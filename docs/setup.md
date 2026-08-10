@@ -37,11 +37,12 @@ bash setup/install-hooks.sh    # symlinks ~/.claude/vault-hooks + registers the 
 # 3. restart Claude Code
 ```
 
-`install-hooks.sh` is self-locating (works on any user/path/spelling) and idempotent. It registers the canonical set (mirrored in `scripts/check-hooks.py` `EXPECTED_HOOKS`; `engagement-init` warns at SessionStart if any is unregistered) -- 10 hook commands across 6 events:
+`install-hooks.sh` is self-locating (works on any user/path/spelling) and idempotent. It registers the canonical set (mirrored in `scripts/check-hooks.py` `EXPECTED_HOOKS`; `engagement-init` warns at SessionStart if any is unregistered) -- 11 hook commands across 6 events:
 - **SessionStart** -- `session-start.sh` (skill auto-register + hot.md cache), `engagement-init.py` (self-heals the `state/loot/paths/killchain/...` set, injects the state summary + kill-chain board status + top next-moves + one compact `harness:` maintenance line).
 - **UserPromptSubmit** -- `hunt-trigger.py` (fires hunt skills from `skills/hunt/triggers.json`).
 - **PreToolUse (Bash)** -- `scope-guard.py` (ENFORCES: denies out-of-scope host/IP (IPv4+IPv6, CIDR-aware; query-param/fragment values exempt) or RoE-forbidden tooling; fail-open + `skills/hooks/.enforce-off` escape hatch; also logs each block as a drift signal).
 - **PreToolUse (Write)** -- `session-guard.py` (client-marker leak guard: session/* AND git-tracked framework trees; targets/ + docs/superpowers/ exempt; logs a boundary-drift signal).
+- **PreToolUse (Bash)** -- `drift-guard.py` (makes the campaign driver non-optional: on an off-board exploit-shaped command during an active campaign at pass>=5 -- a NET_BINS/handroll call whose binary the driver never emitted, board non-empty -- escalates an `off_board_streak` in `.campaign.json`: 1-2 injects a "run campaign.py next" warning, >=3 DENIES; a `campaign.py next|board|done` call resets it. Fail-open; shares the `.enforce-off` escape hatch).
 - **PostToolUse (Bash)** -- `recon-capture.py` (fingerprint router + OOB callback correlation + a once-per-engagement GATE-1 wiki-first nudge; a framework-meta guard suppresses false fires; advisory).
 - **PostToolUse (all)** -- `tool-telemetry.py` (per-box telemetry: appends every tool/skill call to `targets/<eng>/.events.jsonl`, stamps `started_at`, records the session `transcript_path`; feeds `scripts/eval_metrics.py`. Silent, fail-open).
 - **PostToolUse (Write/Edit)** -- `wiki-reindex.py` (auto-reindex: a Write/Edit to `wiki/**/*.md` fires a debounced background `qmd update` so the change is searchable without a manual reindex; off the blocking path, fail-open).

@@ -1,0 +1,40 @@
+{
+  "_comment": "Observation-seed row source for campaign.py board (surface-seed track). playbook.json routes by TECH FINGERPRINT and behaviours.json by ENDPOINT SEMANTICS; on a generic host (plain Apache/SSH/SMB with no CVE fingerprint and no rich endpoint) BOTH produce 0 rows, so the board is empty and `next` has no action to return to. This third source seeds 1-3 high-value ENUMERATION rows off an OBSERVED SURFACE (service/port/tech), guaranteeing a never-empty board. board matches `match` (literal tokens, word-boundary) and optional `match_regex` (raw regex, e.g. a version string) against state.md's service/services/port/tech/os/notes columns. Each row names zero or more `roe` flags (no_bruteforce/no_dos/passive_only); if ANY named flag is set in scope.md the row is skipped (an active dir/vhost fuzz is a brute; a passive_only envelope forbids all active enum). Keep it LEAN: enumeration leads only, never exploit payloads. Add surfaces/rows here, no code.",
+
+  "web-service": {
+    "match": ["http", "https", "www", "web", "nginx", "apache", "httpd", "iis", "tomcat", "jetty", "lighttpd", "caddy", "80", "443", "8080", "8443", "8000"],
+    "rows": [
+      {"class": "content-discovery", "skill": "wiki-recon", "tool": "ffuf", "roe": ["passive_only", "no_bruteforce"]},
+      {"class": "vhost-fuzz", "skill": "wiki-recon", "tool": "ffuf", "roe": ["passive_only", "no_bruteforce"]}
+    ]
+  },
+
+  "versioned-service": {
+    "match": [],
+    "match_regex": "\\d+\\.\\d+|release[.\\s_-]*\\d",
+    "rows": [
+      {"class": "cve-check", "skill": "nday", "tool": "nuclei", "roe": ["passive_only"]}
+    ]
+  },
+
+  "ssh": {
+    "match": ["ssh", "openssh", "dropbear", "22"],
+    "rows": [
+      {"class": "ssh-enum", "skill": "arsenal", "tool": "nxc", "roe": ["passive_only", "no_bruteforce"]}
+    ]
+  },
+
+  "smb": {
+    "match": ["smb", "microsoft-ds", "netbios", "netbios-ssn", "samba", "445", "139"],
+    "rows": [
+      {"class": "smb-enum", "skill": "arsenal", "tool": "nxc", "roe": ["passive_only"]}
+    ]
+  },
+
+  "ftp": {
+    "match": ["ftp", "vsftpd", "proftpd", "pure-ftpd", "filezilla", "21"],
+    "rows": [
+      {"class": "ftp-enum", "skill": "arsenal", "tool": "nxc", "roe": ["passive_only"]}
+    ]
+  }
+}

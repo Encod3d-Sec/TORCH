@@ -36,12 +36,15 @@ def check(name, ok, detail="", warn=False):
 # --------------------------------------------------------------------------- A. vault content
 
 def _a_files():
-    need = ["campaign.py", "campaign.json", "behaviours.json", "handroll.py", "check-engagement.py",
-            "playbook.json", "chains.json", "coverage-classes.json", "tool-phase-backfill.py"]
+    need = ["campaign.py", "campaign.json", "behaviours.json", "surface-seeds.json", "handroll.py",
+            "check-engagement.py", "playbook.json", "chains.json", "coverage-classes.json",
+            "tool-phase-backfill.py"]
     for f in need:
         check("script present: " + f, os.path.isfile(os.path.join(HERE, f)))
     check("triggers.json present",
           os.path.isfile(os.path.join(VAULT, "skills", "hunt", "triggers.json")))
+    check("drift-guard hook present",
+          os.path.isfile(os.path.join(VAULT, "skills", "hooks", "drift-guard.py")))
 
 
 def _a_json():

@@ -57,6 +57,15 @@ def _now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
+def _now_dt():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def _aware(dt):
+    """Force a tz on a naive datetime (assume UTC) so deadline math never mixes naive+aware."""
+    return dt if dt.tzinfo else dt.replace(tzinfo=datetime.timezone.utc)
+
+
 def _load_cfg():
     return json.load(open(CFG, encoding="utf-8"))
 
@@ -333,6 +342,55 @@ def derive_behavioural_rows(d):
             seen.add(key)
             out.append((asset, cls, spec.get("skill", ""), spec.get("tool", ""),
                         spec.get("requires", {})))
+    return out
+
+
+def _surface_seeds():
+    try:
+        s = json.load(open(os.path.join(HERE, "surface-seeds.json"), encoding="utf-8"))
+        return {k: v for k, v in s.items() if not k.startswith("_")}
+    except Exception:
+        return {}
+
+
+def derive_surface_rows(d):
+    """(asset, class, skill, tool, requires) seeded by an OBSERVED SURFACE (service/port/tech) rather
+    than a tech fingerprint (playbook.json) or endpoint semantics (behaviours.json). On a generic host
+    both of those yield 0 rows -> empty board -> `next` has no action to return to (Observation 1);
+    this third source guarantees a never-empty board by seeding high-value ENUMERATION rows off the
+    surface itself. surface-seeds.json maps a surface -> 1-3 rows; a row naming an RoE flag that is set
+    in scope.md (no_bruteforce/no_dos/passive_only) is skipped here so the board never carries a row
+    the envelope forbids. Modeled on derive_behavioural_rows; requires is {} (read-only enum)."""
+    seeds = _surface_seeds()
+    out, seen = [], set()
+    for r in E._parse_table(os.path.join(d, "state.md")):
+        asset = (r.get("asset") or r.get("host") or r.get("target") or "").strip()
+        if not asset or asset == "?":
+            continue
+        hay = " ".join(str(r.get(k, "")) for k in
+                       ("service", "services", "port", "tech", "os", "notes")).lower()
+        for _surf, spec in seeds.items():
+            hit = any(re.search(r"\b" + re.escape(m.lower()) + r"\b", hay)
+                      for m in spec.get("match", []))
+            if not hit and spec.get("match_regex"):
+                try:
+                    hit = bool(re.search(spec["match_regex"], hay, re.I))
+                except re.error:
+                    hit = False
+            if not hit:
+                continue
+            for row in spec.get("rows", []):
+                roe = row.get("roe") or []
+                if isinstance(roe, str):
+                    roe = [roe]
+                if any(_flag(d, f, False) for f in roe):
+                    continue
+                cls = row.get("class", "")
+                key = (asset.lower(), cls)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append((asset, cls, row.get("skill", ""), row.get("tool", ""), {}))
     return out
 
 
@@ -622,6 +680,11 @@ def cmd_board(a):
         _add(asset, cls, skill, tool)
     for asset, cls, skill, tool, requires in derive_behavioural_rows(d):
         _add(asset, cls, skill, tool, requires)
+    # Third source (surface-seed): guarantees a never-empty board on generic tech, so `next` always
+    # has a real action. Runs LAST so its enum rows never displace a tech/endpoint row (_add dedups
+    # against `have`); RoE-forbidden seeds are already dropped inside derive_surface_rows.
+    for asset, cls, skill, tool, requires in derive_surface_rows(d):
+        _add(asset, cls, skill, tool, requires)
     write_board(d, rows)
     # Building the board IS the pass-4 deliverable and hands off to driving; advance to pass 5 so
     # `next` drives the board instead of repeating pre-board recon guidance.
@@ -758,6 +821,75 @@ def _active_row(rows, asset):
     return None
 
 
+# Classes worth chasing when the clock is short: high-impact / target-severity-reachable. Used only
+# to rank OPEN rows under a deadline crunch, never to gate.
+HIGH_VALUE_CLASSES = {"rce", "sqli", "ssrf", "auth", "idor", "bola", "deserialization", "xxe",
+                      "ssti", "cmdi", "file-upload", "business-logic", "default-creds", "lfi"}
+
+
+def _deadline_info(d, st):
+    """(remaining_min, total_min, frac_left) from scope.md `deadline`, or None when unset/bad.
+    `deadline` is either an integer count of MINUTES from started_at, or an absolute ISO timestamp.
+    Fail-open: any parse problem returns None so the clock simply does not exist."""
+    raw = str(_scope_fm(d).get("deadline") or "").strip()
+    if not raw:
+        return None
+    try:
+        start = _aware(datetime.datetime.fromisoformat(st.get("started_at")))
+    except Exception:
+        return None
+    if re.fullmatch(r"\d+", raw):
+        total = float(raw)
+        end = start + datetime.timedelta(minutes=total)
+    else:
+        try:
+            end = _aware(datetime.datetime.fromisoformat(raw))
+        except Exception:
+            return None
+        total = (end - start).total_seconds() / 60.0
+    remaining = (end - _now_dt()).total_seconds() / 60.0
+    frac = (remaining / total) if total > 0 else 0.0
+    return remaining, total, frac
+
+
+def _row_value(r):
+    """Rough worth of an OPEN row under clock crunch: high-impact class + progress already sunk.
+    ponytail: a 3-signal heuristic, not a persisted score - board rows never stored one."""
+    v = 2 if (r.get("vuln class") or "").strip().lower() in HIGH_VALUE_CLASSES else 1
+    if _status_of(r) == "[~]":        # already in progress -> finishing it is cheapest
+        v += 2
+    if (r.get("arsenal") or "").strip():  # arsenal loaded -> one step from a close
+        v += 1
+    return v
+
+
+def _crunch_serve(d, st, rows, dl):
+    """Under <25% of the wall-clock budget, return (asset, row) for the single highest-value open
+    row across the WHOLE board (depth-first abandoned) and print the crunch banner; else None.
+    Rows are re-ranked, never deleted - low-value ones are flagged for the agent to --dead, so the
+    board stays a full audit trail. Fail-open: no deadline / no open rows -> None (cursor drives)."""
+    if dl is None or dl[2] >= 0.25:
+        return None
+    paused = {p.lower() for p in st.get("paused_hosts", [])}
+    open_rows = [r for r in rows if _status_of(r) in ("[ ]", "[~]")
+                 and _host_of(r.get("asset")) not in paused]
+    if not open_rows:
+        return None
+    open_rows.sort(key=lambda r: -_row_value(r))
+    print("CLOCK CRUNCH: %.0fm of %.0fm left (<25%%) - depth-first OFF, chasing highest value:"
+          % (dl[0], dl[1]))
+    for r in open_rows[:3]:
+        print("  %s  %s x %s   value %d" % (r.get("id"), (r.get("asset") or "").strip(),
+                                            r.get("vuln class"), _row_value(r)))
+    extra = len(open_rows) - 3
+    if extra > 0:
+        print("  ... %d lower-value open row(s) - `done <id> --dead 'clock'` unless quick." % extra)
+    top = open_rows[0]
+    st["asset_cursor"] = (top.get("asset") or "").strip()
+    _save_state(d, st)
+    return (top.get("asset") or "").strip(), top
+
+
 def cmd_next(a):
     d = _resolve(a.eng)
     st = _load_state(d) if d else None
@@ -779,9 +911,13 @@ def cmd_next(a):
         st["mode"] = "report-only"
         _save_state(d, st)
 
-    header = ("PASS %d/9  %s      rows %d[x] %d[!] %d[?] %d open   req %s/%s   drift %d"
+    dl = _deadline_info(d, st)
+    clock = ""
+    if dl is not None:
+        clock = "   clock %.0fm/%.0fm left" % (dl[0], dl[1]) + (" [CRUNCH]" if dl[2] < 0.25 else "")
+    header = ("PASS %d/9  %s      rows %d[x] %d[!] %d[?] %d open   req %s/%s   drift %d%s"
               % (st["pass"], PASS_LABELS[min(st["pass"], 9)], counts["[x]"], counts["[!]"],
-                 counts["[?]"], counts["open"], req, budget or "-", drift))
+                 counts["[?]"], counts["open"], req, budget or "-", drift, clock))
     print(header)
     if st.get("paused_hosts"):
         print("PAUSED (banned/rate-walled, rows skipped): %s" % ", ".join(st["paused_hosts"]))
@@ -801,18 +937,24 @@ def cmd_next(a):
 
     if _board_exhausted(rows):
         return _reframe_or_closeout(d, st, rows, tconf)
-    asset = _cursor_asset(rows, st)
-    if asset is None:
-        # Board is NOT exhausted (checked above) yet no asset is servable -> every open row is on a
-        # paused host. That is a ban wall, not real exhaustion: do NOT reframe/close-out (which would
-        # abandon unexhausted work). Wait for a resume.
-        print("all remaining open rows are on PAUSED hosts (%s) - resume one to continue:"
-              % ", ".join(st.get("paused_hosts", [])))
-        print("  campaign.py pause-host <host> --resume")
-        return 0
-    st["asset_cursor"] = asset
-    _save_state(d, st)
-    row = _active_row(rows, asset)
+    # Wall-clock crunch (deadline envelope): under 25% of the budget left, abandon depth-first and
+    # serve the single highest-value open row across the board. Reuses `dl` from the header.
+    crunch = _crunch_serve(d, st, rows, dl)
+    if crunch:
+        asset, row = crunch
+    else:
+        asset = _cursor_asset(rows, st)
+        if asset is None:
+            # Board is NOT exhausted (checked above) yet no asset is servable -> every open row is on
+            # a paused host. That is a ban wall, not real exhaustion: do NOT reframe/close-out (which
+            # would abandon unexhausted work). Wait for a resume.
+            print("all remaining open rows are on PAUSED hosts (%s) - resume one to continue:"
+                  % ", ".join(st.get("paused_hosts", [])))
+            print("  campaign.py pause-host <host> --resume")
+            return 0
+        st["asset_cursor"] = asset
+        _save_state(d, st)
+        row = _active_row(rows, asset)
     aset_rows = [r for r in rows if (r.get("asset") or "").strip() == asset]
     closed = sum(1 for r in aset_rows if _status_of(r) in ("[x]", "[!]", "[?]"))
     print("ASSET     %s  (%d/%d rows closed, depth-first)" % (asset, closed, len(aset_rows)))
@@ -1015,6 +1157,50 @@ def _append_line(path, line):
         fh.write(line.rstrip() + "\n")
 
 
+def _append_pivot_rows(d, st, asset, cls):
+    """Grow the board with chains.json pivots off a just-CONFIRMED class (done --find): each edge
+    becomes a real `[ ]` row (asset x to_class, the edge's skill + a class-default tool), deduped
+    against every pair already on the board and against Deadends (G4). Mirrors cmd_board._add's id
+    allocation. gate:oob edges are added like any other row; next() withholds their exploit until
+    oob.md has a live listener (OOB_CLASSES gate) - current oob edges all target OOB classes, so no
+    separate per-edge gate is needed here. Mutates st.row_created; caller saves. Returns (added,
+    skipped)."""
+    edges = _chains().get(cls, {}).get("then", [])
+    if not edges:
+        return 0, 0
+    rows = read_board(d)
+    have = {((r.get("asset") or "").lower(), (r.get("vuln class") or "").lower()) for r in rows}
+    dead = _deadend_pairs(d)
+    maxid = 0
+    for r in rows:
+        m = re.match(r"4a:(\d+)", (r.get("id") or "").strip())
+        if m:
+            maxid = max(maxid, int(m.group(1)))
+    triggers = _triggers()
+    cfg = _load_cfg()
+    added = skipped = 0
+    for e in edges:
+        to = (e.get("to_class") or "").strip().lower()
+        if not to:
+            continue
+        key = (asset.lower(), to)
+        if key in have or key in dead:
+            skipped += 1
+            continue
+        have.add(key)
+        maxid += 1
+        rid = "4a:%d" % maxid
+        skill = (e.get("skill") or "").strip() or _skill_for_class(to, triggers)
+        rows.append({"id": rid, "asset": asset, "vuln class": to, "arsenal": "",
+                     "skill": skill, "tool": _tool_for_class(to, cfg),
+                     "status": "[ ]", "poc": "", "poc_kind": ""})
+        st.setdefault("row_created", {})[rid] = _now()
+        added += 1
+    if added:
+        write_board(d, rows)
+    return added, skipped
+
+
 def cmd_done(a):
     d = _resolve(a.eng)
     st = _load_state(d) if d else None
@@ -1115,7 +1301,13 @@ def cmd_done(a):
                 mv = (e.get("move") or "").replace("{asset}", row.get("asset") or "")
                 _append_line(pth, "| %s->%s | 4 | open | | %s |"
                              % (cls, e.get("to_class", "?"), mv))
-            print("PATHS: +%d pivot row(s) from chains.json -> paths.md" % len(edges))
+            # ...AND grow the board itself, so a confirmed finding turns into servable next-rows
+            # instead of a note the driver never re-serves.
+            addn, skipn = _append_pivot_rows(d, st, row.get("asset") or "", cls)
+            _save_state(d, st)
+            print("PATHS: +%d pivot row(s) -> paths.md ; BOARD: +%d pivot row(s) [ ]%s"
+                  % (len(edges), addn,
+                     (", %d dup/dead skipped" % skipn) if skipn else ""))
         _append_line(os.path.join(d, "Vuln-index.md"),
                      "<!-- %s | %s | %s | CONFIRMED -->" % (a.find, row.get("asset"), cls))
     return 0

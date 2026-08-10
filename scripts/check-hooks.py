@@ -37,6 +37,7 @@ EXPECTED_HOOKS = [
     ("PostToolUse", "wiki-reindex.py"),
     ("PreToolUse", "scope-guard.py"),
     ("PreToolUse", "session-guard.py"),
+    ("PreToolUse", "drift-guard.py"),
     ("PreCompact", "pre-compact.sh"),
     ("Stop", "close-out.py"),
 ]
