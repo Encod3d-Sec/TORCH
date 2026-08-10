@@ -1,0 +1,24 @@
+{
+  "_comment": "Per-type campaign configuration for scripts/campaign.py (bb/pt/ctf workflow driver). Data, not code: change behaviour by editing here. `approach` must appear in playbook.json's fingerprint `approach` lists. `osint:false` for ctf skips pass 0 unless the skill is invoked with an osint arg. `phase_default_tools`, `visual_evidence_classes`, `reframe_lenses` and `refuter_prompt` are shared across all three types.",
+
+  "bb":  { "approach": "bugbounty", "osint": true,  "verifier": "required", "closeout": ["triage", "evidence", "report", "learn"],
+           "recon_tools": ["subfinder", "httpx", "gau", "arjun", "nuclei", "trufflehog"],
+           "dry_streak_threshold": 3, "row_effort_ceiling": 25 },
+  "pt":  { "approach": "pentest",   "osint": true,  "verifier": "required", "closeout": ["triage", "evidence", "report", "learn"],
+           "recon_tools": ["rustscan", "nmap", "nxc", "kerbrute", "bloodhound"],
+           "dry_streak_threshold": 3, "row_effort_ceiling": 25 },
+  "ctf": { "approach": "ctf",       "osint": false, "verifier": "optional", "closeout": ["walkthrough", "learn"],
+           "recon_tools": ["rustscan", "nmap", "ffuf", "nuclei"],
+           "dry_streak_threshold": 2, "row_effort_ceiling": 40 },
+
+  "phase_default_tools": {
+    "web-recon": ["subfinder", "httpx", "katana", "gau", "nuclei"],
+    "web-fuzz": ["ffuf"],
+    "param-endpoint": ["sqlmap"],
+    "js": ["jsluice"]
+  },
+  "visual_evidence_classes": ["xss", "ssti", "upload-preview", "ui-authz", "flag-onscreen"],
+  "_reframe_comment": "Generative lenses first (off-playbook, chain-first) so the driver deterministically produces rows before the narrative lenses that need agent recon; otherwise two front-loaded dry lenses would terminate the campaign before the productive ones run.",
+  "reframe_lenses": ["off-playbook", "chain-first", "second-order", "deprioritised", "historical", "version-recheck"],
+  "refuter_prompt": "You are an adversarial verifier. Try to REFUTE this candidate finding, do not confirm it. Default to refuted=true when uncertain. Check: (1) is the observed behaviour a differential, or was only one branch ever seen; (2) is it an edge/WAF artifact rather than the application; (3) is it already public / a vendor default; (4) does the impact actually reach the target's own data or systems (RoE upstream-vendor rule). Return {refuted: bool, reason: str}."
+}

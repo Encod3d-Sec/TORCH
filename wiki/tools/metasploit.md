@@ -5,6 +5,7 @@ tags: [exploitation, htb, linux, network, post-exploitation, tool, web]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [cpts-metasploit]
+phase: exploit
 ---
 
 ## Purpose

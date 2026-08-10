@@ -5,6 +5,7 @@ tags: [brute-force, cracking, tool, web, wordlist]
 date_created: 2026-07-16
 date_updated: 2026-07-16
 sources: []
+phase: recon
 ---
 
 ## Purpose

@@ -5,6 +5,7 @@ tags: [recon, osint, subdomain-enumeration, bug-bounty, attack-surface]
 date_created: 2026-06-16
 date_updated: 2026-06-16
 sources: []
+phase: recon
 ---
 
 ## Purpose

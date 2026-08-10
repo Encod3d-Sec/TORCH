@@ -5,6 +5,7 @@ tags: [jwt, authentication, web, api, cracking]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: crack
 ---
 
 ## Purpose

@@ -5,6 +5,7 @@ tags: [chisel, network, pivoting, port-forwarding, proxy, socks, tunneling]
 date_created: 2026-05-12
 date_updated: 2026-05-12
 sources: [0xdf-tools-chisel]
+phase: pivot
 ---
 
 # Chisel

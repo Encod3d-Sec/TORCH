@@ -32,6 +32,8 @@
 | Update CLAUDE.md (targeted session learnings) | `claude-md-management:revise-claude-md`                                                |
 | Session end / pause work                      | `gsd:pause-work` (optional plugin) or the manual pause-work steps                                                                       |
 | Parallel independent tasks                    | `superpowers:dispatching-parallel-agents`                                              |
+| Run a full bb/pt/ctf engagement autonomously  | `bb-workflow` / `pt-workflow` / `ctf-workflow` skill (driver: `scripts/campaign.py`; the single source of truth for the execution loop) |
+| Check the workflow driver is set up on this machine | `campaign-health` skill (`scripts/campaign-doctor.py`)                            |
 | About to attack a web endpoint                | `hunt-<type>` skill (see auto-triggers below)                                            |
 | Driving a web target through Burp (proxy-history triage, Repeater/Intruder/Collaborator) | `hunt-burp` skill (Burp MCP; setup [[burp-mcp]])              |
 | Starting recon on any target                  | wiki-recon skill                                                                       |
@@ -62,15 +64,24 @@ Vuln-type rows (SSRF/XSS/SQLi/IDOR/RCE/auth/federation/injection/m365/vpn -> mat
 
 ## Engagement discipline (state-first, anti-loop)
 
-**Execution loop (per offensive step, ALWAYS).** The hooks below are advisory and can misfire or go
-silent (e.g. when the `wiki-search` MCP drops); THIS loop is the real enforcement because it is always
-in context. On every engagement, run each step in order, do not skip under momentum:
-0. **Board-first.** Open `targets/<eng>/killchain.md` (the wiki-wired kill-chain board: Recon ->
-   Weaponize -> Deliver -> Exploit). Work the current phase's open items (`[ ]`/`[~]`) in order; mark
-   each `[x]` as it lands. Honor the three GATE lines, which map onto the steps below: GATE 1 = no
-   hand-rolled exploit before its wiki item is `[x]` (step 1); GATE 2 = no exploit step goes `[x]`
-   without a `poc/` image (step 3); GATE 3 = an exhausted vector is marked `[!]` + one `Deadends.md`
-   line, then move to the next open item, never re-run `[!]` (step 5's stop condition).
+**Engagement workflow (the driver is the plan).** For any bb/pt/ctf engagement run `Skill(bb-workflow)`,
+`Skill(pt-workflow)`, or `Skill(ctf-workflow)`. The deterministic driver `scripts/campaign.py` owns
+pass state, generates the killchain board from recon, and prints the exact next action (Skill + tool)
+every turn. It is the single source of truth for the discipline this section describes: it ENFORCES as
+gates G1 wiki/arsenal-first, G2 skill-first, G3 typed evidence, G4 deadend-first, G5 depth-first, G7
+no-ask, G8 tool-first, plus pre-board recon (passes 0-4), the read-whole gate, the effort-ceiling stop
+condition, OOB and two-account readiness, ban control, and budget/report-only. When it runs, follow its
+`next` output literally. Health check on a new machine: `Skill(campaign-health)`.
+
+**Execution loop (per offensive step, ALWAYS).** The hooks are advisory and can misfire or go silent
+(e.g. when the `wiki-search` MCP drops). During a campaign the driver above is the enforcement and the
+steps below are what it sequences; off-campaign (driver unavailable, or a quick manual engagement) run
+each step in order yourself, do not skip under momentum:
+0. **Board-first.** Work `targets/<eng>/killchain.md` (the kill-chain board) one open item (`[ ]`/`[~]`)
+   at a time, marking `[x]` as each lands. In a campaign the driver generates this board and enforces
+   its gates: no exploit before the row's arsenal card (G1), no `[x]` without a `poc/` image (G3), and
+   an exhausted vector goes `[!]` + one `Deadends.md` line then you move to the next open item, never
+   re-running `[!]` (G4); off-campaign, honor the board's own GATE 1/2/3 lines by hand.
 1. **Wiki-first, reference-map before qmd (qmd is ~15-30s, so it is hint-driven).** Before exploiting
    a fingerprinted service/class: (a) FIRST read the mapped pages directly - the hunt skill's `## Wiki`
    section (domain MOC + primary page + anchors) and one-hop from the MOC. That is an instant `Read`
@@ -96,9 +107,9 @@ in context. On every engagement, run each step in order, do not skip under momen
    live now (no auto-card staging). NEVER hand-write / fabricate an evidence card.
 4. **Persist immediately.** A host/cred/path/flag lands -> write `state.md`/`loot.md`/`paths.md` before
    the next move; a dead-end -> one `Deadends.md` line.
-5. **Close out.** Both flags captured -> set `## STATUS: SOLVED` in state.md AT ONCE, then run
-   `Skill(walkthrough)`, then `Skill(learn)` (harvest this box's generic lessons into `wiki/`). Set
-   SOLVED promptly so the close-out sequence runs.
+5. **Close out.** Objective landed (both flags, or a target-severity finding) -> set `## STATUS: SOLVED`
+   in state.md at once, then run the per-type close-out chain the driver prints (`campaign.py`'s
+   `closeout` config, echoed by the bb/pt/ctf workflow skill). Run it exactly as printed.
 
 Token control and real findings come from the same rule: do not repeat work.
 

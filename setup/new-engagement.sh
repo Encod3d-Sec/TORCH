@@ -146,6 +146,10 @@ sub "$VAULT/setup/templates/_deadends.md" "$NAME" "$TODAY" "$DEST/Deadends.md"
 # full-set extras (SHARED_FULL): default for pentest/bugbounty, opt-in for ctf
 [ "$WITH_OOB" = 1 ] && sub "$VAULT/setup/templates/_oob.md" "$NAME" "$TODAY" "$DEST/oob.md"
 [ "$TYPE" != "ctf" ] && sub "$VAULT/setup/templates/_vuln-index.md" "$NAME" "$TODAY" "$DEST/Vuln-index.md"
+# campaign-driver working files (Task 34c): identities/decisions/source-ledger/write-ledger.
+for f in identities decisions source-ledger write-ledger; do
+  sub "$VAULT/setup/templates/_$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
+done
 
 printf '%s\n' "$NAME" > "$VAULT/targets/active.md"
 

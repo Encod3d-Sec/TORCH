@@ -5,6 +5,7 @@ tags: [binary, bof, linux]
 date_created: 2026-05-09
 date_updated: 2026-05-09
 sources: [Malware-ccdcoe-essentials-bof]
+phase: aux
 ---
 
 # GDB + GEF

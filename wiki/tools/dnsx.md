@@ -5,6 +5,7 @@ tags: [recon, dns, subdomain-enumeration, automation, bug-bounty]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: scan
 ---
 
 ## Purpose

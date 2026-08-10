@@ -211,8 +211,8 @@ def _ranked(limit=5):
             ent = entity(r)
             for pat, info in PLAYBOOK.items():
                 try:
-                    hi = bool(re.search(pat, structured))
-                    lo = bool(re.search(pat, freetext))
+                    hi = bool(re.search(pat, structured, re.I))
+                    lo = bool(re.search(pat, freetext, re.I))
                 except re.error:
                     continue
                 if not (hi or lo):

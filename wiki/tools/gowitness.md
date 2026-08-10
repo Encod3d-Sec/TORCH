@@ -5,6 +5,7 @@ tags: [recon, screenshots, bug-bounty, attack-surface, triage]
 date_created: 2026-06-16
 date_updated: 2026-06-16
 sources: []
+phase: recon
 ---
 
 ## Purpose

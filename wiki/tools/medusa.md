@@ -5,6 +5,7 @@ tags: [brute-force, htb, linux, network, tool, windows]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [cpts-brute-forcing]
+phase: crack
 ---
 
 ## Purpose

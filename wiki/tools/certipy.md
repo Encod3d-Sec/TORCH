@@ -5,6 +5,7 @@ tags: [active-directory, adcs, certificates, esc1, esc13, esc16, esc4, esc7, esc
 date_created: 2026-05-12
 date_updated: 2026-05-12
 sources: [0xdf-tools-certipy]
+phase: aux
 ---
 
 ## Purpose

@@ -5,6 +5,7 @@ tags: [exploitation, htb, scanner, thm, tool, web]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [cpts-sqlmap, thm-sqlmap]
+phase: exploit
 ---
 
 ## Purpose

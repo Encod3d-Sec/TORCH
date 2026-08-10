@@ -1,0 +1,30 @@
+{
+  "_comment": "Behavioural row source for campaign.py board (Task 31). playbook.json routes by TECH fingerprint; several of the highest-paying classes (race, business-logic, IDOR) follow from what an ENDPOINT DOES, not what it is built with, so a tech-only board never creates them and coverage reports them as permanent gaps. board matches these patterns against state.md's endpoint/url/param columns. `requires.write_policy` lists the envelope values under which the row may run; a stricter policy parks it. `requires.burst` marks a row that needs the rate-control exemption (Task 31b). Add classes here, no code.",
+
+  "race-condition": {
+    "endpoint_patterns": ["redeem", "apply", "claim", "activate", "transfer", "withdraw", "vote", "invite", "checkout", "coupon", "voucher", "topup", "confirm", "cancel", "purchase", "gift"],
+    "param_patterns": [],
+    "signals": ["a per-account limit is enforced", "a balance or quota is decremented", "a one-time token or code is consumed"],
+    "skill": "hunt-bizlogic",
+    "tool": "turbo-intruder",
+    "requires": {"write_policy": ["own-records-only", "full"], "burst": true}
+  },
+
+  "idor": {
+    "endpoint_patterns": ["/api/", "/user", "/account", "/order", "/invoice", "/document", "/file", "/profile", "/report"],
+    "param_patterns": ["id", "uid", "user_id", "account", "order", "invoice", "doc", "file", "uuid", "guid", "ref"],
+    "signals": ["a numeric or UUID identifier addresses an object", "the object belongs to an account"],
+    "skill": "hunt-idor",
+    "tool": "ffuf",
+    "requires": {}
+  },
+
+  "business-logic": {
+    "endpoint_patterns": ["cart", "price", "quantity", "discount", "coupon", "refund", "balance", "checkout", "order", "subscription", "upgrade"],
+    "param_patterns": ["price", "amount", "qty", "quantity", "discount", "coupon", "total", "currency"],
+    "signals": ["a price/quantity is client-supplied", "a workflow has orderable steps"],
+    "skill": "hunt-bizlogic",
+    "tool": "ffuf",
+    "requires": {}
+  }
+}

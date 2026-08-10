@@ -11,10 +11,46 @@ anyway), no active engagement -> no-op. All aggregation is done offline by scrip
 """
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+
+# Shell separators that start a new command.
+_BIN_SPLIT = re.compile(r"[|;\n]|&&|\|\|")
+# Compound-header keywords: `for p in a b c` names no binary at all -- skip the whole segment,
+# or the loop VARIABLE gets logged as a tool (the loop body is a separate segment and is kept).
+_SKIP_SEGMENT = {"for", "while", "until", "if", "elif", "case", "select"}
+# Tokens that merely precede the real binary: body keywords and wrappers.
+_SKIP_TOKEN = {"do", "then", "else", "done", "fi", "esac", "{", "}", "!",
+               "sudo", "env", "time", "nohup", "xargs", "doas", "command", "exec"}
+
+
+def _binaries(cmd):
+    """Program names invoked by a shell command.
+
+    Without this every shell call logs as `tool: Bash`, so nothing can tell `sqlmap` from a
+    hand-rolled `curl` loop -- which is why tool-use was unmeasurable across a whole campaign.
+
+    Leak-safe by construction: only program NAMES are kept, never arguments, which are what
+    carry target hosts, paths and tokens.
+    """
+    out = []
+    for seg in _BIN_SPLIT.split(cmd or ""):
+        for tok in seg.split():
+            if "=" in tok and not tok.startswith("-"):
+                continue                      # env-var prefix: FOO=bar cmd
+            b = os.path.basename(tok.strip("()`$'\"&"))
+            if (not b or b.startswith("-") or b in _SKIP_SEGMENT
+                    or "<" in b or ">" in b):     # a flag or a redirect: no binary follows
+                break
+            if b in _SKIP_TOKEN:
+                continue                      # do/then/sudo/env <real-binary>
+            if b not in out:
+                out.append(b)
+            break
+    return out[:8]
 
 
 def main():
@@ -48,7 +84,8 @@ def main():
                 wiki = p[len(root):]
         except Exception:
             wiki = None
-    _telemetry.log_event("tool", d=d, tool=tool, skill=skill, wiki=wiki)
+    bins = _binaries(ti.get("command")) if tool == "Bash" else None
+    _telemetry.log_event("tool", d=d, tool=tool, skill=skill, wiki=wiki, bins=bins or None)
     _telemetry.stamp_once("started_at", _telemetry.now_iso(), d=d)
     _telemetry.add_transcript(data.get("transcript_path"), d=d)
 

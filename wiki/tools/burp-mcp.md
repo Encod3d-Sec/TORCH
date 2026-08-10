@@ -5,6 +5,7 @@ tags: [tool, web, proxy, mcp, ai, burp, automation]
 date_created: 2026-07-04
 date_updated: 2026-07-04
 sources: [git-portswigger-mcp-server, portswigger-mcp-readme, hacktricks-burp-mcp, humanoid-burp-mcp-kali, git-six2dez-burp-ai-agent]
+phase: scan
 ---
 
 ## Purpose

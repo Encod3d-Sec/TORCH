@@ -5,6 +5,7 @@ tags: [smtp, email, network-service, enumeration, testing]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: recon
 ---
 
 ## Purpose

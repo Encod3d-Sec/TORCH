@@ -42,8 +42,8 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 ## 4. Exploit
 
 ### 4a. Findings  (subsumes coverage.md: asset x class x status)
-| asset | vuln class | wiki | payload/tool | status | poc |
-|-------|-----------|------|--------------|--------|-----|
+| id | asset | vuln class | arsenal | skill | tool | status | poc | poc_kind |
+|----|-------|-----------|---------|-------|------|--------|-----|----------|
 
 route by class: Skill(arsenal) -> Skill(`hunt-<class>`)
 chains to impact: e.g. ssrf -> imds -> creds -> ato  -> [[imds-cloud-metadata]] [[account-takeover]]

@@ -5,6 +5,7 @@ tags: [exploitation, cve, recon, quick-win, exploit-db, methodology]
 date_created: 2026-07-21
 date_updated: 2026-07-21
 sources: []
+phase: exploit
 ---
 
 # searchsploit (Exploit-DB CLI)

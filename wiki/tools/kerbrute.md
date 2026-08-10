@@ -5,6 +5,7 @@ tags: [active-directory, kerberos, username-enumeration, password-spraying, pre-
 date_created: 2026-07-02
 date_updated: 2026-07-02
 sources: []
+phase: recon
 ---
 
 # Kerbrute

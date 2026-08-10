@@ -5,6 +5,7 @@ tags: [privilege-escalation, enumeration, post-exploitation, linux, windows, cre
 date_created: 2026-07-02
 date_updated: 2026-07-02
 sources: []
+phase: postex
 ---
 
 # PEASS-ng (linPEAS / winPEAS)

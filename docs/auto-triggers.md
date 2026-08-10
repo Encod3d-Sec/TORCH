@@ -4,6 +4,8 @@ What the framework fires on its own, so you know what activates for a given task
 
 **Core principle:** auto-triggers **inject context** (a suggestion the model reads and acts on, or a warning). They do **not** silently run commands. Every fire is a visible injected line. Nothing executes a tool by itself.
 
+> **During a campaign, the driver supersedes these advisory triggers.** Running an engagement under `Skill(bb-workflow|pt-workflow|ctf-workflow)` puts `scripts/campaign.py` in charge: it prints the next required action (wiki-first, tool-first, skill-first, typed evidence) as tool output every turn, which is *enforced* rather than suggested. The hooks below still fire and remain the routing layer for **ad-hoc, non-campaign** work; inside a campaign, follow the driver's `next` block over any hook nudge. Retiring the now-redundant hooks is deliberately deferred: they are harmless and still serve non-campaign work.
+
 **Source of truth** (edit these, not this doc, to change behaviour):
 - keyword -> skill: `skills/hunt/triggers.json`
 - tech fingerprint -> tests: `scripts/playbook.json`

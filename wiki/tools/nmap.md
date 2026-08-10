@@ -5,6 +5,7 @@ tags: [enumeration, htb, network, nmap, recon, scanner, tool]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [cpts-nmap]
+phase: scan
 ---
 
 ## Purpose

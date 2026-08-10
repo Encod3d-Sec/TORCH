@@ -5,6 +5,7 @@ tags: [linux, privilege-escalation, enumeration, post-exploitation, ctf]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: postex
 ---
 
 ## Purpose

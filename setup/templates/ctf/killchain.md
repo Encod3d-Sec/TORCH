@@ -53,8 +53,8 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 ## 4. Exploit
 
 ### 4a. Foothold  (subsumes coverage.md: asset x class x status)
-| target | vuln class | wiki | payload/tool | status | poc |
-|--------|-----------|------|--------------|--------|-----|
+| id | asset | vuln class | arsenal | skill | tool | status | poc | poc_kind |
+|----|-------|-----------|---------|-------|------|--------|-----|----------|
 
 cred attacks:  sqlmap / hydra / medusa / john / hashcat
   -> [[sqlmap]] [[hydra]] [[medusa]] [[john]] [[hashcat]] [[password-attacks]] [[wordlists]] [[default-credentials]]

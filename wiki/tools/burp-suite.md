@@ -5,6 +5,7 @@ tags: [htb, proxy, scanner, thm, tool, web]
 date_created: 2026-05-08
 date_updated: 2026-07-04
 sources: [cpts-web-proxies, thm-burpsuite, portswigger-extensions, git-portswigger-all-labs, git-portswigger-mcp-server]
+phase: scan
 ---
 
 ## Purpose

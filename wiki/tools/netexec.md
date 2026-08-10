@@ -5,6 +5,7 @@ tags: [active-directory, brute-force, credential-dumping, enumeration, ftp, kerb
 date_created: 2026-05-12
 date_updated: 2026-07-28
 sources: [0xdf-tools-netexec, netexec-wiki]
+phase: postex
 ---
 
 ## Purpose

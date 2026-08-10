@@ -5,6 +5,7 @@ tags: [enumeration, network, recon, scanner, thm, tool]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [thm-rustscan]
+phase: scan
 ---
 
 ## Purpose

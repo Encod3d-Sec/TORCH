@@ -5,6 +5,7 @@ tags: [secrets, credentials, source-code, git, bug-bounty]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: recon
 ---
 
 ## Purpose

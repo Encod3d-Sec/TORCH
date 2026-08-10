@@ -5,6 +5,7 @@ tags: [active-directory, kerberos, credentials, roasting, delegation, golden-tic
 date_created: 2026-07-02
 date_updated: 2026-07-02
 sources: [github-ghostpack-rubeus, harmj0y-rubeus]
+phase: postex
 ---
 
 ## Purpose

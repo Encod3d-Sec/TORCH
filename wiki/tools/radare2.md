@@ -5,6 +5,7 @@ tags: [ctf, reverse-engineering, disassembler, debugger, binary]
 date_created: 2026-06-16
 date_updated: 2026-06-16
 sources: []
+phase: aux
 ---
 
 ## Purpose

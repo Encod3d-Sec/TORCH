@@ -5,6 +5,7 @@ tags: [windows, av-evasion, edr-evasion, payload, loader, defender, red-team, po
 date_created: 2026-07-21
 date_updated: 2026-07-21
 sources: []
+phase: postex
 ---
 
 # ScareCrow

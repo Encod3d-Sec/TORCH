@@ -5,6 +5,7 @@ tags: [active-directory, lateral-movement, post-exploitation, windows]
 date_created: 2026-05-12
 date_updated: 2026-07-02
 sources: [0xdf-htb-administrator, 0xdf-htb-analysis, 0xdf-htb-anubis, 0xdf-htb-apt, 0xdf-htb-authority, 0xdf-htb-blackfield, 0xdf-htb-cascade, 0xdf-htb-cerberus, 0xdf-htb-coder, 0xdf-htb-compiled, 0xdf-htb-driver, 0xdf-specialty-web]
+phase: postex
 ---
 
 ## Purpose

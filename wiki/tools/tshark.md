@@ -5,6 +5,7 @@ tags: [network, thm, tool]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [thm-tool-tshark]
+phase: aux
 ---
 
 ## Purpose

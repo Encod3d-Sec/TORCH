@@ -5,6 +5,7 @@ tags: [brute-force, enumeration, scanner, thm, tool, web]
 date_created: 2026-05-08
 date_updated: 2026-05-08
 sources: [thm-tool-wpscan]
+phase: scan
 ---
 
 ## Purpose

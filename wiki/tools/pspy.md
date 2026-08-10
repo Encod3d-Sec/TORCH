@@ -5,6 +5,7 @@ tags: [cron, enumeration, linux, post-exploitation, privilege-escalation]
 date_created: 2026-05-12
 date_updated: 2026-05-12
 sources: [0xdf-tools-pspy]
+phase: postex
 ---
 
 # pspy

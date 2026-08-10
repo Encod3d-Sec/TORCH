@@ -5,6 +5,7 @@ tags: [active-directory, adcs, certificates, esc1, esc8, kerberos, windows]
 date_created: 2026-07-02
 date_updated: 2026-07-02
 sources: [github-ghostpack-certify, specterops-certified-pre-owned]
+phase: aux
 ---
 
 ## Purpose

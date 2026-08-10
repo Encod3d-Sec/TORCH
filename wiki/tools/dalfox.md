@@ -5,6 +5,7 @@ tags: [xss, scanner, web, bug-bounty, automation]
 date_created: 2026-07-03
 date_updated: 2026-07-03
 sources: []
+phase: scan
 ---
 
 ## Purpose

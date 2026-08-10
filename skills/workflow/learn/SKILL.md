@@ -45,6 +45,18 @@ execution loop) and check each mandated step against what actually happened on d
 | A hook nudge fired -> was it acted on? | grep the transcript for a nudge (e.g. "switch to ffuf") whose action never followed | nudge ignored under momentum |
 | State-first / capture-as-you-go | `state.md`/`loot.md` updated mid-box vs all-at-end | prose-in-chat lost |
 
+**If the engagement ran under the campaign driver** (`bb/pt/ctf-workflow`), pull its own numbers -
+they say precisely where the driver fought the operator, no guessing:
+
+```
+python3 scripts/campaign.py --eng <ENG> ledger --json
+```
+
+`drift` = network calls the driver never emitted (improvisation off the board); `dry_rounds` /
+`reframe_lenses_used` = how hard the campaign had to reframe to find anything; `paused_hosts` = hosts
+that banned us; `board.dead` vs `board.closed` = the exhaustion-to-finding ratio. A high drift or a
+long lens list is the retro's starting point.
+
 For each drift, name the **root cause** honestly: a *skill* that under-specified, a *hook* that
 should have fired a reflex but did not (or fired and was ignorable), or a *me* failure the harness
 had no mechanism to catch.

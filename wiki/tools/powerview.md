@@ -5,6 +5,7 @@ tags: [active-directory, enumeration, powershell, acl, bloodhound, situational-a
 date_created: 2026-07-02
 date_updated: 2026-07-02
 sources: [github-powersploit-powerview, harmj0y-powerview-tricks]
+phase: recon
 ---
 
 ## Purpose

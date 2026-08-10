@@ -332,15 +332,21 @@ def _wiki_excerpt(slugs):
 
 
 def fingerprint_hits(blob):
-    """Return up to MAX_HITS ROUTING lines ('<tech> detected -> load Skill(x)') from
-    playbook.json. Routing only: the named hunt skill owns the tests, tooling-first,
-    payload arsenal, and cheatsheet reuse -- this hook surfaces the skill, it does not
-    prescribe methodology."""
+    """Return up to MAX_HITS ROUTING lines ('<tech> detected -> load Skill(x) | run: <tools>')
+    from playbook.json. Routing only: the named hunt skill owns the tests, payload arsenal,
+    and cheatsheet reuse -- this hook surfaces the skill and the mapped tool, it does not
+    prescribe methodology.
+
+    The `tools` leg matters as much as `skills`: it was present in playbook.json from the
+    start and went unread here, so a fingerprint that routed to hunt-sqli six times never
+    once printed "sqlmap" while the bug was being hand-rolled with curl."""
     out = []
     for label, spec in fingerprint_records(blob):
         skills = spec.get("skills") or []
         sk = (" -> load " + ", ".join("Skill(%s)" % s for s in skills)) if skills else ""
-        out.append(f"  {label} detected{sk}")
+        tools = spec.get("tools") or []
+        tl = (" | run: " + ", ".join(tools)) if tools else ""
+        out.append(f"  {label} detected{sk}{tl}")
     return out
 
 

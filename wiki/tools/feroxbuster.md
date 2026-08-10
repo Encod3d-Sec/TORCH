@@ -5,6 +5,7 @@ tags: [brute-force, enumeration, recon, web]
 date_created: 2026-05-12
 date_updated: 2026-07-02
 sources: [0xdf-htb-agile, 0xdf-htb-alert, 0xdf-htb-analytics, 0xdf-htb-artificial, 0xdf-htb-backend, 0xdf-htb-backendtwo, 0xdf-htb-barrier, 0xdf-htb-blurry, 0xdf-htb-boardlight, 0xdf-htb-bolt, 0xdf-htb-bountyhunter, 0xdf-htb-broscience, 0xdf-htb-busqueda, 0xdf-htb-cap, 0xdf-htb-cat, 0xdf-htb-driver]
+phase: fuzz
 ---
 
 ## Purpose

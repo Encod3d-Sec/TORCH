@@ -5,6 +5,7 @@ tags: [active-directory, windows, smb, kerberos, lateral-movement, post-exploita
 date_created: 2026-06-16
 date_updated: 2026-06-16
 sources: []
+phase: postex
 ---
 
 ## Purpose

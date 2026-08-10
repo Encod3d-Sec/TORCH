@@ -1,0 +1,2 @@
+{"ts":"2026-08-07T09:00:00Z","kind":"tool","tool":"Skill","skill":"hunt-secrets"}
+{"ts":"2026-08-07T09:01:00Z","kind":"tool","tool":"Bash","bins":["sqlmap"]}
