@@ -35,6 +35,13 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
 service to its `Skill(hunt-*)` as the board names it; use `Skill(ctf-category)` for a standalone
 challenge (pwn/rev/crypto/forensics/stego).
 
+## Browser observation
+
+A box is VPN-boxed, so the local `chrome-devtools` MCP browser cannot reach it - use the **VM-side
+browser** (`scripts/browser.sh <url>` / `capture.sh web`) to render a JS-heavy web service and read
+its DOM + network requests (the rendered XHR/fetch calls reveal API routes a `curl` crawl misses -
+often the intended path). Rendered screenshots of the flag/exploited state are valid `web` PoCs.
+
 ## Gates
 
 G1 arsenal-first, G2 skill-first, G3 typed evidence (a flag on screen is a valid `web` PoC), G8

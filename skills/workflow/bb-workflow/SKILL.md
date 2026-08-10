@@ -32,6 +32,22 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
 3. `python3 scripts/campaign.py board` - writes the killchain 4a rows. Refuses on an empty state.
 4. Enter the loop. `next` serves one row, depth-first, one open row at a time.
 
+## Browser observation (chrome-devtools MCP)
+
+The programme's targets are internet-reachable, so **drive them through a real browser**, not just
+`curl` - a modern site's real attack surface is only visible rendered. Use the `chrome-devtools` MCP:
+
+- **Pass 1 crawl:** `navigate_page` to each app, then `list_network_requests` - the XHR/fetch calls a
+  page makes reveal the **API endpoints/routes** a static crawl never sees (this is exactly the lead a
+  curl-only recon misses). `take_snapshot` for the rendered DOM; `evaluate_script` to read client
+  config / `__NEXT_DATA__` / JS globals.
+- **Confirmation + evidence:** DOM-XSS fires in the real DOM (`evaluate_script` / console); a rendered
+  `take_screenshot` of the exploited state is a valid `web` PoC (G3).
+
+Caveat: chrome-devtools drives a **local** browser, so it only reaches internet targets. For a
+VPN-boxed host it cannot connect - use the VM-side browser (`scripts/browser.sh` / `capture.sh web`)
+as the equivalent. `pt-workflow` / `ctf-workflow` default to the VM browser for that reason.
+
 ## Gates (the driver enforces; do not fight them)
 
 - **G1** no exploit action until the row's arsenal card exists (`Skill(wiki-arsenal)` fills it).
