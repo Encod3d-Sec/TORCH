@@ -1,10 +1,10 @@
 {
   "_comment": "Baseline metrics for scripts/wiki-eval.py --check, captured from the clean index. Regenerate with: python3 scripts/wiki-eval.py --baseline. The pytest gate fails if a live eval drops aggregate hit@3 below baseline (minus epsilon) or flips a per-query hit@3 from true to false.",
-  "captured": "2026-07-21",
+  "captured": "2026-08-10",
   "aggregate": {
     "hit@3": 0.9608,
     "hit@5": 1.0,
-    "mrr": 0.7833,
+    "mrr": 0.8105,
     "n_queries": 51
   },
   "per_query_hit3": {
@@ -39,10 +39,10 @@
     "AWS S3 bucket public exposure enumeration": true,
     "Modbus ICS SCADA PLC coil holding register attack": true,
     "linux privilege escalation SUID sudo pspy enumeration": true,
-    "nxc": false,
+    "nxc": true,
     "impacket": true,
     "evil-winrm": true,
-    "nmap service version detection port scan": true,
+    "nmap service version detection port scan": false,
     "sqlmap automated sql injection dump database": true,
     "bloodhound active directory attack path graph": true,
     "ffuf directory content fuzzing wordlist": true,
