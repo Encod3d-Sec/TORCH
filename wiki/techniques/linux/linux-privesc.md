@@ -1792,3 +1792,26 @@ if pid == 0:
 `script -qc 'su - root' /dev/null` works interactively for the same reason.
 
 <!-- promoted-slug: writable-find-masked-unit-fp -->
+
+### Writable `/etc/hosts` + root job HTTP-fetch → capture root credentials
+
+If `/etc/hosts` is attacker-writable (world-writable, or granted via a POSIX ACL —
+check `getfacl /etc/hosts`) AND a root cron/service periodically HTTP-fetches a
+**hostname** (not a bare IP), steal root's credentials with no file overwrite or SUID:
+
+1. Confirm the job and its target hostname with [[pspy]] — watch the periodic root
+   `curl`/`wget`/HTTP client hitting `http://<name>/...`.
+2. Repoint that hostname to your listener: add a `<ATTACKER_IP>  <name>` line to
+   `/etc/hosts` (place it after any real entry — last match wins).
+3. Serve a page at that path that makes the job **authenticate to you** — a 401 with
+   `WWW-Authenticate: Basic`, or a login form the client auto-submits — and log the
+   request. The job replays root's stored credentials (Basic-auth header or POST body).
+4. Decode the captured `Authorization: Basic` / POST body → root's password; reuse for
+   `su` / SSH.
+
+Name resolution, not the HTTP endpoint, is the trust boundary the job relies on; an
+`/etc/hosts` write lets you MITM it locally. Find the ACL grant with `getfacl`, the job
+with `pspy`. Same idea applies to any root job that resolves a hostname it trusts (pkg
+mirror, internal API, license check).
+
+<!-- promoted-slug: writable-etc-hosts-root-fetch-cred-capture -->

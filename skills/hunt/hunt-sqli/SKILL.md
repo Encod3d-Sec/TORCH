@@ -59,8 +59,12 @@ test the SQLi on a different page that does.
    then `UNION SELECT`). Mind display truncation when sizing extracted chunks.
 5. Only then blind: boolean (`AND 1=1` vs `AND 1=2`) then time (`SLEEP(5)`/`pg_sleep(5)`/`WAITFOR`).
 6. **Second-order:** if login/register is parameterized, the SAME stored value may be unsafe on
-   another page (profile/dashboard/"last logins"). Register the payload as the username, log in,
-   then load the page that renders it. See the PROCESSLIST section below.
+   another page (profile/dashboard/"last logins") OR simply wherever the app echoes your stored
+   name back - a greeting, a "Welcome X", a counter/result line. Register the payload as the
+   username, log in, then load the page that renders it - and READ THE WHOLE reflected block, not a
+   keyword grep: the phrasing can shift (singular "1 word" vs plural "N words") and hide the dumped
+   data. This class is rare and under-tested, so it is easy to walk past - always try it before
+   concluding a parameterized login is safe. See the PROCESSLIST section below.
 7. NoSQL (MongoDB): replace value with `{"$gt": ""}` or `param[$ne]=invalid`.
 8. Automate with sqlmap on a confirmed candidate (won't find second-order or PROCESSLIST timing):
 ```bash

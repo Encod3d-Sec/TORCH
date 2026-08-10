@@ -489,6 +489,34 @@ def _weaponize_undone(d):
     return "[x]" not in body and "[~]" not in body and "[ ]" in body
 
 
+_CHECKLIST_RE = re.compile(r"^\s*-\s*\[[ x~!\-]\]", re.I | re.M)
+
+
+def _board_never_built(d):
+    """GATE signal: True iff killchain.md EXISTS but carries no real board content -- no
+    checklist item (`- [ ]`/`[x]`/`[~]`/`[!]`/`[-]`) AND no populated table data row. This is
+    the 'campaign board was never built' state: `campaign.py board` was never run, so the 4a
+    table + recon checklist are still the bare stub. Fail-closed to False (no nudge) when the
+    board is absent/unreadable OR has any content, so it never fires spuriously. A MISSING
+    killchain is deliberately NOT this case (a non-campaign engagement, board command N/A)."""
+    p = os.path.join(d, "killchain.md")
+    if not os.path.isfile(p):
+        return False
+    try:
+        txt = open(p, encoding="utf-8", errors="ignore").read()
+    except OSError:
+        return False
+    if _CHECKLIST_RE.search(txt):
+        return False
+    try:
+        import _engagement
+        if _engagement._parse_table(p):   # any populated (non-header/separator) data row
+            return False
+    except Exception:
+        pass
+    return True
+
+
 _LOOP_RE = re.compile(r"\bfor\b[^\n]*\bin\b|\bwhile\b[^\n]*\bdo\b|\bseq\b\s+\d", re.I)
 _FETCH_RE = re.compile(r"\b(?:curl|wget)\b", re.I)
 _THREADED_RE = re.compile(r"xargs\s+-\S*[pP]|\bparallel\b|\bffuf\b|\bferoxbuster\b", re.I)
@@ -578,6 +606,23 @@ def main():
                         open(marker, "w").close()
                     except OSError:
                         pass
+
+    # board-never-built nudge (fire-once per engagement, advisory, fail-open): an exploit-shaped
+    # command while killchain.md has NO board content (checklist empty + 4a table empty) means the
+    # campaign board was never generated. Skipping `campaign.py board` loses foothold-recording,
+    # vm-rsh routing, and the G3 typed-evidence gate. Framework-meta commands are exempt.
+    if d and _engagement and not _is_framework_meta(cmd):
+        marker = os.path.join(d, ".board-nudged")
+        if not os.path.exists(marker) and _is_exploit_cmd(cmd) and _board_never_built(d):
+            blocks.append(
+                "BOARD NOT BUILT: an exploit-shaped command ran but killchain.md has no board rows "
+                "-- the campaign board was never generated. Run `python3 scripts/campaign.py board` "
+                "first: skipping it loses foothold-recording, vm-rsh routing, and the G3 typed-"
+                "evidence gate.")
+            try:
+                open(marker, "w").close()
+            except OSError:
+                pass
 
     # serial-enumeration nudge (fire-once per engagement, advisory): a for/while/seq + curl loop
     # fetches one URL at a time -- the recurring serial-vs-parallel drift that turns a 10-min box
