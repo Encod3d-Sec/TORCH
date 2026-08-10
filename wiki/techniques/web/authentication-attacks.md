@@ -477,3 +477,40 @@ Combine with absent login lockout/rate-limit for same-day account takeover requi
 <!-- promoted-slug: a-correctly-content-masked-anti-enumeration-control-byte-ide -->
 
 <!-- promoted-slug: a-government-national-identity-number-used-as-the-default-ac -->
+
+## SQL Truncation Duplicate-Account Auth Bypass
+
+Register an account that collides with an existing privileged one (e.g. `admin`) by abusing
+silent string truncation on INSERT. Works when the registration duplicate-check and the INSERT
+disagree about length: MySQL in non-strict mode (`STRICT_ALL_TABLES` off, the pre-5.7 default)
+truncates an over-length string to the column width on write AND ignores trailing spaces in
+`=` comparisons.
+
+Mechanism:
+- The dup-check `SELECT ... WHERE username = 'admin' + <spaces> + 'x'` does NOT match the real
+  `admin` row (the trailing `x` makes the compared value differ), so registration is allowed.
+- The `INSERT` truncates the padded value to the column width, dropping the `x` and leaving
+  `admin` + spaces, which MySQL later compares equal to `admin`.
+- You now own a second row whose effective username is the privileged account, with a password
+  you chose. Log in as the privileged username with your password.
+
+Payload: register `admin` (or the exact target username, incl. an email like `admin@bank.a`)
+followed by ~20 spaces and one junk char, so the junk lands past the column width:
+```
+username = admin<20 spaces>a       # sent url-encoded; client maxlength is bypassed via curl/Burp
+```
+Then log in as `admin` / <your password> -> authenticated as the privileged user.
+
+Gotchas / boundary:
+- Only fires on non-strict SQL modes; strict mode errors instead of truncating. Common on legacy
+  PHP/MySQL stacks (recognisable by old Apache/PHP banners).
+- The junk char after the spaces is essential: without it the dup-check's trailing-space folding
+  matches the existing row and registration is refused.
+- Confirm by observing a successful auth (redirect/session) as the target username; a plain
+  "registered" message is not proof.
+
+Distinct from **Email Truncation for Domain Bypass** (see business-logic): that abuses a fixed-
+length cut to smuggle a trusted domain suffix; this abuses the same truncation to forge a
+duplicate of a *privileged username*.
+
+<!-- promoted-slug: sql-truncation-dup-account -->

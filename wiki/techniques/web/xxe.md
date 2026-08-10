@@ -780,3 +780,17 @@ Other known overridable entities in system DTDs:
 - [[wiki/techniques/web/ssrf]] (external entities turn the XML parser into an SSRF client)
 - [[file-upload]] (SVG, DOCX, and XML uploads are prime XXE entry points)
 - [[path-traversal-lfi]] (XXE file:// entities read arbitrary local files)
+
+## Picking the reflected element in a multi-field XML body
+
+When the XML the app parses has several child elements but only ONE is echoed back, the external
+entity must be placed in the reflected element, not just the first field. Fingerprint the sink
+first with benign values: send distinct markers in each element and see which one comes back
+(e.g. `<name>AAA</name><search>BBB</search>` -> response contains `BBB` => `search` is the sink).
+Then move `&xxe;` into that element. An entity in a non-reflected element parses fine but returns
+nothing, which reads like a failed XXE when the bug is real.
+
+PHP tell: source with `libxml_disable_entity_loader(false)` plus `loadXML($x, LIBXML_NOENT |
+LIBXML_DTDLOAD)` is external-entity resolution deliberately re-enabled = XXE by construction.
+
+<!-- promoted-slug: xxe-reflected-element-selection -->

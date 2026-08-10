@@ -78,6 +78,7 @@ eyJhbGciOiJub25lIn0.PAYLOAD.
 5. Test JWT if present: none algorithm, key confusion, weak secret
 6. Test password reset: host header injection, token in Referer, token reuse after expiry
 7. Test email change: no re-auth, no confirmation
+7a. On a legacy PHP/MySQL stack (old Apache/PHP banner) with self-registration, try **SQL truncation** to forge a duplicate of a privileged username (register `admin`+spaces+junk, log in as `admin`/yourpass) - see [[authentication-attacks]] "SQL Truncation Duplicate-Account Auth Bypass".
 8. Verify impact: demonstrate full ATO on test account B from attacker session A, then clear the confirmation gate below
 9. **Distill when confirmed** (per hunt-core): a reusable legacy-endpoint bypass or JWT variant, GENERIC (no client host): `python3 scripts/wiki-stage.py --kind technique --slug <slug> --target-page techniques/web/authentication-attacks.md`
 

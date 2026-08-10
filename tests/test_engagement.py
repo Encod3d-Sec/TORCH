@@ -443,6 +443,85 @@ def test_learn_pending_false_none_dir_fails_open():
     assert _engagement.learn_pending(None) is False
 
 
+# ---- flag_accounting_gap / captured_flags (ctf close-out flag sweep) --------------
+
+def _solved_ctf(tmp_path, flags_expected="3", flags=(), etype="ctf"):
+    fe = "" if flags_expected is None else str(flags_expected)
+    (tmp_path / "state.md").write_text(
+        '---\ntype: engagement-state\nengagement_type: %s\nflags_expected: "%s"\n---\n\n'
+        "# State\n\n## STATUS: SOLVED\n" % (etype, fe), encoding="utf-8")
+    rows = "".join("| %s | flag | src | where | captured |\n" % f for f in flags)
+    (tmp_path / "loot.md").write_text(
+        "---\ntype: engagement-loot\n---\n\n# Loot\n\n| item | type | source | where | status |\n"
+        "|---|---|---|---|---|\n" + rows, encoding="utf-8")
+
+
+def test_flag_gap_fires_on_shortfall(tmp_path):
+    _solved_ctf(tmp_path, "3", ("THM{aaa}", "THM{bbb}"))
+    g = _engagement.flag_accounting_gap(str(tmp_path))
+    assert g and "2/3" in g and "THM{" in g
+
+
+def test_flag_gap_silent_when_complete(tmp_path):
+    _solved_ctf(tmp_path, "3", ("THM{aaa}", "THM{bbb}", "THM{ccc}"))
+    assert _engagement.flag_accounting_gap(str(tmp_path)) == ""
+
+
+def test_flag_gap_fires_when_expected_unset(tmp_path):
+    _solved_ctf(tmp_path, "", ("THM{aaa}",))
+    g = _engagement.flag_accounting_gap(str(tmp_path))
+    assert g and "unset" in g.lower()
+
+
+def test_flag_gap_silent_when_not_solved(tmp_path):
+    (tmp_path / "state.md").write_text(
+        '---\nengagement_type: ctf\nflags_expected: "3"\n---\n\n# State\n\n| host |\n|---|\n',
+        encoding="utf-8")
+    (tmp_path / "loot.md").write_text("# Loot\n", encoding="utf-8")
+    assert _engagement.flag_accounting_gap(str(tmp_path)) == ""
+
+
+def test_flag_gap_silent_for_non_ctf(tmp_path):
+    _solved_ctf(tmp_path, "3", (), etype="pentest")
+    assert _engagement.flag_accounting_gap(str(tmp_path)) == ""
+
+
+def test_flag_gap_fails_open_missing_state(tmp_path):
+    assert _engagement.flag_accounting_gap(str(tmp_path)) == ""
+    assert _engagement.flag_accounting_gap(None) == ""
+
+
+def test_flag_gap_infers_platform_prefix(tmp_path):
+    _solved_ctf(tmp_path, "2", ("HTB{only}",))
+    g = _engagement.flag_accounting_gap(str(tmp_path))
+    assert g and "HTB{" in g
+
+
+def test_captured_flags_dedups_duplicate_value(tmp_path):
+    # a copied flag file (/tmp/rootflag.txt == /root/root.txt) must count once
+    _solved_ctf(tmp_path, "3", ("THM{root}", "THM{root}", "THM{user}"))
+    assert _engagement.captured_flags(str(tmp_path)) == {"THM{root}", "THM{user}"}
+
+
+def test_captured_flags_ignores_prose_placeholder_row(tmp_path):
+    # a 'Base Flag' placeholder row (no PREFIX{...} token) is not a captured flag
+    _solved_ctf(tmp_path, "3", ("THM{user}",))
+    with open(tmp_path / "loot.md", "a", encoding="utf-8") as fh:
+        fh.write("| Base Flag | flag | room page | off-box | not on target |\n")
+    assert _engagement.captured_flags(str(tmp_path)) == {"THM{user}"}
+
+
+def test_captured_flags_skips_decoy_labeled_row(tmp_path):
+    # a decoy flag file must NOT count as a scored flag (else it masks a missing scored flag)
+    _solved_ctf(tmp_path, "3", ("THM{user}", "THM{root}"))
+    with open(tmp_path / "loot.md", "a", encoding="utf-8") as fh:
+        fh.write("| THM{decoyval} | flag | /home/x/flag1.txt | DECOY troll marker | captured |\n")
+    assert _engagement.captured_flags(str(tmp_path)) == {"THM{user}", "THM{root}"}
+    # and the gap now correctly fires 2/3 despite the decoy string being present
+    g = _engagement.flag_accounting_gap(str(tmp_path))
+    assert g and "2/3" in g
+
+
 def test_eval_in_shared_core_for_every_type():
     for etype in ("ctf", "bugbounty", "pentest"):
         assert ("eval.md", "_eval.md") in _engagement._heal_shared_set(etype), etype

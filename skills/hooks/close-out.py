@@ -116,6 +116,19 @@ def main():
             open(em_marker, "w").close()
     except Exception:
         pass
+    # Flag-accounting reflex (ctf only): SOLVED but fewer flags recorded than flags_expected,
+    # or flags_expected unset -> nudge the full-FS flag sweep. Prints first but does NOT return,
+    # so the evidence/walkthrough/learn chain below still surfaces. Fires each Stop while unsatisfied
+    # (same as the walkthrough/learn nudges); resolves the moment the flags are recorded.
+    fg = _engagement.flag_accounting_gap(d)
+    if fg:
+        print("Flag accounting: " + fg)
+        try:
+            import _telemetry
+            _telemetry.drift("close-out", "flags under-counted / flags_expected unset at SOLVED")
+            _telemetry.hook("close-out", action="flag-accounting-nudge")
+        except Exception:
+            pass
     gaps = _engagement.web_evidence_gaps(d)
     if gaps:
         print("Close-out INCOMPLETE (web box marked SOLVED but evidence missing): "

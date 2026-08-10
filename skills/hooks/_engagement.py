@@ -898,6 +898,73 @@ def unsprayed_cred_gap(d):
         return 0
 
 
+# a flag token in a loot.md item cell: PREFIX{...}. Excludes placeholder rows ("Base Flag")
+# whose item is prose, so an un-captured flag never counts toward the total.
+_FLAG_STR_RE = re.compile(r"[A-Za-z0-9_]{2,}\{[^}]+\}")
+
+
+def captured_flags(d):
+    """Distinct SCORED flag strings recorded in loot.md (any cell containing a PREFIX{...}
+    token). De-duplicated by value so a copied flag file (e.g. /tmp/rootflag.txt ==
+    /root/root.txt) counts once. A row labelled `decoy` (case-insensitive) is skipped, so a
+    troll/decoy flag file does not inflate the count and mask a genuinely missing scored flag.
+    Fail-open -> set() on any error."""
+    out = set()
+    if not d:
+        return out
+    try:
+        loot = open(os.path.join(d, "loot.md"), encoding="utf-8", errors="ignore").read()
+        for ln in loot.splitlines():
+            if "decoy" in ln.lower():
+                continue
+            for m in _FLAG_STR_RE.finditer(ln):
+                out.add(m.group(0))
+    except Exception:
+        pass
+    return out
+
+
+def flag_accounting_gap(d):
+    """Close-out reflex for a SOLVED ctf box: returns a nudge string when the flags recorded
+    in loot.md are fewer than state.md's `flags_expected`, OR flags_expected is unset/empty
+    (can't verify -> still remind to set it + run the full-FS sweep). Returns "" when
+    satisfied, not SOLVED, or not a ctf box. Fail-open ("" on any error).
+
+    This is the guard a CTF flag-accounting retro exposed: a box was declared done with a
+    mislabeled decoy user flag and a scored flag missed entirely, nothing checked completeness."""
+    if not d:
+        return ""
+    try:
+        if not is_solved(d):
+            return ""
+        if (engagement_type(d) or "").lower() != "ctf":
+            return ""
+        st = open(os.path.join(d, "state.md"), encoding="utf-8", errors="ignore").read()
+        raw = (_frontmatter(st).get("flags_expected") or "").strip()
+        flags = captured_flags(d)
+        n = len(flags)
+        fmt = next((f.split("{", 1)[0] for f in flags), "flag")   # infer sweep prefix
+        sweep = ("`grep -RIn '%s{' / --exclude-dir={proc,sys,dev,run}`" % fmt)
+        try:
+            expected = int(raw)
+        except (TypeError, ValueError):
+            expected = None
+        common = ("The first home-dir flag may be a DECOY and the scored user flag may belong "
+                  "to a LATER user; verify each captured flag matches the room's answer format. "
+                  "A scored flag that is nowhere on disk (a THM 'Base Flag') may live in the "
+                  "ROOM-PAGE source (view-source), not the box.")
+        if expected is None:
+            return ("flags_expected is unset in state.md and %d flag(s) are recorded. Set "
+                    "flags_expected from the room's answer boxes, then run %s to enumerate ALL "
+                    "flags. %s" % (n, sweep, common))
+        if n < expected:
+            return ("SOLVED but only %d/%d flags recorded. Run %s to enumerate ALL flags. %s"
+                    % (n, expected, sweep, common))
+        return ""
+    except Exception:
+        return ""
+
+
 def ensure_state_files():
     """Create any missing per-engagement files (from the type's template) and the
     standard dirs in the active engagement. The shared set is type-aware: a ctf

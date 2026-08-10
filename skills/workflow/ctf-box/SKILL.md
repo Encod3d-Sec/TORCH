@@ -380,6 +380,13 @@ Load `Skill(hunt-idor)`/`Skill(hunt-ssrf)`/`Skill(hunt-api)`. Owned via app-logi
 - **A grep of a page/JS is NOT a read:** greps filtered out the exact `sendRequest`/`/fetch` lines. When an upload's files vanish or a site "has no dynamic surface", open the JS handler/response and read top-to-bottom.
 - **Egress was port-filtered:** `/dev/tcp` + shells to high ports (9001) died while curl and a python reverse shell to 443 worked. Confirm egress with a curl-callback over candidate ports, use an http-ish port. Root was PwnKit once the intended knockd->SSH path was dead. See [[privesc-exploit-arsenal]].
 
+## Lesson: flag accounting - sweep ALL flags after root; the first one is not "the user flag" (THM Battery)
+- **The instant you have root, enumerate EVERY flag before declaring done:** `grep -RIn 'THM{' / --exclude-dir={proc,sys,dev,run,mnt} 2>/dev/null` (swap the platform's format: `flag{`, `HTB{`, `picoCTF{`). One command, authoritative. I grabbed root + the FIRST home-dir flag and reported it as "user flag" - it was a DECOY, and the real user flag was in a SECOND user's home. The end-of-box full-FS grep found all of them in seconds; run it at the START of close-out, not after the operator says a flag is wrong.
+- **A flag file with a troll marker is a decoy:** `flag1.txt` ended with "Sorry I am not good in designing ascii art :(" - the room's tell that it is not a scored flag. Multiple shell users (`cyber` AND `yash`) means the scored "user flag" may belong to a LATER user reached by lateral movement, not the first foothold.
+- **A root shortcut can skip the intended user flag.** I jumped `cyber -> root` via a `sudo NOPASSWD` script and never did the intended `cyber -> yash` lateral (a root-owned `emergency.py` + a `fernet` token in yash's home) - which is exactly where the scored user flag lived. Getting root fast is fine, but then sweep for the flags/steps the shortcut bypassed.
+- **Map flags to the room's task structure + answer format UP FRONT, and know the platform mechanic:** count how many flags the room scores and their format (`THM{` + 32 hex here). Revamped THM rooms plant an intro/"Base Flag" as an HTML comment in the ROOM PAGE source on tryhackme.com (view-source / Ctrl+U), NOT on the target - a full-FS grep on the box will never find it. If a scored flag is nowhere on disk, it is an off-box/portal artifact, not a missed file.
+- **Verify file state with `wc -c`/`md5sum`, not a single `ls`.** A lone `ls` showed a transient wrong size (mid box-reset); byte count + md5 + the served response agreeing is the real "did we read the whole file". A THM/HTB box redeploys/resets under you - re-verify rather than trusting one stat.
+
 ## Context tools
 
 <!-- auto-wired: documented tools to reach for; do not hand-roll -->
