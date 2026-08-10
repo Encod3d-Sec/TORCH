@@ -52,6 +52,23 @@ def test_driver_call_resets_streak(vault):
     assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 0
 
 
+def test_post_foothold_never_denies(vault):
+    """Post-foothold, privesc enum is legit and varied -> the guard ADVISES but must never hard-deny
+    (blocking privesc enum is the over-fire the review warned about). Deny stays for pre-foothold."""
+    eng = vault / "targets" / "acme"
+    json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
+    (eng / "killchain.md").write_text(
+        "### 4a\n| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n"
+        "| r1 | 10.0.0.5 | privesc | linpeas | [ ] |\n")
+    (eng / "state.md").write_text("| asset | access |\n|--|--|\n| 10.0.0.5 | foothold |\n")
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    o1 = _run("bash /root/vm.sh 'python3 /tmp/x.py'", env)
+    o2 = _run("nmap 10.0.0.5", env)
+    o3 = _run("curl http://10.0.0.5/", env)         # 3rd - would DENY pre-foothold; here only advises
+    assert o3.get("permissionDecision") != "deny"
+    assert "additionalContext" in o3
+
+
 def test_framework_meta_not_drift(vault):
     """Dev/framework commands (pytest, editing scripts) must NOT fire even while an engagement is
     active at pass>=5 - observed misfiring on pytest during harness development."""

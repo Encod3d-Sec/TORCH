@@ -81,6 +81,21 @@ def _enforcing():
     return not os.path.exists(os.path.join(HERE, ".enforce-off"))
 
 
+def _post_foothold(d, _eng):
+    """True once any asset has reached foothold+ (state.md access). Post-foothold, privesc enum
+    (cat/sudo/find/linpeas over a shell) is legitimate and varied, so the guard must NEVER hard-deny
+    there - it only ADVISES. Hard-blocking privesc enum is the over-fire the review warned about;
+    the deny path stays for the pre-foothold scripted-exploit drift that actually lost the box."""
+    try:
+        for r in _eng._parse_table(os.path.join(d, "state.md")):
+            acc = (r.get("access") or r.get("foothold") or "").strip().lower()
+            if any(k in acc for k in ("foothold", "shell", "user", "root", "admin", "owned", "vuln")):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 def _bins_in(cmd):
     """Exploit/scan binaries mentioned anywhere in the command string (whole-string search, so a
     binary inside a `bash vm.sh '<inner>'` wrapper is still seen)."""
@@ -160,11 +175,12 @@ def main():
     try:
         import _telemetry
         _telemetry.drift("drift-guard", "off-board streak %d (%s)" % (streak, off))
-        _telemetry.hook("drift-guard", action=("deny" if streak >= 3 and _enforcing() else "advise"))
+        _telemetry.hook("drift-guard", action=("deny" if streak >= 3 and _enforcing()
+                        and not _post_foothold(d, _engagement) else "advise"))
     except Exception:
         pass
 
-    if streak >= 3 and _enforcing():
+    if streak >= 3 and _enforcing() and not _post_foothold(d, _engagement):
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": "deny",

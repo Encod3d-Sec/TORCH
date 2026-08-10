@@ -15,7 +15,8 @@
     "web-recon": ["subfinder", "httpx", "katana", "gau", "nuclei"],
     "web-fuzz": ["ffuf"],
     "param-endpoint": ["sqlmap"],
-    "js": ["jsluice"]
+    "js": ["jsluice"],
+    "exploit": ["msfconsole"]
   },
   "visual_evidence_classes": ["xss", "ssti", "upload-preview", "ui-authz", "flag-onscreen"],
   "_reframe_comment": "Generative lenses first (off-playbook, chain-first) so the driver deterministically produces rows before the narrative lenses that need agent recon; otherwise two front-loaded dry lenses would terminate the campaign before the productive ones run.",

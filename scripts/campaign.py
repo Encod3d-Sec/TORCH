@@ -246,6 +246,11 @@ def _tool_for_class(cls, cfg):
     pdt = cfg.get("phase_default_tools", {})
     if cls in ("sqli", "idor", "graphql", "nosql"):
         return (pdt.get("param-endpoint") or ["sqlmap"])[0]
+    # Known-CVE / RCE exploitation: prefer a vetted Metasploit module (msfconsole -q -x 'search ...;
+    # use ...; set RHOSTS/LHOST; run -z; exit') over a hand-rolled exploit - faster, more reliable,
+    # and keeps the operator on a tool instead of bespoke exploit code.
+    if cls in ("rce", "cve-check", "deserialization", "cmdi", "ssti"):
+        return (pdt.get("exploit") or ["msfconsole"])[0]
     return (pdt.get("web-fuzz") or ["ffuf"])[0]
 
 

