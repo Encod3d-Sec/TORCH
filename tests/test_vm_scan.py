@@ -48,3 +48,15 @@ def test_remote_script_reports_reused_vs_new_window():
 
 # (Area 2 .pending-tmux marker removed: loop-driver + recon-capture tmux staging that
 # consumed it are deleted, so vm-scan.sh no longer writes the marker.)
+
+
+def test_win_msf_lands_msfconsole_in_a_named_msf_window():
+    # interactive-session design: msfconsole is launched into its own persistent tmux window via
+    # the existing generic --win, no launcher change. Mirrors the shell-window pattern.
+    out = dry("--win", "msf", "eng1", "10.0.0.5",
+              "msfconsole", "-q", "-x", "use exploit/multi/handler; run")
+    assert "-n 'msf'" in out                                 # window is named msf
+    assert '$2=="msf"' in out                                # lookup keys on the msf window name
+    assert "msfconsole -q -x use exploit/multi/handler; run" in out   # the msf launch cmd is sent
+    assert "10-0-0-5" not in out.split("send-keys", 1)[0]    # the target is NOT the window name
+    assert "has-session -t eng1" in out                      # still one session per engagement

@@ -618,6 +618,9 @@ def cmd_init(a):
     sz = os.path.getsize(de) if os.path.isfile(de) else 0
     print("campaign init: %s type=%s. Deadends.md is %d bytes (read it before selecting a host)."
           % (os.path.basename(d), t, sz))
+    if t == "ctf":
+        print("reminder: set `flags_expected` in state.md from the room's answer boxes "
+              "(base+user+root...) so the close-out flag-sweep reflex can verify completeness.")
     print("next: campaign.py board  (after passes 1-3 have fed state.md)")
     return 0
 
@@ -975,6 +978,11 @@ def cmd_next(a):
     effort = _row_effort(d, st, rid)
     print("ROW       %s  %s x %s        (%d/%d effort)"
           % (rid, row.get("asset"), row.get("vuln class"), effort, ceiling))
+    win = (st.get("footholds") or {}).get(asset)
+    eng = os.path.basename(os.path.normpath(d))
+    if win:
+        print("FOOTHOLD  session live in tmux window '%s' -> operator can: tmux attach -t %s"
+              % (win, eng))
     print("")
     print("REQUIRED, in order:")
 
@@ -1020,7 +1028,13 @@ def cmd_next(a):
     tool = (row.get("tool") or "").strip()
     if tool:
         inv = tool_index().get(tool, {}).get("invocation") or (tool + " <target>")
-        print("  %d. run: %s          [G8: tool-first]" % (n, inv))
+        if win:
+            # post-foothold: keep the persistent session + operator visibility (route through the
+            # known driver primitive, which fixes the drift-guard's post-foothold blind spot).
+            print("  %d. run: bash scripts/vm-rsh.sh --win %s %s '%s'   [post-foothold: persistent "
+                  "session; G8]" % (n, win, eng, inv))
+        else:
+            print("  %d. run: %s          [G8: tool-first]" % (n, inv))
         st.setdefault("emitted_bins", [])
         if tool not in st["emitted_bins"]:
             st["emitted_bins"].append(tool)
@@ -1206,6 +1220,77 @@ def _append_pivot_rows(d, st, asset, cls):
     return added, skipped
 
 
+def _set_state_access(d, asset, win, access="foothold"):
+    """Flip the state.md inventory row whose key cell == `asset` to access=`access` and note the
+    tmux window. Line-based (mirrors E._parse_table's header/separator handling) so it rewrites one
+    cell in place without a table library. Returns True if a row matched. Fail-soft on any IO."""
+    p = os.path.join(d, "state.md")
+    try:
+        lines = open(p, encoding="utf-8", errors="ignore").read().split("\n")
+    except Exception:
+        return False
+    header = None
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not s.startswith("|"):
+            if header is not None:
+                break  # table ended
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if set("".join(cells)) <= set("-: "):
+            continue  # separator
+        if header is None:
+            header = [c.lower() for c in cells]
+            continue
+        if not cells or cells[0] != asset:
+            continue
+        ai = header.index("access") if "access" in header else None
+        ni = header.index("notes") if "notes" in header else None
+        changed = False
+        if ai is not None and ai < len(cells):
+            cells[ai] = access
+            changed = True
+        note = "tmux:%s" % win
+        if ni is not None and ni < len(cells) and note not in cells[ni]:
+            cells[ni] = (cells[ni] + "; " + note) if cells[ni] else note
+            changed = True
+        if changed:
+            lines[i] = "| " + " | ".join(cells) + " |"
+            open(p, "w", encoding="utf-8").write("\n".join(lines))
+        return True
+    return False
+
+
+def _record_foothold(d, st, asset, win):
+    """Mark an asset's foothold: store the tmux window in state.json and flip its state.md row to
+    access=foothold. next() then routes post-ex tool commands for this asset through
+    `vm-rsh --win <win>`, keeping the persistent session and operator visibility (the drift-guard's
+    post-foothold blind spot). Mutates st; caller saves. Returns True if a state.md row matched."""
+    if not asset or not win:
+        return False
+    st.setdefault("footholds", {})[asset] = win
+    return _set_state_access(d, asset, win)
+
+
+def cmd_foothold(a):
+    d = _resolve(a.eng)
+    st = _load_state(d) if d else None
+    if not d or not st:
+        _die("no initialised campaign")
+    asset = a.asset or st.get("asset_cursor")
+    if not asset:
+        _die("foothold needs an <asset> (or a cursor asset from a prior `next`)")
+    matched = _record_foothold(d, st, asset, a.win)
+    _save_state(d, st)
+    eng = os.path.basename(os.path.normpath(d))
+    print("campaign foothold: %s -> tmux window '%s'%s"
+          % (asset, a.win, "" if matched else " (no state.md row matched; recorded anyway)"))
+    print("  post-ex for %s now routes through: bash scripts/vm-rsh.sh --win %s %s '<cmd>'"
+          % (asset, a.win, eng))
+    print("  operator can: tmux attach -t %s" % eng)
+    return 0
+
+
 def cmd_done(a):
     d = _resolve(a.eng)
     st = _load_state(d) if d else None
@@ -1287,6 +1372,14 @@ def cmd_done(a):
     _save_state(d, st)
     write_board(d, rows)
     print("campaign done: %s closed [x]" % a.row)
+
+    if getattr(a, "win", None):
+        _record_foothold(d, st, (row.get("asset") or "").strip(), a.win)
+        _save_state(d, st)
+        eng = os.path.basename(os.path.normpath(d))
+        print("foothold recorded: %s access=foothold, tmux window '%s' -> post-ex routes through "
+              "vm-rsh --win %s ; operator can: tmux attach -t %s"
+              % (row.get("asset"), a.win, a.win, eng))
 
     if a.find:
         # track the max severity found, for the reframe/close-out decision (Task 21)
@@ -1509,7 +1602,11 @@ def main(argv):
     p = sub.add_parser("note"); p.add_argument("row"); p.add_argument("--arsenal", required=True); p.set_defaults(fn=cmd_note)
     p = sub.add_parser("done")
     p.add_argument("row"); p.add_argument("--poc"); p.add_argument("--kind", choices=["req", "burp", "web"])
-    p.add_argument("--find"); p.add_argument("--dead"); p.add_argument("--park"); p.set_defaults(fn=cmd_done)
+    p.add_argument("--find"); p.add_argument("--dead"); p.add_argument("--park")
+    p.add_argument("--win", help="tmux window the foothold session landed in -> record it (post-ex routes through vm-rsh --win)")
+    p.set_defaults(fn=cmd_done)
+    p = sub.add_parser("foothold"); p.add_argument("asset", nargs="?"); p.add_argument("--win", required=True)
+    p.set_defaults(fn=cmd_foothold)
     sub.add_parser("pass-done").set_defaults(fn=cmd_pass_done)
     p = sub.add_parser("pause-host"); p.add_argument("host"); p.add_argument("--resume", action="store_true"); p.set_defaults(fn=cmd_pause_host)
     p = sub.add_parser("ledger"); p.add_argument("--json", action="store_true"); p.set_defaults(fn=cmd_ledger)

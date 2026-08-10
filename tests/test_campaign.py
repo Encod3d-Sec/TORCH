@@ -697,3 +697,64 @@ def test_full_happy_path_close_a_row(eng):
     rows2 = E._parse_table(os.path.join(eng, "killchain.md"))
     closed = next(r for r in rows2 if r["id"] == target["id"])
     assert closed["status"] == "[x]" and closed["poc"] == "poc/x.png"
+
+
+# ------------------------------------- tmux interactive-session / foothold wiring (design 2026-08-10)
+
+def test_foothold_records_window_and_next_routes_post_ex_through_vm_rsh(eng):
+    _init(eng)
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rid = next(r["id"] for r in rows if r["asset"] == "asset-1")   # default-creds / trufflehog
+    _write_arsenal(eng, "mc")
+    run(eng, "note", rid, "--arsenal", "mc", expect=0)             # arms G1 + makes asset-1 sticky
+    # a shell lands for asset-1 in tmux window 'shell'
+    r = run(eng, "foothold", "asset-1", "--win", "shell", expect=0)
+    assert "tmux attach" in r.stdout
+    # state.md row flips to access=foothold and notes the window
+    srow = next(x for x in E._parse_table(os.path.join(eng, "state.md")) if x["asset"] == "asset-1")
+    assert srow["access"] == "foothold"
+    assert "tmux:shell" in srow["notes"]
+    # state.json records it
+    st = json.load(open(os.path.join(eng, ".campaign.json")))
+    assert st["footholds"]["asset-1"] == "shell"
+    # next serves asset-1 (sticky) and routes its tool through vm-rsh --win shell + shows the attach hint
+    r = run(eng, "next", expect=0)
+    assert "FOOTHOLD" in r.stdout and "tmux attach" in r.stdout
+    assert "vm-rsh.sh --win shell" in r.stdout
+    assert "trufflehog" in r.stdout
+
+
+def test_next_without_foothold_emits_bare_tool(eng):
+    # regression: a non-foothold asset must NOT get the vm-rsh wrapper (only footholded assets do).
+    _init(eng)
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rid = next(r["id"] for r in rows if r["asset"] == "asset-1")
+    _write_arsenal(eng, "mc")
+    run(eng, "note", rid, "--arsenal", "mc", expect=0)
+    r = run(eng, "next", expect=0)
+    assert "vm-rsh.sh" not in r.stdout
+    assert "FOOTHOLD" not in r.stdout
+
+
+def test_done_win_records_foothold_on_close(eng):
+    _init(eng)
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    target = next(r for r in rows if r["asset"] == "asset-1")
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:      # satisfy G2 like the happy-path test
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": target["skill"]}) + "\n")
+    _write_arsenal(eng, "mc")
+    run(eng, "note", target["id"], "--arsenal", "mc", expect=0)
+    r = run(eng, "done", target["id"], "--poc", "poc/shell.png", "--kind", "req", "--win", "shell", expect=0)
+    assert "foothold recorded" in r.stdout
+    srow = next(x for x in E._parse_table(os.path.join(eng, "state.md")) if x["asset"] == "asset-1")
+    assert srow["access"] == "foothold" and "tmux:shell" in srow["notes"]

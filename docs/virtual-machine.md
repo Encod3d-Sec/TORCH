@@ -57,6 +57,27 @@ terminal card with `shot.py --tmux <eng>:<target>`; capture a GUI app / the desk
 tab name) that `vm-scan.sh` prints, not the raw dotted target (a dot in the target
 collides with tmux's `session:window.pane` syntax).
 
+### tmux for interactive sessions (shell + msfconsole)
+
+tmux is NOT for scan parallelism (one-shots + the `capture-poc` hook cover that). It is reserved
+for landing a PERSISTENT INTERACTIVE session so it survives the agent's one-shot command boundaries
+and is `tmux attach`-able for manual operator work. Same `--win` mechanism, split by session type:
+
+- **Reverse shell:** `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` holds the listener; the
+  shell lands in `<eng>:shell`. Drive it one command at a time with `vm-rsh.sh --win shell <eng> '<cmd>'`
+  (base64 + marker wrapped, clean output).
+- **msfconsole / meterpreter:** `vm-scan.sh --win msf <eng> <target> "msfconsole -q -x 'use <mod>; set
+  RHOSTS ...; run'"` lands msfconsole in `<eng>:msf`, persistent + attachable. Drive msf itself by
+  **operator attach** (`tmux attach -t <eng>`); for agent-driven post-ex, drop to a system shell inside
+  the session and use `vm-rsh.sh --win msf` there. `vm-rsh`'s wrapper is bash (`... | base64 -d | bash`),
+  so it frames a shell, not the raw `msf6 >` REPL.
+- **Operator takeover:** `tmux attach -t <eng>` on the VM, select the `shell`/`msf` window.
+
+The campaign driver records the foothold window (`campaign.py foothold <asset> --win <win>`, or
+`done ... --win <win>` on the closing find). After that, `campaign.py next` routes post-foothold tool
+commands for that asset through `vm-rsh --win <win>` and prints the `tmux attach` hint, keeping the
+persistent session and operator visibility past foothold.
+
 GUI grabs need the desktop's X session: shot.py resolves the seat user/display from `who`,
 unlocks via `loginctl unlock-session`, wakes with `xset dpms force on`, and grabs as that
 user with `XAUTHORITY` (a bare `scrot` as root-over-SSH fails with "Can't open X display").

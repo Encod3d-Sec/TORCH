@@ -26,6 +26,11 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
 3. `python3 scripts/campaign.py board` - writes the 4a rows (plus 4b lateral/privesc/DCSync for the
    pentest approach). Refuses on empty state.
 4. Enter the loop, depth-first, one open row at a time.
+5. **When a shell/session lands on a host** (reverse shell via `vm-scan.sh --win shell`, or
+   meterpreter via `--win msf`), record it: `python3 scripts/campaign.py foothold <host> --win shell`
+   (or ride it on the closing find with `done ... --win`). The driver flips that host's `state.md`
+   row to `access=foothold`, routes its 4b lateral/privesc rows through `vm-rsh --win <win>`
+   (persistent session + operator visibility), and prints `tmux attach -t <eng>` for takeover.
 
 ## Gates
 

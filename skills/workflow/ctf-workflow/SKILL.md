@@ -27,6 +27,13 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
 4. `python3 scripts/campaign.py board` - writes 4a foothold rows plus 4b pspy/linpeas/sudo/docker
    privesc rows for the ctf approach.
 5. Enter the loop, depth-first.
+6. **When a foothold lands** (a reverse shell in a tmux window via `vm-scan.sh --win shell`, or a
+   meterpreter/msfconsole session via `--win msf`), record it: `python3 scripts/campaign.py foothold
+   <target> --win shell` (or `--win msf`; or ride it on the closing find with `done ... --win`). The
+   driver flips the asset's `state.md` row to `access=foothold`, routes its 4b privesc rows through
+   `vm-rsh --win <win>` (persistent session + operator visibility past foothold), and prints `tmux
+   attach -t <eng>` for manual takeover. msf itself is operator-attach / drop-to-shell, not
+   `vm-rsh`-driven (its wrapper frames a bash shell, not the `msf6 >` REPL).
 
 ## Box recipes
 
