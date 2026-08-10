@@ -34,6 +34,7 @@ EXPECTED_HOOKS = [
     ("UserPromptSubmit", "hunt-trigger.py"),
     ("PostToolUse", "recon-capture.py"),
     ("PostToolUse", "tool-telemetry.py"),
+    ("PostToolUse", "capture-poc.py"),
     ("PostToolUse", "wiki-reindex.py"),
     ("PreToolUse", "scope-guard.py"),
     ("PreToolUse", "session-guard.py"),

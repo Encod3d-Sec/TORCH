@@ -114,6 +114,10 @@ for g in h.get("PostToolUse", []):
         if "recon-capture.py" in hk.get("command", "") and hk.get("timeout", 0) < 30:
             hk["timeout"] = 30
             print("bumped recon-capture timeout -> 30")
+if not has("PostToolUse", "capture-poc.py"):
+    add("PostToolUse", {"matcher": "Bash", "hooks": [{"type": "command",
+        "command": "python3 ~/.claude/vault-hooks/capture-poc.py", "timeout": 15}]})
+    print("added PostToolUse capture-poc")
 if not has("PostToolUse", "tool-telemetry.py"):
     add("PostToolUse", {"matcher": "*", "hooks": [{"type": "command",
         "command": "python3 ~/.claude/vault-hooks/tool-telemetry.py", "timeout": 10}]})
