@@ -1394,3 +1394,35 @@ def test_tool_telemetry_records_wiki_reads_only(vault):
     wikis = [r.get("wiki") for r in rows if r.get("wiki")]
     assert wikis == ["techniques/web/ssrf.md"]
     assert not any("creds.txt" in json.dumps(r) for r in rows)
+
+
+# --------------------------------------------- close-out: auto-build walkthrough on SOLVED
+
+def test_close_out_autobuilds_walkthrough_on_solved(vault):
+    # the hook locates build-walkthrough.py under <vault>/scripts (via _engagement.VAULT, same as
+    # its autocard/eval calls); the fixture vault has no scripts/, so symlink the real one in (its
+    # realpath still resolves _engagement from the real repo, and it reads CLAUDEBRAIN_VAULT).
+    sdir = vault / "scripts"
+    sdir.mkdir(exist_ok=True)
+    os.symlink(os.path.join(REPO, "scripts", "build-walkthrough.py"), sdir / "build-walkthrough.py")
+    eng = vault / "targets" / "acme"
+    with open(eng / "state.md", "a", encoding="utf-8") as fh:
+        fh.write("\n## STATUS: SOLVED\n")
+    os.makedirs(eng / "poc", exist_ok=True)
+    (eng / "poc" / "01-shell.png").write_bytes(b"\x89PNG\r\n")           # a card for the gallery
+    assert not (eng / "walkthrough.md").is_file()                        # absent before the hook
+    p = run_hook("close-out.py", {}, _env(vault))
+    # the hook auto-assembled the walkthrough scaffold + Evidence gallery
+    assert (eng / "walkthrough.md").is_file(), p.stdout + p.stderr
+    text = (eng / "walkthrough.md").read_text(encoding="utf-8")
+    assert "## Evidence" in text and "![](poc/01-shell.png)" in text
+    # narrative stubs remain -> the draft-narrative nudge still fires (not silently "done")
+    assert "walkthrough" in p.stdout.lower()
+
+
+def test_close_out_silent_when_not_solved(vault):
+    # a non-SOLVED engagement must NOT get a walkthrough built or a close-out nudge
+    eng = vault / "targets" / "acme"
+    p = run_hook("close-out.py", {}, _env(vault))
+    assert not (eng / "walkthrough.md").is_file()
+    assert "walkthrough.md is not assembled" not in p.stdout

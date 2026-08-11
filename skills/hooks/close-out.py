@@ -136,9 +136,24 @@ def main():
               "found -- do not consider the box done until status.py shows recon-card + source "
               "evidence.")
         return
+    # Auto-build the walkthrough scaffold + Evidence gallery (idempotent, no-clobber: only the
+    # ## Evidence section is refreshed, narrative bytes preserved). Same bounded/fail-open pattern
+    # as the eval_metrics call above. This does the mechanical assembly so a SOLVED box always has
+    # a started walkthrough.md; the narrative stubs remain, so walkthrough_stale below stays True
+    # and the "draft the narrative" nudge still fires. Runs each SOLVED Stop (build is idempotent).
+    try:
+        import subprocess
+        bw = os.path.join(_engagement.VAULT, "scripts", "build-walkthrough.py")
+        if os.path.isfile(bw):
+            subprocess.run(["python3", bw, os.path.basename(d)],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           stdin=subprocess.DEVNULL, timeout=15)
+    except Exception:
+        pass
     if _engagement.walkthrough_stale(d):
-        print("Close-out: engagement is SOLVED but walkthrough.md is not assembled. Run "
-              "Skill(walkthrough) to build the report from poc/, then Skill(learn).")
+        print("Close-out: engagement is SOLVED but walkthrough.md is not assembled (scaffold + "
+              "Evidence gallery auto-built). Run Skill(walkthrough) to draft the narrative, then "
+              "Skill(learn).")
     elif _engagement.learn_pending(d):
         print("Close-out: walkthrough assembled, learn harvest still due. Run Skill(learn) "
               "to harvest generic lessons into wiki/ + do the harness retrospective.")
