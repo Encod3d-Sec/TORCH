@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ClaudeBrain vault bootstrap -- run once per machine from the vault root.
+# TORCH vault bootstrap -- run once per machine from the vault root.
 # Usage: bash setup/bootstrap.sh
 set -e
 

@@ -1,6 +1,6 @@
-# Sharing ClaudeBrain (client-data boundary)
+# Sharing TORCH (client-data boundary)
 
-ClaudeBrain mixes shareable methodology with private client data. The split is enforced by git.
+TORCH mixes shareable methodology with private client data. The split is enforced by git.
 
 ## The boundary
 
@@ -19,7 +19,7 @@ ClaudeBrain mixes shareable methodology with private client data. The split is e
 
 ```bash
 bash scripts/check-leaks.sh        # must print "clean"
-git archive --format=tar.gz -o /tmp/claudebrain-share.tar.gz HEAD
+git archive --format=tar.gz -o /tmp/torch-share.tar.gz HEAD
 # or push the repo to a (private first, then public) remote
 ```
 

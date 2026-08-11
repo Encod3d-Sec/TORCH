@@ -3,7 +3,7 @@
 `CLAUDE.md` carries the compact top-level tree; this is the detailed per-file reference.
 
 ```
-ClaudeBrain/
+TORCH/
 ├── CLAUDE.md                    <- this file  (+ README.md, LICENSE)
 ├── targets/                     <- engagements (PRIVATE; client data only here, git-ignored)
 │   ├── active.md                <- pointer: current engagement dir name

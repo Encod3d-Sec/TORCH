@@ -174,7 +174,7 @@ The path resolvers (`setup/vault-path.sh`) and hooks self-locate or read
 ## Directory structure
 
 ```
-ClaudeBrain/
+TORCH/
 ├── CLAUDE.md   <- this file (+ README.md, LICENSE)
 ├── targets/    <- engagements (PRIVATE, git-ignored; ALL client data lives here)
 ├── wiki/       <- knowledge base: techniques/ payloads/ tools/ cheatsheets/ (+ index, moc)
