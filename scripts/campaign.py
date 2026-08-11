@@ -451,6 +451,37 @@ def derive_surface_rows(d):
     return out
 
 
+# Privesc rows seeded once an asset is owned (ctf/pentest boot-to-root). Two rows so pspy+linpeas
+# (auto) and the manual checklist each get their own G3 evidence gate - coverage the board
+# previously never generated (pspy/linpeas were an optional reflex, skippable under drift).
+# bugbounty does no host privesc, so it is excluded.
+_FOOTHOLD_ACCESS = {"foothold", "user", "root", "shell", "own", "owned"}
+
+
+def derive_privesc_rows(d, st):
+    """(asset, class, skill, tool) privesc rows for each FOOTHOLD asset. A foothold is state.md
+    `access` in _FOOTHOLD_ACCESS OR an asset present in st['footholds']. ctf/pentest only."""
+    if st.get("approach") not in ("ctf", "pentest"):
+        return []
+    foot = set((st.get("footholds") or {}).keys())
+    out = []
+    for r in E._parse_table(os.path.join(d, "state.md")):
+        asset = (r.get("asset") or r.get("host") or r.get("target") or "").strip()
+        if not asset or asset == "?":
+            continue
+        access = (r.get("access") or "").strip().lower()
+        if asset not in foot and access not in _FOOTHOLD_ACCESS:
+            continue
+        oshay = " ".join(str(r.get(k, "")) for k in ("os", "tech", "services", "notes")).lower()
+        is_win = bool(re.search(r"\bwin(dows)?\b|win10|win201[69]|win2022|server 20", oshay))
+        skill = "hunt-windows" if is_win else ""     # no linux-privesc hunt skill -> no G2 line
+        auto_tool = "winpeas" if is_win else "pspy"
+        man_tool = "winpeas" if is_win else "linpeas"
+        out.append((asset, "privesc-auto", skill, auto_tool))
+        out.append((asset, "privesc-manual", skill, man_tool))
+    return out
+
+
 def _deadend_pairs(d):
     """{(asset_lower, class_lower)} from the Deadends.md table (G4)."""
     out = set()
@@ -755,6 +786,10 @@ def cmd_board(a):
     # against `have`); RoE-forbidden seeds are already dropped inside derive_surface_rows.
     for asset, cls, skill, tool, requires in derive_surface_rows(d):
         _add(asset, cls, skill, tool, requires)
+    # Fourth source: privesc rows for footholds (ctf/pentest). Runs LAST; _add dedups against
+    # `have`, so a re-board after foothold adds these without disturbing 4a rows.
+    for asset, cls, skill, tool in derive_privesc_rows(d, st):
+        _add(asset, cls, skill, tool)
     write_board(d, rows)
     # Building the board IS the pass-4 deliverable and hands off to driving; advance to pass 5 so
     # `next` drives the board instead of repeating pre-board recon guidance.
