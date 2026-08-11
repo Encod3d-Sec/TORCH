@@ -1,4 +1,4 @@
-# ClaudeBrain Wiki
+# TORCH Wiki
 
 A living offensive-security reference: 450+ cross-linked technique pages, payload
 arsenals, tool references, and cheatsheets. Built in Obsidian and indexed for

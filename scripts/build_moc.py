@@ -125,7 +125,7 @@ def main():
     # top-level MOC
     top = [
         "---",
-        'title: "ClaudeBrain Wiki - Map of Content"',
+        'title: "TORCH Wiki - Map of Content"',
         "type: moc",
         "tags: [moc, index]",
         "sources: []",
