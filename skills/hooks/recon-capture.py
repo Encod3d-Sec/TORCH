@@ -91,6 +91,34 @@ def _state_has_foothold(d):
     except Exception:
         return False
 
+
+# nmap/rustscan asset extraction -> auto-populate state.md so `campaign.py board` works from recon.
+_SCAN_CMD_RE = re.compile(r"\b(nmap|rustscan|masscan)\b", re.I)
+_NMAP_PORT_RE = re.compile(r"^\s*(\d{1,5})/tcp\s+open\s+([A-Za-z0-9._+-]+)", re.M)
+_NMAP_HOST_RE = re.compile(r"Nmap scan report for (\S+)", re.I)
+_RUSTSCAN_RE = re.compile(r"([\w.-]+|\d{1,3}(?:\.\d{1,3}){3})\s*->\s*\[([\d, ]+)\]")
+_IP_RE = re.compile(r"\b(\d{1,3}(?:\.\d{1,3}){3})\b")
+
+
+def _extract_assets(cmd, text):
+    """(host, port, service) tuples from nmap/rustscan output. Deterministic lines only; the host
+    is the nmap report host, else the target IP in the command. Empty unless the command was a scan."""
+    if not text or not _SCAN_CMD_RE.search(cmd or ""):
+        return []
+    out = []
+    hm = _NMAP_HOST_RE.search(text)
+    cmd_ip = _IP_RE.search(cmd or "")
+    host = hm.group(1) if hm else (cmd_ip.group(1) if cmd_ip else None)
+    if host:
+        for m in _NMAP_PORT_RE.finditer(text):
+            out.append((host, m.group(1), m.group(2)))
+    for m in _RUSTSCAN_RE.finditer(text):
+        for p in m.group(2).split(","):
+            p = p.strip()
+            if p.isdigit():
+                out.append((m.group(1), p, "?"))
+    return out
+
 MAX_BLOB = 20000   # cap output scanned for fingerprints
 MAX_HITS = 3
 
@@ -822,6 +850,24 @@ def main():
                         "(a real vhost 302s ELSEWHERE; -fc 302 / -ac hides it); (3) another port or "
                         "the second vhost's OWN app; (4) source-read (LFI/.git/backup) before brute. "
                         "Or run `python3 scripts/campaign.py board` and work it depth-first." % n)
+        except Exception:
+            pass
+
+    # AUTO-POPULATE state.md from recon: a nmap/rustscan run writes one asset row per open port
+    # (host | service | port | ... | port-open) so `campaign.py board` builds itself from the scan
+    # instead of a hand-edited inventory. Deduped + fail-soft inside append_state_asset.
+    if d and _engagement:
+        try:
+            seeded = []
+            for host, port, svc in _extract_assets(cmd, _response_text(data)):
+                if _engagement.append_state_asset(d, host, service=svc, port=port,
+                                                  access="port-open", notes="auto: nmap/rustscan"):
+                    seeded.append("%s:%s" % (host, port))
+            if seeded:
+                blocks.append(
+                    "state.md auto-populated from the scan: added %d asset row(s) (%s). "
+                    "Run `python3 scripts/campaign.py board` to build the killchain from these."
+                    % (len(seeded), ", ".join(seeded[:8])))
         except Exception:
             pass
 

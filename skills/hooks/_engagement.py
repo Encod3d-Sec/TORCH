@@ -161,6 +161,65 @@ def _parse_table(path):
     return rows
 
 
+def append_state_asset(d, target, service="?", port="?", access="port-open", notes=""):
+    """Append one inventory row to <d>/state.md's FIRST markdown table, filling cells by the
+    header's column order (target/host/asset<-target; service; port; access; notes). Dedups: a
+    bare seed (port "?") is skipped if the target already has ANY row; a real port is skipped if
+    target+port already exists. Returns True if a row was added. Fail-soft (returns False) on any
+    IO/parse problem, so a caller (board auto-seed, the recon hook) never crashes on it.
+
+    This is the plumbing that lets `campaign.py board` auto-populate from recon instead of
+    requiring a hand-edited state.md - the friction that made the board easy to bypass."""
+    p = os.path.join(d, "state.md")
+    tgt = (target or "").strip()
+    if not tgt or tgt in ("?", "-"):
+        return False
+
+    def _rk(r):
+        return (r.get("target") or r.get("host") or r.get("asset") or "").strip().lower()
+
+    existing = _parse_table(p)
+    if str(port) in ("?", ""):
+        if any(_rk(r) == tgt.lower() for r in existing):
+            return False
+    elif any(_rk(r) == tgt.lower() and (r.get("port") or "").strip() == str(port) for r in existing):
+        return False
+
+    try:
+        lines = open(p, encoding="utf-8", errors="ignore").read().split("\n")
+    except Exception:
+        return False
+    header = None
+    header_i = None
+    last_i = None
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not s.startswith("|"):
+            if header is not None:
+                break  # first table ended
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if set("".join(cells)) <= set("-: "):
+            last_i = i  # separator is part of the table region
+            continue
+        if header is None:
+            header = [c.lower() for c in cells]
+            header_i = last_i = i
+            continue
+        last_i = i
+    if header is None:
+        return False
+    valmap = {"target": tgt, "host": tgt, "asset": tgt, "service": str(service),
+              "port": str(port), "access": access, "notes": notes}
+    row = "| " + " | ".join(valmap.get(c, "") for c in header) + " |"
+    lines.insert((last_i + 1) if last_i is not None else (header_i + 1), row)
+    try:
+        open(p, "w", encoding="utf-8").write("\n".join(lines))
+    except Exception:
+        return False
+    return True
+
+
 # vuln-class synonyms: phrases (beyond the literal class token) that credit a class
 # as TESTED when they appear in a finding title/slug or a Deadends.md line. Keep
 # additions specific -- a false positive silences a coverage-gap reminder early.

@@ -148,6 +148,41 @@ def _in_scope_nonempty(d):
     return False
 
 
+def _scope_hosts(d):
+    """First token of each non-placeholder bullet under scope.md '## In scope' (host/IP/domain)."""
+    p = os.path.join(d, "scope.md")
+    try:
+        text = open(p, encoding="utf-8", errors="ignore").read()
+    except Exception:
+        return []
+    m = re.search(r"^##\s*In scope\s*$(.*?)(^##\s|\Z)", text, re.S | re.M | re.I)
+    if not m:
+        return []
+    out = []
+    for line in m.group(1).splitlines():
+        s = line.strip()
+        if not s.startswith(("-", "*")):
+            continue
+        v = s.lstrip("-* ").strip()
+        if not v or v == "-":
+            continue
+        tok = v.split()[0].split(",")[0].strip()          # first token; drop inline annotations
+        if tok and not tok.startswith(("<", "#", "(")):
+            out.append(tok)
+    return out
+
+
+def _seed_assets_from_scope(d):
+    """Ensure state.md has >=1 asset by seeding the in-scope host(s), so `board` never dead-ends on
+    an empty inventory (the friction that made the board bypassable). Returns count added. A later
+    nmap/rustscan run (parsed by the recon hook) adds the real per-port service rows on top."""
+    n = 0
+    for h in _scope_hosts(d):
+        if E.append_state_asset(d, h, notes="auto: scope seed (re-run board after nmap for services)"):
+            n += 1
+    return n
+
+
 # --------------------------------------------------------------------------- board table io
 
 def _needs_migration(d):
@@ -632,11 +667,21 @@ def cmd_board(a):
         _die("no initialised campaign (run: campaign.py init --type ...)")
     if _needs_migration(d):
         _die("this engagement's board is the pre-overhaul format - run: campaign.py migrate")
-    assets = [r for r in E._parse_table(os.path.join(d, "state.md"))
-              if (r.get("asset") or r.get("host") or r.get("target") or "").strip() not in ("", "?")]
+    def _assets():
+        return [r for r in E._parse_table(os.path.join(d, "state.md"))
+                if (r.get("asset") or r.get("host") or r.get("target") or "").strip() not in ("", "?")]
+    assets = _assets()
     if not assets:
-        _die("state.md has no assets - run passes 1-2 to populate it before board "
-             "(an empty board reads as 'nothing to test')")
+        # auto-populate from recon instead of dead-ending: seed the in-scope host(s) so the board
+        # always builds (the recon hook fills in per-port service rows from nmap/rustscan on top).
+        seeded = _seed_assets_from_scope(d)
+        assets = _assets()
+        if seeded:
+            print("campaign board: auto-seeded %d asset(s) from scope.md (re-run board after nmap "
+                  "to add per-port services)." % seeded)
+    if not assets:
+        _die("state.md has no assets and scope.md '## In scope' is empty - add the target host to "
+             "scope.md, then re-run board")
     # board is the pass-4 deliverable and hands off to driving, so honor the pass-1 read gate here
     # too (a board built while source is unread skips read-whole). Only in the pre-board window;
     # a mid-campaign re-board (pass>=5) is unaffected.
