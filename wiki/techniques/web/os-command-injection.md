@@ -672,7 +672,7 @@ date|<cmd>
 
 The same shape recurs as `startswith()`/`.StartsWith()`/`^date` regex-anchor checks —
 whenever a command sink only anchors the prefix, treat it the same as an unanchored sink
-once you supply that prefix. See also `## Partial regex anchor` above for the input-
+once you supply that prefix. See also `### Partial regex anchor` above for the input-
 validation sibling of this bug (a missing trailing `$`/`.fullmatch`).
 
 <!-- promoted-slug: prefix-allowlist-command-chain -->

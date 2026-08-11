@@ -620,6 +620,8 @@ def _last_discipline_ts(events):
             continue
         tool = e.get("tool") or ""
         if e.get("wiki") or tool == "Skill" or tool.startswith("mcp__wiki-search"):
+            # ts compared lexicographically; safe because tool-telemetry.py always writes
+            # uniform UTC microsecond ISO timestamps.
             ts = e.get("ts") or ""
             if best is None or ts > best:
                 best = ts
@@ -685,7 +687,7 @@ def _drift_reminder(d, cmd):
         unmet = _gate1_unmet(d)
         who = ("Skill(%s) (routed for this row, still not invoked)" % unmet[0]) if unmet \
             else "the routed hunt skill for this row"
-        return ("REMINDER (advisory): %d exploit calls / ~%s min since your last wiki query, "
+        return ("REMINDER (advisory): %d exploit/probe calls / ~%s min since your last wiki query, "
                 "hunt-skill, or board touch. Run `python3 scripts/campaign.py next` for the "
                 "APPROACH, load %s, and log a dead-end (`done <row> --dead <reason>`) if a vector "
                 "is spent - don't hand-roll from memory."
