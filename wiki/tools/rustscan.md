@@ -148,7 +148,7 @@ Scripts receive arguments via `sys.argv` in the format defined by `call_format`.
 
 ## Related Techniques
 
-- [[nmap]] — RustScan passes discovered ports to Nmap; Nmap handles service/version detection
+- [[wiki/tools/nmap]] — RustScan passes discovered ports to Nmap; Nmap handles service/version detection
 - [[wiki/cheatsheets/recon]] — Quick reference for the scanning workflow
 
 ## Sources

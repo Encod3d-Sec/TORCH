@@ -37,13 +37,13 @@ naabu -host t -p 80,443,8080,8443 -silent                      # targeted web po
 ## Tips and gotchas
 
 - SYN mode needs root + libpcap; otherwise it falls back to slower CONNECT scans.
-- Through a tunnel/pivot a full-range fast scan can exhaust conntrack and kill the pivot; throttle `-rate` and prefer `-top-ports` (same caution as [[nmap]] / [[wiki/tools/rustscan]]).
+- Through a tunnel/pivot a full-range fast scan can exhaust conntrack and kill the pivot; throttle `-rate` and prefer `-top-ports` (same caution as [[wiki/tools/nmap]] / [[wiki/tools/rustscan]]).
 - Use `-nmap-cli` so version detection stays targeted to open ports (far faster than nmap alone).
 - Feed results into [[wiki/tools/httpx]] to find and fingerprint web services.
 
 ## Related techniques
 
-[[nmap]], [[wiki/tools/httpx]], [[network-discovery]]
+[[wiki/tools/nmap]], [[wiki/tools/httpx]], [[network-discovery]]
 
 ## Sources
 

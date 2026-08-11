@@ -650,7 +650,7 @@ Each agent connects to the same proxy binary. Add different routes for each sess
 ## Tools
 
 - [[metasploit]] — autoroute, socks_proxy, portfwd
-- [[nmap]] — scanning through proxychains
+- [[wiki/tools/nmap]] — scanning through proxychains
 - OpenSSH (`ssh`) — built-in tunneling
 - socat — port relay
 - Ligolo-ng — transparent TUN tunneling

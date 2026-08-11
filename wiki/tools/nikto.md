@@ -140,7 +140,7 @@ Nikto is best used early in a web recon phase for a quick automated surface scan
 
 ## Related Techniques
 
-- [[nmap]] — Use for port discovery before running Nikto
+- [[wiki/tools/nmap]] — Use for port discovery before running Nikto
 - [[wiki/cheatsheets/recon]] — Nikto fits into the active fingerprinting phase
 - [[wiki/cheatsheets/recon]] — Quick reference for web scanning workflow
 

@@ -576,7 +576,7 @@ ldapsearch -x -H ldap://$target -D "<user>@<domain>" -w "<pass>" \
 
 ## Cross-References
 
-- [[nmap]] — scanning foundation
+- [[wiki/cheatsheets/nmap]] — scanning foundation
 - [[sql-injection]] — MySQL/MSSQL exploitation
 - [[pass-the-hash]] — NTLM credential reuse
 - [[password-cracking]] — offline hash cracking

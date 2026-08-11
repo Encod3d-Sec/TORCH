@@ -22,7 +22,7 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 
 ## 1. Recon  ([[wiki/cheatsheets/recon]] · [[service-enumeration]] · [[network-services]])
 - [ ] rustscan all ports                 -> [[wiki/tools/rustscan]]
-- [ ] nmap -sCV on open ports            -> [[nmap]]
+- [ ] nmap -sCV on open ports            -> [[wiki/tools/nmap]]
 - [ ] service enum per port              -> [[service-enumeration]]
 - [ ] DNS enum (dig any / axfr)          -> [[wiki/cheatsheets/recon]]
 - [ ] wiki-query EACH fingerprinted tech/version   <-- GATE 1 source

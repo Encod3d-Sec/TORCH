@@ -2793,7 +2793,7 @@ No specific CVE for the protocol; the two abuse classes are design-level: first-
 
 | Tool | Purpose |
 |------|---------|
-| [[nmap]] | Port scanning, service versioning, NSE scripts (ftp-anon, smtp-open-relay, smb-protocols) |
+| [[wiki/tools/nmap]] | Port scanning, service versioning, NSE scripts (ftp-anon, smtp-open-relay, smb-protocols) |
 | [[metasploit]] | Exploit delivery (EternalBlue, BlueKeep, etc.) |
 | [[hydra]] | Brute force — FTP, SSH, RDP, SMB, SMTP, POP3, IMAP, HTTP |
 | smbclient | SMB share interaction, file download/upload |

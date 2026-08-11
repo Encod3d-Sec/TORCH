@@ -235,7 +235,7 @@ Apply vendor baselines for logging, least privilege, patch cadence, and segmenta
 
 - [[chisel]]
 - [[ligolo-ng]]
-- [[nmap]]
+- [[wiki/tools/nmap]]
 - [[wiki/tools/nuclei]]
 
 ## Sources

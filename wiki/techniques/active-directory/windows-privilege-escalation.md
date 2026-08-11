@@ -1885,7 +1885,7 @@ Apply vendor baselines for logging, least privilege, patch cadence, and segmenta
 - [[metasploit]]
 - [[mimikatz]]
 - [[netexec]]
-- [[nmap]]
+- [[wiki/tools/nmap]]
 - [[radare2]]
 - Also uses (no dedicated page yet): winPEAS, Seatbelt, PowerSploit
 

@@ -26,7 +26,7 @@ Service enumeration proceeds through three mechanisms:
 
 ## General Methodology
 
-1. **Nmap first pass** — Full port scan with service/version detection on all discovered hosts. Use [[nmap]] as the foundation.
+1. **Nmap first pass** — Full port scan with service/version detection on all discovered hosts. Use [[wiki/tools/nmap]] as the foundation.
 2. **Service-specific tooling** — Run dedicated tools for each discovered service (rpcclient, smbclient, snmpwalk, odat, etc.).
 3. **Manual verification** — Confirm findings by directly connecting to the service and issuing protocol commands.
 4. **Cross-reference** — Credentials found in one service (e.g., FTP) may unlock another (e.g., SSH). Check for password reuse. See [[pass-the-hash]] when NTLM hashes are obtained.
@@ -726,7 +726,7 @@ prips 93.184.216.0/24 | hakoriginfinder -h https://example.com:443/foo
 
 ## Cross-References
 
-- [[nmap]] — initial scanning and NSE scripting
+- [[wiki/tools/nmap]] — initial scanning and NSE scripting
 - [[sql-injection]] — when MySQL or MSSQL is accessible
 - [[pass-the-hash]] — when NTLM hashes are captured (IPMI, MSSQL, SMB)
 - [[password-cracking]] — offline cracking of captured hashes (IPMI mode 7300, NTLM mode 5600/1000)

@@ -40,7 +40,7 @@ sources: []
 
 | Phase | Status | Pages |
 |-------|--------|-------|
-| Recon & OSINT | Complete | [[wiki/cheatsheets/recon]] cheatsheet, [[nmap]], [[wiki/tools/ffuf]], [[gobuster]], [[nikto]], [[wiki/tools/rustscan]] |
+| Recon & OSINT | Complete | [[wiki/cheatsheets/recon]] cheatsheet, [[wiki/tools/nmap]], [[wiki/tools/ffuf]], [[gobuster]], [[nikto]], [[wiki/tools/rustscan]] |
 | Service enumeration | Complete | [[service-enumeration]], [[service-enumeration]] cheatsheet |
 | Web exploitation | Complete | 20+ technique pages (see Web section below) |
 | Network exploitation | Complete | [[network-service-attacks]], [[network-services]] cheatsheet |
@@ -104,7 +104,7 @@ sources: []
 
 ## Tools
 
-[[nmap]] · [[wiki/tools/rustscan]] · [[wiki/tools/ffuf]] · [[gobuster]] · [[nikto]] · [[wiki/tools/httpx]] · [[wiki/tools/nuclei]] · [[hydra]] · [[medusa]] · [[hashcat]] · [[wpscan]] · [[metasploit]] · [[burp-suite]] · [[sqlmap]] · [[netexec]] · [[impacket]] · [[certipy]] · [[evil-winrm]] · [[tshark]] · [[gdb-gef]] · [[radare2]] · [[ghidra]] · [[pwntools]] · [[angr]] · [[volatility]] · [[binwalk]] · [[aflplusplus]] · [[libfuzzer]] · [[semgrep]] · [[codeql]] · [[trivy]] · [[bloodhound]] · [[responder]] · [[subfinder]] · [[gowitness]] · [[ligolo-ng]] · [[frida]] · [[john]] · [[scoutsuite]] · [[pacu]] · [[roadtools]] · [[apktool]] · [[jadx]]
+[[wiki/tools/nmap]] · [[wiki/tools/rustscan]] · [[wiki/tools/ffuf]] · [[gobuster]] · [[nikto]] · [[wiki/tools/httpx]] · [[wiki/tools/nuclei]] · [[hydra]] · [[medusa]] · [[hashcat]] · [[wpscan]] · [[metasploit]] · [[burp-suite]] · [[sqlmap]] · [[netexec]] · [[impacket]] · [[certipy]] · [[evil-winrm]] · [[tshark]] · [[gdb-gef]] · [[radare2]] · [[ghidra]] · [[pwntools]] · [[angr]] · [[volatility]] · [[binwalk]] · [[aflplusplus]] · [[libfuzzer]] · [[semgrep]] · [[codeql]] · [[trivy]] · [[bloodhound]] · [[responder]] · [[subfinder]] · [[gowitness]] · [[ligolo-ng]] · [[frida]] · [[john]] · [[scoutsuite]] · [[pacu]] · [[roadtools]] · [[apktool]] · [[jadx]]
 
 ---
 

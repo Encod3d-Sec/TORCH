@@ -207,7 +207,7 @@ mosquitto_sub -h TARGET -p 8883 -t "#" --insecure --cafile ca.crt
 - `mosquitto_sub` — MQTT subscriber; `-t "#"` subscribes to all topics
 - `mosquitto_pub` — MQTT publisher; used to send commands to devices
 - MQTT Explorer — GUI browser for MQTT brokers; visualises topic trees and payloads
-- [[nmap]] — NSE script `mqtt-subscribe` enumerates broker and topics automatically
+- [[wiki/tools/nmap]] — NSE script `mqtt-subscribe` enumerates broker and topics automatically
 - CyberChef — Base64 decode and encode payloads in browser
 
 ## Sources

@@ -340,5 +340,5 @@ netsh advfirewall firewall add rule name="pivot 8080" dir=in action=allow protoc
 
 - [[pivoting-tunneling]] — full technique notes
 - [[metasploit]] — MSF pivoting details
-- [[nmap]] — scanning through proxychains
+- [[wiki/cheatsheets/nmap]] — scanning through proxychains
 - [[reverse-shells]] — catching shells through pivots
