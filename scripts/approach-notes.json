@@ -1,0 +1,48 @@
+{
+  "_comment": "class -> per-row methodology printed by campaign.py cmd_next (APPROACH/AVOID/REFS). Distilled from skills/workflow/ctf-box. Generic only, never client data. Keys MUST be real board vuln-class tokens.",
+  "content-discovery": {
+    "do": "feroxbuster recursive FIRST then the big list; fuzz /~FUZZ userdir early (Apache mod_userdir can host a whole second app); READ every .js / inline <script> / onclick end to end - a JS/SPA API map lives in app.js, not in ferox output.",
+    "avoid": "grep is not the read; do not conclude 'no hidden route/param' until feroxbuster AND nuclei have both run and been read whole; a labelled or troll file is usually a decoy, don't brute it.",
+    "refs": ["recon", "feroxbuster"]
+  },
+  "cve-check": {
+    "do": "searchsploit <app> <ver> AND msfconsole search FIRST; prefer the vetted msf module or a copy-paste searchsploit PoC over a hand-rolled exploit.",
+    "avoid": "do not deep-dive a CVE writeup before checking the two quick-win tools; verify the exact version band before firing a version-specific PoC.",
+    "refs": ["cve-arsenal", "metasploit"]
+  },
+  "sqli": {
+    "do": "in-band UNION/error before blind; test every quote context (' \" numeric) and second-order; run sqlmap only AFTER a manual confirm of an injectable param.",
+    "avoid": "disprove a param ONCE, log it in Deadends.md, and never re-test or launch sqlmap at an already-disproven param.",
+    "refs": ["sql-injection", "hunt-sqli"]
+  },
+  "xss": {
+    "do": "use a unique marker per injection point; confirm it reflects unencoded in an executable context; stored/blind -> a beacon, not inference.",
+    "avoid": "no XSS claim from a marker that comes back HTML-encoded or lands in a text-only context.",
+    "refs": ["xss", "hunt-xss"]
+  },
+  "idor": {
+    "do": "two accounts: prove account A reads account B's object; sample a bounded set of IDs.",
+    "avoid": "a one-account result cannot tell cross-tenant access from your own data; never claim IDOR with one identity, and never range-sweep IDs.",
+    "refs": ["idor", "hunt-idor"]
+  },
+  "ssrf": {
+    "do": "OOB-gate it: stand up interactsh/Collaborator and confirm the callback; then cloud metadata (169.254.169.254) and redirect bypasses.",
+    "avoid": "no blind-SSRF claim from inference or a timing guess - silence without a live listener is a false negative, not a result.",
+    "refs": ["ssrf", "hunt-ssrf"]
+  },
+  "upload": {
+    "do": "confirm the app actually USES this upload (is the stored file reachable and executed?) before grinding extension/content-type/magic-byte bypasses.",
+    "avoid": "an unauth upload that lands outside the webroot with no execution is a dead end - do not spend the box on it.",
+    "refs": ["file-upload", "hunt-upload"]
+  },
+  "privesc-auto": {
+    "do": "ALWAYS pspy64 first (watch >=60s for root cron/timers), THEN linpeas (default scan, not -a on a small VM). Capture both: a --term shot AND the full .md log.",
+    "avoid": "do not hand-roll find/ls/cat privesc enum instead of linpeas; a root cron hides in the full pspy stream a keyword grep skips.",
+    "refs": ["linux-privesc", "linux-enumeration"]
+  },
+  "privesc-manual": {
+    "do": "walk the checklist: sudo -l, SUID/getcap, cron/systemd timers, group memberships (docker/lxd/disk/adm), config+backup creds - and reuse EVERY captured secret across users x su/ssh first.",
+    "avoid": "kernel-LPE (PwnKit/DirtyPipe/...) is a LABELLED FALLBACK: verify the intended path is absent AND the CVE precondition holds before firing; don't grind a new vector while an unused cred spray remains.",
+    "refs": ["linux-privesc", "privesc-exploit-arsenal"]
+  }
+}

@@ -393,6 +393,23 @@ def _surface_seeds():
         return {}
 
 
+_APPROACH_NOTES = None
+
+
+def _approach_notes():
+    """{class_lower: {do, avoid, refs}} from approach-notes.json - the distilled ctf-box lessons
+    cmd_next prints at the row they apply to (methodology surfaced per-turn, not loaded once and
+    left to go stale). Cached; {} on any error."""
+    global _APPROACH_NOTES
+    if _APPROACH_NOTES is None:
+        try:
+            n = json.load(open(os.path.join(HERE, "approach-notes.json"), encoding="utf-8"))
+            _APPROACH_NOTES = {k.lower(): v for k, v in n.items() if not k.startswith("_")}
+        except Exception:
+            _APPROACH_NOTES = {}
+    return _APPROACH_NOTES
+
+
 def derive_surface_rows(d):
     """(asset, class, skill, tool, requires) seeded by an OBSERVED SURFACE (service/port/tech) rather
     than a tech fingerprint (playbook.json) or endpoint semantics (behaviours.json). On a generic host
@@ -1028,6 +1045,15 @@ def cmd_next(a):
     if win:
         print("FOOTHOLD  session live in tmux window '%s' -> operator can: tmux attach -t %s"
               % (win, eng))
+    notes = _approach_notes().get((row.get("vuln class") or "").strip().lower())
+    if notes:
+        if notes.get("do"):
+            print("APPROACH  %s" % notes["do"])
+        if notes.get("avoid"):
+            print("AVOID     %s" % notes["avoid"])
+        refs = notes.get("refs") or []
+        if refs:
+            print("REFS      %s" % " ".join("[[%s]]" % r for r in refs))
     print("")
     print("REQUIRED, in order:")
 
