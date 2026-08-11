@@ -18,7 +18,7 @@ CAPTURE="tmux scrot xdotool imagemagick x11-utils xauth"
 # Recon + test toolchain, Kali package names. httpx-toolkit = ProjectDiscovery httpx.
 RECON="httpx-toolkit subfinder nuclei naabu dnsx katana amass gau gobuster ffuf \
 feroxbuster dalfox gowitness arjun sqlmap hydra medusa nikto whatweb wpscan swaks \
-jwt-tool trufflehog gitleaks seclists jq"
+jwt-tool trufflehog gitleaks seclists jq rlwrap"
 
 if [ "${1:-}" = "--list" ]; then
   echo "capture deps:"; printf '  %s\n' $CAPTURE
@@ -50,6 +50,14 @@ done
 if ! command -v trufflehog >/dev/null 2>&1; then
   curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
     | \$SUDO sh -s -- -b /usr/local/bin >/dev/null 2>&1 && echo "  trufflehog (installer)" || echo "  MISS trufflehog"
+fi
+# pwncat-cs: auto-PTY-stabilizing reverse-shell handler (preferred over raw nc for a web-RCE
+# foothold; see ctf-box Phase 3). apt on newer Kali, else pipx/pip --user; tolerant either way.
+if ! command -v pwncat-cs >/dev/null 2>&1; then
+  \$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y -qq pwncat-cs >/dev/null 2>&1 && echo "  ok   pwncat-cs (apt)" \
+    || { pipx install pwncat-cs >/dev/null 2>&1 && echo "  pwncat-cs (pipx)" \
+    || { pip install --user --break-system-packages -q pwncat-cs >/dev/null 2>&1 && echo "  pwncat-cs (pip --user)" \
+    || echo "  MISS pwncat-cs (raw nc + vm-stabilize.sh is the fallback)"; }; }
 fi
 if ! command -v jwt_tool >/dev/null 2>&1 && [ ! -x /usr/local/bin/jwt_tool ]; then
   [ -d /opt/jwt_tool ] || \$SUDO git clone -q https://github.com/ticarpi/jwt_tool /opt/jwt_tool 2>/dev/null

@@ -34,6 +34,15 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
    `vm-rsh --win <win>` (persistent session + operator visibility past foothold), and prints `tmux
    attach -t <eng>` for manual takeover. msf itself is operator-attach / drop-to-shell, not
    `vm-rsh`-driven (its wrapper frames a bash shell, not the `msf6 >` REPL).
+7. **Web RCE -> a real shell, THEN stabilize -- do not ride one-liners (recurring drift).** The
+   moment code-exec lands (a web-RCE primitive, an LFI->session-poison, a deser gadget), STOP
+   hand-poking one-shot payloads: (a) `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` +
+   fire the reverse shell, (b) **stabilize it immediately** with `bash scripts/vm-stabilize.sh
+   --win shell <eng>` (pty + job control + window size) or prefer `pwncat-cs` / an msf
+   multi-handler over a raw nc, (c) then record the foothold (step 6) and drive with `vm-rsh`. An
+   unstabilized nc shell (no job control, mid-line wrapping) is what makes post-ex drift back into
+   one-liners. Full discipline: `Skill(ctf-box)` Phase 3 (Deliver). The `recon-capture` hook fires
+   this reflex once on the first service-account `id`.
 
 ## Box recipes
 

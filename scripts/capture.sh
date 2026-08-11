@@ -232,6 +232,26 @@ python3 /tmp/shot.py $(printf '%q' "$URL") $BAR --width $W --height $H -o /tmp/p
   [ -s "$POC/$SRC" ] && echo "saved targets/$ENG/poc/$SRC (page source)"
 }
 
+# webauth: render an AUTHENTICATED page into poc/. `web` (live URL, no cookie) shoots whatever an
+# anonymous browser sees -- for a page behind login that is the LOGIN REDIRECT, not the authed
+# state, so a flag/dashboard shot fires prematurely on the wrong page (observed real miss). This
+# mode curls the URL WITH the session cookie (+ a browser UA, since UA-WAF boxes need it), saves the
+# authed HTML, and renders it via `shot.py --html` (assets loaded from --base origin, address bar =
+# the real URL). Use for any post-login dashboard / flag page / authed panel.
+mode_webauth() {
+  [ $# -ge 4 ] || { echo "usage: capture.sh webauth <eng> <slug> <url> <cookie e.g. 'PHPSESSID=..'> [user-agent]" >&2; exit 2; }
+  ENG="$1"; local SLUG="$2" URL="$3" COOKIE="$4"; shift 4
+  local UA="${1:-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36}"
+  local ORIGIN; ORIGIN=$(printf '%s' "$URL" | sed -E 's,^(https?://[^/]+).*,\1,')
+  _poc_target "$ENG" "$SLUG"
+  local HTML="/tmp/poc/${SLUG//[^a-zA-Z0-9]/_}-authed.html"
+  local SHOT_B64; SHOT_B64=$(base64 -w0 "$VAULT/scripts/shot.py")
+  bash "$VM_SH" "echo '$SHOT_B64' | base64 -d > /tmp/shot.py; mkdir -p /tmp/poc
+curl -sk -L --max-time 15 -A $(printf '%q' "$UA") -b $(printf '%q' "$COOKIE") $(printf '%q' "$URL") -o $(printf '%q' "$HTML")
+python3 /tmp/shot.py --html $(printf '%q' "$HTML") --base $(printf '%q' "$ORIGIN") --url-bar $(printf '%q' "$URL") -o /tmp/poc/$PNG" >&2
+  _pull_and_report "/tmp/poc/$PNG" "$SLUG"
+}
+
 # recon: card a running/finished scan tmux TAB (nmap/ffuf/nuclei/rustscan) into recon/ (NOT poc/).
 # Run per-tool AS each scan finishes, before exploiting - EVERY tool gets a card, even an empty
 # result, so the operator can see what ran. <tab> = the sanitized name or @id vm-scan.sh printed;
@@ -453,6 +473,7 @@ case "$MODE" in
   req)  mode_req "$@" ;;
   tmux) mode_tmux "$@" ;;
   web)  mode_web "$@" ;;
+  webauth) mode_webauth "$@" ;;
   recon) mode_recon "$@" ;;
   log)  mode_log "$@" ;;
   raw)  mode_raw "$@" ;;

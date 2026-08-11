@@ -60,6 +60,16 @@ _FINDING_RE = re.compile(
     r"(?:THM|FLAG|HTB|CTF)\{[^}\n]{0,80}\}"            # a full flag value (dedup key)
     r"|uid=\d+\([a-z_][^)]*\)\s*gid=",                  # `id` output = shell / privesc landing
     re.I)
+# code-exec landed: an `id` line naming a NON-root service acct (uid!=0, a lowercase name) -- the
+# signature of a fresh web-RCE/foothold, NOT a reflected attacker-root false positive.
+_RCE_ID_RE = re.compile(r"uid=[1-9]\d*\([a-z_][^)]*\)\s*gid=", re.I)
+
+
+def _is_rce_landing(text):
+    """True when output shows an `id`-style uid=<nonzero>(<name>) gid= line = code execution
+    landed as a service account (the moment to stand up a stabilized reverse shell). Excludes
+    uid=0 so a reflected attacker-root `id` (the false-RCE trap) does not fire the reflex."""
+    return bool(text) and bool(_RCE_ID_RE.search(text[:MAX_BLOB]))
 
 MAX_BLOB = 20000   # cap output scanned for fingerprints
 MAX_HITS = 3
@@ -734,6 +744,30 @@ def main():
                         "(the flag in place, the payload firing, or the shell via --tmux) to poc/. "
                         "Capture at EACH success as it lands, not at the end -- a transient state "
                         "cannot be re-shot after this turn.")
+        except Exception:
+            pass
+
+    # RCE -> reverse-shell -> STABILIZE reflex (fire-once per engagement, advisory, fail-open).
+    # An `id` naming a service acct = code exec landed. Recurring drift on web-RCE boxes: keep
+    # hand-poking one-shot payloads / ride an unstabilized `nc` shell instead of standing up a proper
+    # session -- so post-ex is un-driveable and invisible to the operator. Nudge ONCE toward a real
+    # stabilized shell. The ctf-box skill carries this discipline but the ctf-WORKFLOW driver did
+    # not load it, so the hook is the safety net that fires regardless of which skill is active.
+    if d and _engagement:
+        try:
+            if _is_rce_landing(_response_text(data)):
+                seenr = os.path.join(d, ".rce-shell-nudged")
+                if not os.path.exists(seenr):
+                    open(seenr, "a").close()
+                    blocks.append(
+                        "RCE / code-exec confirmed (`id` shows a service account). If this came "
+                        "from a web RCE or an unstabilized `nc` shell, STOP hand-poking one-liners: "
+                        "(1) pop a reverse shell into tmux -- bash scripts/vm-scan.sh --win shell "
+                        "<eng> <target> 'nc -lvnp <port>', then fire the shell via the RCE; "
+                        "(2) STABILIZE it at once -- bash scripts/vm-stabilize.sh --win shell <eng> "
+                        "(pty + job control + window size), or prefer pwncat-cs / an msf "
+                        "multi-handler over a raw nc; (3) drive it with bash scripts/vm-rsh.sh "
+                        "--win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3 (Deliver).")
         except Exception:
             pass
 

