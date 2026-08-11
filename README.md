@@ -13,7 +13,7 @@
     |_|
 ```
 
-**An AI-powered penetration testing and bug-bounty knowledge base and automation harness for [Claude Code](https://claude.com/claude-code).** It turns an Obsidian vault into an opinionated offensive-security workflow: a searchable wiki of 500+ hacking technique pages, per-vulnerability "hunt" skills, deterministic hooks that fire the right skill at the right moment, and a state-first engagement model that stops you (and the model) from repeating work.
+**An AI-powered penetration testing and bug-bounty knowledge base and automation harness for [Claude Code](https://claude.com/claude-code).** It turns an Obsidian vault into an opinionated offensive-security workflow: autonomous campaign drivers (`/pt-workflow`, `/bb-workflow`, `/ctf-workflow`) that run a whole engagement end to end, a searchable wiki of 500+ hacking technique pages, per-vulnerability "hunt" skills, deterministic hooks that fire the right skill at the right moment, and a state-first engagement model that stops you (and the model) from repeating work.
 
 [![Built for Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-blueviolet.svg)](https://claude.com/claude-code)
 [![Wiki pages](https://img.shields.io/badge/wiki-500%2B%20pages-brightgreen.svg)](wiki/)
@@ -46,6 +46,7 @@ If TORCH saves you time on an engagement, a [star](https://github.com/Encod3d-Se
 
 ## Features
 
+- **Autonomous engagement workflows** (`/pt-workflow`, `/bb-workflow`, `/ctf-workflow`): the headline capability, run a whole pentest, bug-bounty program, or boot-to-root box end to end with no operator approvals. A deterministic driver (`scripts/campaign.py`) owns pass state, builds a kill-chain board from recon, and prints the exact next action (which skill + tool) every turn, enforcing the wiki-first, tool-first, typed-evidence, and dead-end-first gates. Single agent, refuter-verified; the pentest flow delivers a client report. Verify the driver is wired up on a new machine with `/campaign-health`.
 - **Wiki-first methodology.** 500+ markdown technique pages indexed by `qmd` for semantic and keyword search over an MCP server (`wiki-search`). Every hunt skill queries the wiki *before* attacking, so knowledge compounds instead of scattering.
 - **Hunt skills** (`skills/hunt/hunt-*`): one per vulnerability class, XSS, SQLi, SSRF, IDOR, RCE, auth bypass, OAuth/SAML federation, deserialization, cloud (AWS/Azure/GCP), Active Directory, local Windows and macOS privilege escalation, API (OWASP API Top 10), LLM/AI, ICS/OT, request smuggling, cache poisoning, and more. Each is wiki-first, out-of-band-gated for blind bugs, and emits a uniform FIND finding schema.
 - **Deterministic automation (hooks).** Plain Python that fires on Claude Code lifecycle events:
@@ -114,6 +115,11 @@ qmd update
 
 # Start an engagement (pentest | bugbounty | ctf)
 bash setup/new-engagement.sh acme pentest
+
+# Then, inside Claude Code, drive the whole engagement autonomously with the matching workflow:
+#   /pt-workflow    pentest (client-report deliverable)
+#   /bb-workflow    bug-bounty program
+#   /ctf-workflow   CTF / boot-to-root box
 
 # Run the test suite
 python3 -m pytest -q
