@@ -54,7 +54,7 @@ If TORCH saves you time on an engagement, a [star](https://github.com/Encod3d-Se
   - `recon-capture.py` (PostToolUse) fingerprints discovered tech against `scripts/playbook.json`, routes to targeted tests, and auto-captures results into engagement state and PoC evidence.
   - `engagement-init.py` (SessionStart) self-heals the engagement file set and injects a ranked next-move summary.
   - `scope-guard.py` (PreToolUse) denies a command that targets an out-of-scope host or uses rules-of-engagement-forbidden tooling (deterministic enforcement; a `.enforce-off` marker downgrades it to advisory).
-- **State-first engagement model.** Each engagement lives under `targets/<name>/` (`state`, `loot`, `paths`, `scope`, `coverage`). Analyzers (`next_move.py`, `coverage.py`) rank what to do next and surface untested vulnerability classes so nothing in scope is skipped.
+- **State-first engagement model.** Each engagement lives under `targets/<name>/` (`state`, `loot`, `paths`, `scope`, `killchain`). `next_move.py` ranks what to do next, and the kill-chain board's coverage table (via the `coverage` skill) surfaces untested vulnerability classes so nothing in scope is skipped.
 - **Research loop** (`skills/research`) for CVE discovery on binaries, libraries, and repos, with its own persistent state under `raw/research/`.
 - **Hard client-data boundary.** Every client specific stays under `targets/` (git-ignored); `scripts/check-leaks.sh` gates tracked files before you ever push.
 
@@ -160,8 +160,8 @@ plugins, but the documented planning loop assumes `superpowers`.
 ```
 CLAUDE.md         top-level instructions loaded by Claude Code
 wiki/             500+ page technique corpus (ships; semantic + keyword indexed)
-skills/           hunt-* skills, research / disclosure, hooks/, meta-skills
-scripts/          next_move, coverage, find-lint, check-leaks, index / lint tooling
+skills/           hunt-* skills, workflow/ (campaign drivers, triage / evidence / coverage), research / disclosure / burp, hooks/, meta-skills
+scripts/          campaign (autonomous workflow driver), next_move, find-lint, check-leaks, index / lint tooling
 setup/            bootstrap, install-hooks, install-skills, new-engagement / research, templates
 docs/             workflows, page-types, setup, sharing (client-data boundary), conventions
 tests/            pytest suite for the automation
