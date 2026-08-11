@@ -1,13 +1,13 @@
 # TORCH
 
 ```sh
-	 )
+     )
     ( (
    ) ) (
-  ( ( ) )       T   O   R   C   H
-   ) (*)        ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-    )|(         Targeted Offensive
-     |          Recon & Compromise Harness
+  ( ( ) )                           T   O   R   C   H
+   ) (*)               ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+    )|(                Targeted Offensive Recon & Compromise Harness
+     |
     |=|
     | |
     |_|
