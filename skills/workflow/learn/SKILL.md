@@ -171,7 +171,9 @@ python3 scripts/wiki-stage.py --kind api-pattern --slug <product>-<endpoint> \
 # technique / bypass / tool-gotcha that ENRICHES an existing page
 python3 scripts/wiki-stage.py --kind technique --slug <slug> \
   --target-page techniques/<area>/<page>.md
-# then edit targets/$ENG/wiki-candidates/<slug>.md to hold the generic '## Heading' body
+# then edit targets/$ENG/wiki-candidates/<slug>.md to APPEND the generic '## Heading' body
+# (append below the staged frontmatter -- do NOT overwrite the file, or you drop `status: pending`
+#  and `wiki-promote --list` will show nothing to promote)
 ```
 
 **Genuinely new class with no home page:** `wiki-promote` merges into an EXISTING

