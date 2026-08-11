@@ -1,14 +1,16 @@
-# ClaudeBrain
+# TORCH
 
-```
-   ____ _                 _      ____            _
-  / ___| | __ _ _   _  __| | ___| __ ) _ __ __ _(_)_ __
- | |   | |/ _` | | | |/ _` |/ _ \  _ \| '__/ _` | | '_ \
- | |___| | (_| | |_| | (_| |  __/ |_) | | | (_| | | | | |
-  \____|_|\__,_|\__,_|\__,_|\___|____/|_|  \__,_|_|_| |_|
-
-Pentest & bug-bounty knowledge base + AI automation harness
-
+```sh
+	 )
+    ( (
+   ) ) (
+  ( ( ) )       T   O   R   C   H
+   ) (*)        ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+    )|(         Targeted Offensive
+     |          Recon & Compromise Harness
+    |=|
+    | |
+    |_|
 ```
 
 **An AI-powered penetration testing and bug-bounty knowledge base and automation harness for [Claude Code](https://claude.com/claude-code).** It turns an Obsidian vault into an opinionated offensive-security workflow: a searchable wiki of 500+ hacking technique pages, per-vulnerability "hunt" skills, deterministic hooks that fire the right skill at the right moment, and a state-first engagement model that stops you (and the model) from repeating work.
@@ -19,11 +21,11 @@ Pentest & bug-bounty knowledge base + AI automation harness
 
 
 
-ClaudeBrain is a red-team / bug-bounty second brain built on Andrej Karpathy's [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: a persistent, AI-maintained knowledge base the model synthesizes each new source into over time, instead of re-deriving from raw documents on every query. Concretely, an offensive-security wiki, an agentic hunt-skill library, and a Model Context Protocol (MCP) search layer, wired together so Claude Code always checks the knowledge base before it attacks and never repeats a dead end. Think HackTricks or PayloadsAllTheThings, but indexed for semantic search and driven by an autonomous AI agent.
+TORCH is a red-team / bug-bounty second brain built on Andrej Karpathy's [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: a persistent, AI-maintained knowledge base the model synthesizes each new source into over time, instead of re-deriving from raw documents on every query. Concretely, an offensive-security wiki, an agentic hunt-skill library, and a Model Context Protocol (MCP) search layer, wired together so Claude Code always checks the knowledge base before it attacks and never repeats a dead end. Think HackTricks or PayloadsAllTheThings, but indexed for semantic search and driven by an autonomous AI agent.
 
 > **Authorized testing only.** Everything here assumes a legal engagement: a signed penetration test, a bug-bounty program in scope, or your own lab / CTF. You are responsible for staying in scope and within the rules of engagement.
 
-If ClaudeBrain saves you time on an engagement, a [star](https://github.com/Encod3d-Sec/ClaudeBrain) helps other pentesters and bug-bounty hunters find it.
+If TORCH saves you time on an engagement, a [star](https://github.com/Encod3d-Sec/TORCH) helps other pentesters and bug-bounty hunters find it.
 
 ---
 
@@ -59,7 +61,7 @@ If ClaudeBrain saves you time on an engagement, a [star](https://github.com/Enco
 
 ## The knowledge base (500+ pages ship with the repo)
 
-The `wiki/` corpus is the heart of ClaudeBrain and it is fully committed, clone it and you get the whole library, not an empty shell. It is a living offensive-security reference organized as:
+The `wiki/` corpus is the heart of TORCH and it is fully committed, clone it and you get the whole library, not an empty shell. It is a living offensive-security reference organized as:
 
 | Area | Covers |
 |---|---|
@@ -97,8 +99,8 @@ The wiki and the entire harness are public. Only client data and per-machine sta
 ## Quickstart
 
 ```bash
-git clone <this-repo> ClaudeBrain
-cd ClaudeBrain
+git clone <this-repo> TORCH
+cd TORCH
 
 # One-time, per-machine setup. NOTE: bootstrap.sh mutates ~/.claude: it writes a
 # CLAUDE.md include, symlinks the hooks, registers the MCP servers, and installs
@@ -126,7 +128,7 @@ bash scripts/check-leaks.sh
 
 ## Plugins and MCP servers
 
-ClaudeBrain runs on Claude Code plus a set of plugins and MCP servers. `setup/bootstrap.sh`
+TORCH runs on Claude Code plus a set of plugins and MCP servers. `setup/bootstrap.sh`
 installs the core set for you; the rest are referenced by the workflow and installed separately.
 
 **Installed by `bootstrap.sh`:**
@@ -166,13 +168,13 @@ Full annotated tree in [`docs/layout.md`](docs/layout.md). Start with [`docs/wor
 
 ## The model underneath
 
-ClaudeBrain is a *harness*, the intelligence it orchestrates is a large language model (Claude). If you want to understand what an LLM actually is under the hood, tokens, attention, training, and inference, the clearest from-scratch implementations on the internet are Andrej Karpathy's:
+TORCH is a *harness*, the intelligence it orchestrates is a large language model (Claude). If you want to understand what an LLM actually is under the hood, tokens, attention, training, and inference, the clearest from-scratch implementations on the internet are Andrej Karpathy's:
 
 - **[nanoGPT](https://github.com/karpathy/nanoGPT)** a minimal, readable GPT training and finetuning codebase; the canonical "here is a transformer, end to end."
 - **[nanochat](https://github.com/karpathy/nanochat)** a full ChatGPT-style pipeline (pretraining, supervised finetuning, RL, and inference with a web UI) in one hackable repo.
 - **[Neural Networks: Zero to Hero](https://karpathy.ai/zero-to-hero.html)** the video series that builds an LLM line by line, from `micrograd` up to a GPT.
 
-Those repos show you the engine; ClaudeBrain shows you how to point that engine at a target and keep it disciplined.
+Those repos show you the engine; TORCH shows you how to point that engine at a target and keep it disciplined.
 
 ---
 
