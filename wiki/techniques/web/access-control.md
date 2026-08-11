@@ -725,3 +725,17 @@ framework's own routing does. Pair every finding with a genuine negative-control
 same filter before treating it as confirmation.
 
 <!-- promoted-slug: a-spring-security-ant-style-gate-written-for-one-path-depth -->
+
+## A forgeable cookie usually gates only PART of the app
+
+Confirming that a cookie check is trivially forgeable (`Cookie: role=admin`, a bare
+`md5("true")` value, an unsigned flag) does not mean the whole app is now open. Map WHICH
+check gates the thing you actually want before assuming full admin: a forged/predictable
+cookie frequently unlocks one layer (an API, an IDOR-able panel) while the sensitive
+action (RCE, the flag, a destructive admin function) sits behind a SEPARATE, session-backed
+check (`$_SESSION['admin']`, a server-side role lookup) set only by a real login. Test the
+target action directly with the forged cookie before declaring the app pwned from the
+cookie bypass alone — if it 403s/redirects while the API/IDOR still works, you have two
+different gates, not one.
+
+<!-- promoted-slug: forgeable-cookie-gates-only-part-of-app -->

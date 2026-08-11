@@ -124,6 +124,19 @@ sh -c "echo \$\$ > /tmp/c/x/cgroup.procs"     # trigger
 
 Privileged also means you can just `fdisk -l; mount /dev/sda /mnt; chroot /mnt`. If SYS_ADMIN/SYS_MODULE/SYS_PTRACE are held individually (not full privileged), use the matching capability primitive in [[linux-privesc]].
 
+**No escape found (no `docker.sock`, `CapEff=0`, no host mount)? Pivot LATERALLY over the container's
+own network instead of trying to break OUT.** A container almost always sits on a bridge network
+(`172.17.0.0/16` / `172.18.0.0/16` by default) with siblings and often the host's gateway IP reachable:
+
+```bash
+ip route          # confirm the bridge subnet and default gateway (the host, from inside the container)
+rustscan -a 172.18.0.1,172.18.0.2,172.18.0.3 --ulimit 5000 -g   # sweep the gateway + sibling containers
+```
+
+The gateway IP is frequently the Docker host itself with ports NOT exposed externally (an internal
+admin panel, a database, another service only meant for container-to-container traffic) — treat "I
+can't escape this container" and "I can't reach anything else" as two separate questions.
+
 ---
 
 ## Kubernetes node escape: kubelet :10250 and hostPath /var tokens

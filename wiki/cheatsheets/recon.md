@@ -282,6 +282,34 @@ cat js-endpoints.txt | httpx -silent -mc 200,201,204,301,302,401,403,500 -o live
 
 Source-map recovery (when `.js.map` exposed) reconstructs original source - see [[javascript-source-map-exploitation]]. Mined keys often unlock cloud (see [[imds-cloud-metadata]] / cloud bucket section below); blind endpoints feed [[oob-callbacks]]-gated SSRF tests.
 
+**Obfuscated/computed secrets: run the JS in node instead of hand-tracing it.** When a key/algorithm
+is not a literal string but the OUTPUT of obfuscated logic (a minified IIFE, a computed constant),
+grep finds nothing useful. Execute the file itself and print the value instead of reverse-engineering
+the obfuscation by eye:
+
+```bash
+node -e "$(cat api.js); console.log(c)"    # load the file's scope, then dump the variable it computed
+```
+
+Far faster than manually stepping through minified/obfuscated JS when you only need the resulting
+value, not a full understanding of the algorithm.
+
+**Modern CMS/SPA admin panels are JS-rendered — `curl` sees only the shell.** A `curl`-driven crawl
+against a JS/SPA-rendered admin panel (React/Vue dashboards, a modern Joomla 4+ admin, most modern
+CMS back-ends) returns an empty shell `<div id="app">` with no real markup — don't grind a
+template-editor RCE, a form submission, or any interaction over raw curl against one of these; drive
+a real browser (headless Chromium, `Skill(screenshot)`/`browser.sh`) or the actual foothold surface
+is elsewhere on the target.
+
+**Never serial-curl a numeric/name range.** A `for i in $(seq ...); do curl ...; done` loop fetches
+one URL at a time and turns a 10-minute enumeration into 40 minutes. Fan out threaded from the first
+open port instead:
+
+```bash
+ffuf -t 80 -w <(seq -f '%04g' 0 9999) -u http://TARGET/path/FUZZ/ -mc 200
+# or: xargs -P50 -I{} curl -s http://TARGET/path/{}
+```
+
 ---
 
 ## Favicon Hash Fingerprinting
@@ -828,3 +856,33 @@ What matters is the posture DIFFERENTIAL, not the gate:
 Gotcha: a gated instance is a genuine hardening win worth citing as a positive control in the report - especially for products that are normally found wide open. Do not grind on the gate.
 
 <!-- promoted-slug: one-dev-staging-naming-convention-enumerates-a-whole-product -->
+
+## CTF flag accounting: sweep ALL flags before declaring a box done
+
+The instant you have root/full access on a CTF box, enumerate EVERY flag on the filesystem before
+reporting any single one as "the" user/root flag — a box can legitimately hide more than the two you
+expect:
+
+```bash
+grep -RIn 'THM{' / --exclude-dir={proc,sys,dev,run,mnt} 2>/dev/null   # swap the platform's format
+grep -RIn 'flag{\|HTB{\|picoCTF{' / --exclude-dir={proc,sys,dev,run,mnt} 2>/dev/null
+```
+
+- **A flag file with a troll marker/joke text is a decoy**, not a scored flag — a room's tell that
+  you found a distractor, not the real one.
+- **Multiple shell-capable users means the scored "user flag" may belong to a LATER user** reached by
+  lateral movement, not whoever you got a shell as first. A fast root shortcut (e.g. a `sudo
+  NOPASSWD` script straight to root) can skip the intended lateral step entirely — after getting
+  root, check whether the box had a second/third user you never pivoted to, since the scored flag may
+  live there.
+- **Some platforms plant an intro flag OFF the target box entirely** — a TryHackMe room's "Base Flag"
+  is commonly an HTML comment in the ROOM PAGE source on the platform site (view-source on the task
+  page, not the target IP), never findable by any full-filesystem grep on the box. If a scored flag
+  is nowhere on disk after a real full-FS grep, check the room/task page source before assuming you
+  missed a file.
+- **Verify file state with `wc -c` + `md5sum`, not a single `ls`.** A box mid-redeploy/reset can show
+  a transient wrong size on one `ls`; a byte-count + hash agreeing across a couple of reads is the
+  real confirmation that you read the whole, current file — CTF platforms redeploy/reset boxes under
+  you more often than a live client engagement would.
+
+<!-- promoted-slug: ctf-flag-accounting-sweep-all-flags -->

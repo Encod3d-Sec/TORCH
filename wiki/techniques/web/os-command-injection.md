@@ -656,3 +656,23 @@ The request path in your `http.server` log is the output. Confirmed against embe
 web-admin command injection (see [[firmware-hardware]]).
 
 <!-- promoted-slug: busybox-blind-exfil-caveat -->
+
+## Prefix-allowlist sink: chain off the required leading command
+
+A sink guarded with `strpos($cmd, 'date') === 0` (or an equivalent "must start with X"
+check in any language) only validates the FIRST token, not the whole string. Satisfy the
+prefix, then chain a separator to run anything after it:
+
+```bash
+# strpos($cmd,'date')===0 lets anything through as long as it STARTS with "date"
+date;<cmd>
+date&&<cmd>
+date|<cmd>
+```
+
+The same shape recurs as `startswith()`/`.StartsWith()`/`^date` regex-anchor checks —
+whenever a command sink only anchors the prefix, treat it the same as an unanchored sink
+once you supply that prefix. See also `## Partial regex anchor` above for the input-
+validation sibling of this bug (a missing trailing `$`/`.fullmatch`).
+
+<!-- promoted-slug: prefix-allowlist-command-chain -->

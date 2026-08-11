@@ -312,6 +312,15 @@ print(base64.b64encode(pickle.dumps(Exploit())).decode())
 
 Replace the `serialized_data` field in the target application's POST request with this value.
 
+### `/static/`-looking paths and `onclick=` handlers can hide a dynamic backend
+
+Do not assume a path under `/static/` or a page that looks like flat HTML is actually static — an
+`onclick="sendRequest('1')"` handler wired up in a JS file you have not yet opened can point at a
+live backend route (`POST /fetch`, `POST /api/...`) that a purely static site would never need.
+Read every JS file the page loads end to end, not just the ones with an obviously dynamic name; the
+sink for a deserialization/RCE chain routinely lives in the ONE handler a keyword grep skips because
+the surrounding page presented as static.
+
 ### Python Pickle: path-controlled `pickle.load` + separate upload = RCE (delivery chain)
 
 A recurring shape where neither half looks like RCE alone: an endpoint deserializes a file whose PATH

@@ -223,4 +223,15 @@ git diff <older-commit> <newer-commit>
 # Output shows: -ADMIN_PASSWORD=<plaintext>  →  +ADMIN_PASSWORD=env('ADMIN_PASSWORD')
 ```
 
+## Directory-listing-exposed logs can leak the one (input, output) pair a crypto scheme needs
+
+An `autoindex on`-style open log directory (`ffuf`/manual browse to `/logs/`) is not just a source of
+credentials — a single leaked application log line can be exactly enough to BREAK a weak token/crypto
+scheme even without full source access. If a log records a real (known-input, generated-output) pair
+for a token/invite-code/reset-code generator, that one pair is often sufficient to recover an unknown
+seed constant offline and forge tokens for any other input. See [[cryptography-attacks]] (PRNG /
+`mt_rand` seed-recovery section) for the forging technique once you have the pair — the discovery
+vector here is simply: fuzz for open log directories (`/logs/`, `/log/`, `/debug/`) on any app with a
+custom token scheme, and read every line of what you find, not just the most recent one.
+
 **Key insight:** Secrets removed in a commit still exist in git history. Even a public repo with a "deleted credentials" commit is fully compromised — rotate all affected credentials immediately. Use `trufflehog` or `gitleaks` to scan history automatically.

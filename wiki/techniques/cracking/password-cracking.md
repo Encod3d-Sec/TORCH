@@ -130,6 +130,13 @@ john --wordlist=rockyou.txt --rules hashes.txt
 cewl https://www.inlanefreight.com -d 4 -m 6 --lowercase -w inlane.wordlist
 ```
 
+**OSINT combinator: build the candidate from the target's OWN leaked shape, not rockyou.** When
+OSINT (a public profile, a fake-social app on the target, a bio field) yields personal facts (a pet
+name, a birth year, a hobby) AND a separate leak reveals the SHAPE of an old password (e.g.
+`word+number`, `Name!Year`), combine the OSINT facts into that exact shape rather than grinding a
+generic wordlist — the target reuses their own pattern, not a random rockyou hit. A tiny hand-built
+combinator list of 10-50 candidates in the confirmed shape beats a multi-hour rockyou run.
+
 ### 6. Crack specific hash types
 
 ```bash

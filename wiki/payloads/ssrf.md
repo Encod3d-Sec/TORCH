@@ -183,3 +183,21 @@ blind SSRF sink also leaks outbound request headers (API keys/tokens) if you poi
 listener. See [[werkzeug-debug-console-rce]] (turn the file-read into RCE on Flask debug apps).
 
 <!-- promoted-slug: ssrf-scheme-control-lfi -->
+
+## Diagnostics/ingest/probe endpoints as an SSRF trigger surface
+
+Any endpoint named `diagnostics`, `ingest`, `probe`, `health-check`, or `test-connection` that
+accepts a URL is a dedicated SSRF surface by design — it exists specifically to make the server
+fetch something. Treat it as SSRF even when it is not obviously part of the "main" app, and even
+when it validates the target against an allowlist: an allowlist entry is often a magic/internal
+host that, once matched, PERFORMS A PRIVILEGED ACTION (mints a session/console token, triggers an
+internal callback) rather than just fetching bytes — so passing the allowlist can itself be the
+exploit, not merely a bypass en route to one.
+
+These endpoints are frequently only DISCOVERABLE by reading a response header/manifest in full,
+not by content-discovery: e.g. a hidden route referenced inside an HLS `#EXT-X-SESSION-DATA` tag
+in an `.m3u8` manifest, a config blob embedded in a `<meta>` tag, or a value buried in a JSON API
+response that a scanner never parses semantically. Read every manifest/header/response body whole
+(same read-whole discipline as source/JS) rather than grepping for `url=`/`callback=` params only.
+
+<!-- promoted-slug: diagnostics-ingest-endpoint-ssrf-surface -->

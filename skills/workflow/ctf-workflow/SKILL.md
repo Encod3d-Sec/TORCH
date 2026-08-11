@@ -16,6 +16,11 @@ python3 scripts/campaign.py note <row> --arsenal <slug>
 python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | --park Q | --find F
 ```
 
+Every `next` now prints an `APPROACH:`/`AVOID:`/`REFS:` block for the served row (the distilled
+ctf-box method for that vuln class) - read it before acting. If you drift into hand-rolled exploit
+loops without touching the wiki/board, the `recon-capture` hook posts a one-line REMINDER to run
+`next` and load the routed hunt skill; it never blocks, so act on it rather than riding past it.
+
 ## Start / resume
 
 1. `python3 scripts/campaign.py init --type ctf` - validates `scope.md` (for a box, scope is just
@@ -24,16 +29,19 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
    with an explicit `osint` argument - a box's answer is on the box, not in Wayback.
 3. Passes 1-3 feed `state.md` - rustscan/nmap + web enum. Read every service banner, page source and
    config end to end.
-4. `python3 scripts/campaign.py board` - writes 4a foothold rows plus 4b pspy/linpeas/sudo/docker
-   privesc rows for the ctf approach.
+4. `python3 scripts/campaign.py board` - writes the 4a foothold rows; once an asset is a foothold,
+   re-run `board` and it seeds the 4b privesc rows (pspy/linpeas auto + the manual checklist) for
+   that asset.
 5. Enter the loop, depth-first.
 6. **When a foothold lands** (a reverse shell in a tmux window via `vm-scan.sh --win shell`, or a
    meterpreter/msfconsole session via `--win msf`), record it: `python3 scripts/campaign.py foothold
    <target> --win shell` (or `--win msf`; or ride it on the closing find with `done ... --win`). The
-   driver flips the asset's `state.md` row to `access=foothold`, routes its 4b privesc rows through
+   driver flips the asset's `state.md` row to `access=foothold` and routes its 4b privesc rows through
    `vm-rsh --win <win>` (persistent session + operator visibility past foothold), and prints `tmux
    attach -t <eng>` for manual takeover. msf itself is operator-attach / drop-to-shell, not
-   `vm-rsh`-driven (its wrapper frames a bash shell, not the `msf6 >` REPL).
+   `vm-rsh`-driven (its wrapper frames a bash shell, not the `msf6 >` REPL). **After recording a
+   foothold, re-run `python3 scripts/campaign.py board` so the 4b privesc rows are seeded** - `next`
+   will not surface them until you do.
 7. **Web RCE -> a real shell, THEN stabilize -- do not ride one-liners (recurring drift).** The
    moment code-exec lands (a web-RCE primitive, an LFI->session-poison, a deser gadget), STOP
    hand-poking one-shot payloads: (a) `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` +
@@ -61,7 +69,8 @@ often the intended path). Rendered screenshots of the flag/exploited state are v
 ## Gates
 
 G1 arsenal-first, G2 skill-first, G3 typed evidence (a flag on screen is a valid `web` PoC), G8
-tool-first. Privesc always includes pspy + linpeas/winpeas - the board seeds these as 4b rows.
+tool-first. Privesc always includes pspy + linpeas/winpeas - the board seeds these as 4b rows once
+an asset is recorded as a foothold (re-run `board` after `foothold`/`done --win` to seed them).
 
 ## Autonomy
 
