@@ -1,5 +1,4 @@
 """approach-notes.json loads, keys are real board class tokens, and cmd_next prints the note."""
-import json
 import os
 import shutil
 import subprocess
@@ -21,6 +20,21 @@ def test_loader_parses_and_has_privesc_keys():
     assert "privesc-auto" in notes and "privesc-manual" in notes
     for v in notes.values():
         assert v.get("do") and v.get("refs")
+
+
+def test_every_key_is_a_real_board_token():
+    # _class_vocab() is the confirmed-findings vocab (CLASS_ALIASES + coverage-classes.json) and
+    # does NOT include the enumeration classes surface-seeds.json seeds onto the board (e.g.
+    # content-discovery, cve-check - see derive_surface_rows); both are real vuln-class tokens a
+    # served row can carry, so both count as "real board class token" here.
+    import campaign
+    import _engagement as E
+    vocab = E._class_vocab()
+    seeded = {row.get("class", "") for spec in campaign._surface_seeds().values()
+              for row in spec.get("rows", [])}
+    allowed = set(vocab) | seeded | {"privesc-auto", "privesc-manual"}
+    for k in campaign._approach_notes():
+        assert k in allowed, f"{k} is not a real board class token"
 
 
 @pytest.fixture

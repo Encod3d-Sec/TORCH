@@ -30,7 +30,7 @@
     "avoid": "no blind-SSRF claim from inference or a timing guess - silence without a live listener is a false negative, not a result.",
     "refs": ["ssrf", "hunt-ssrf"]
   },
-  "upload": {
+  "file-upload": {
     "do": "confirm the app actually USES this upload (is the stored file reachable and executed?) before grinding extension/content-type/magic-byte bypasses.",
     "avoid": "an unauth upload that lands outside the webroot with no execution is a dead end - do not spend the box on it.",
     "refs": ["file-upload", "hunt-upload"]
