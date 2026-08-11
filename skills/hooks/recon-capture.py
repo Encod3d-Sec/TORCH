@@ -71,6 +71,26 @@ def _is_rce_landing(text):
     uid=0 so a reflected attacker-root `id` (the false-RCE trap) does not fire the reflex."""
     return bool(text) and bool(_RCE_ID_RE.search(text[:MAX_BLOB]))
 
+
+# web content/vhost discovery + fetch tools; grinding these on one host with no foothold = the
+# "widen the surface" drift (re-probing a dead surface instead of enumerating a new surface class).
+_WEB_PROBE_RE = re.compile(r"\b(feroxbuster|ffuf|gobuster|dirb|dirsearch|wfuzz|nuclei|nikto|whatweb|wpscan|curl|wget)\b", re.I)
+WIDEN_AT = 20   # web probes with no foothold before the widen-the-surface nudge fires (once)
+
+
+def _is_web_probe(cmd):
+    """A web content/vhost-discovery or fetch command against an http(s) target."""
+    return bool(_WEB_PROBE_RE.search(cmd or "")) and "http" in (cmd or "").lower()
+
+
+def _state_has_foothold(d):
+    """Cheap check: has this engagement reached a foothold (so 'widen recon' no longer applies)."""
+    try:
+        t = open(os.path.join(d, "state.md"), encoding="utf-8", errors="ignore").read().lower()
+        return "foothold" in t or "## status:" in t or "access=foothold" in t
+    except Exception:
+        return False
+
 MAX_BLOB = 20000   # cap output scanned for fingerprints
 MAX_HITS = 3
 
@@ -768,6 +788,40 @@ def main():
                         "(pty + job control + window size), or prefer pwncat-cs / an msf "
                         "multi-handler over a raw nc; (3) drive it with bash scripts/vm-rsh.sh "
                         "--win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3 (Deliver).")
+        except Exception:
+            pass
+
+    # WIDEN-THE-SURFACE reflex (fire-once, advisory, fail-open). Grinding web recon/fetches on one
+    # host with NO foothold is the recurring 40-min drift: re-probing a dead surface (a parameterized
+    # login, an image-only upload) instead of enumerating a NEW surface class. After WIDEN_AT web
+    # probes with no foothold, nudge ONCE to widen (userdir /~, vhost-by-redirect-location, another
+    # port/vhost, source-read) or work the board. The two surface classes named are the exact ones
+    # that cost a real box ~40 min (an Apache userdir + a vhost that 302s to a non-default Location).
+    if d and _engagement and _is_web_probe(cmd):
+        try:
+            seenw = os.path.join(d, ".widen-nudged")
+            footholded = os.path.exists(os.path.join(d, ".rce-shell-nudged")) or _state_has_foothold(d)
+            if not os.path.exists(seenw) and not footholded:
+                cf = os.path.join(d, ".web-probe-count")
+                try:
+                    n = int(open(cf, encoding="utf-8").read().strip() or "0")
+                except Exception:
+                    n = 0
+                n += 1
+                with open(cf, "w", encoding="utf-8") as fh:
+                    fh.write(str(n))
+                if n >= WIDEN_AT:
+                    open(seenw, "a").close()
+                    blocks.append(
+                        "WIDEN THE SURFACE: %d web probes on this engagement with no foothold. A "
+                        "dead OBVIOUS surface (a parameterized login, an image-only upload) is the "
+                        "signal to enumerate a NEW surface class, not to keep grinding it: "
+                        "(1) Apache userdir -- ffuf 'http://T/~FUZZ/' with a usernames list (NO dir "
+                        "wordlist carries ~-prefixed names, so ferox/ffuf structurally miss it); "
+                        "(2) vhost by redirect-LOCATION -- ffuf -mc all then diff the redirectlocations "
+                        "(a real vhost 302s ELSEWHERE; -fc 302 / -ac hides it); (3) another port or "
+                        "the second vhost's OWN app; (4) source-read (LFI/.git/backup) before brute. "
+                        "Or run `python3 scripts/campaign.py board` and work it depth-first." % n)
         except Exception:
             pass
 

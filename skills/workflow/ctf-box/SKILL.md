@@ -127,6 +127,13 @@ bash scripts/backup-sweep.sh http://$T ferox.txt    # appends .bak/.back/~/.old/
 # ffuf for what feroxbuster does NOT do -- param mining + vhosts:
 ffuf -c -u "http://$T/?FUZZ=x" -w scripts/wordlists/harness-params.txt -fs <baseline>          # param mining (SSRF/LFI/cmdi names); -c = colored output (readable recon card)
 ffuf -c -u http://$T/ -H "Host: FUZZ.$T" -w <vhost-wordlist> -ac                                # vhosts
+# VHOST that redirects ELSEWHERE hides from -fc 302 / -ac: if every unknown Host 302s to the same place,
+# the real vhost 302s to a DIFFERENT Location. Match ALL, then diff the redirect locations, do NOT filter by code:
+ffuf -u http://$T/ -H "Host: FUZZ.$T" -w <vhost-wordlist> -mc all -o vh.json                     # then: jq unique redirectlocation != the default -> that FUZZ is the real vhost
+# APACHE USERDIR (~user): a /~name/ path can host a whole second app (the real entry) and NO dir wordlist
+# carries ~-prefixed names, so a normal ferox/ffuf MISSES it. Fuzz userdirs explicitly whenever mod_userdir
+# is plausible (Apache, a "~" hint, or the obvious app is a dead-end) -- the box's actual foothold hid here:
+ffuf -c -u "http://$T/~FUZZ/" -w /usr/share/seclists/Usernames/top-usernames-shortlist.txt -mc 200,301,403 2>/dev/null  # then a bigger names list (Usernames/Names/names.txt); catches webmaster/admin/dev/backup/<people>
 nuclei -u http://$T -o nuclei.txt                                                              # known CVEs/misconfig
 whatweb -a3 http://$T ; curl -s -I http://$T                                                   # fingerprint + cookies (whatweb in its OWN tmux tab -> recon card)
 wpscan -u http://$T                                                                            # If there is a wordpress
@@ -395,7 +402,7 @@ Load `Skill(hunt-idor)`/`Skill(hunt-ssrf)`/`Skill(hunt-api)`. Owned via app-logi
 ## Context tools
 
 <!-- auto-wired: documented tools to reach for; do not hand-roll -->
-- [[nmap]]
+- [[wiki/tools/nmap]]
 - [[rustscan]]
 - [[naabu]]
 - [[ffuf]]
