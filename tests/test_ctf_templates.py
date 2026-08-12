@@ -114,11 +114,11 @@ def test_new_engagement_ctf_lean(eng_vault):
     r = _run_new(eng_vault, "room", "ctf")
     assert r.returncode == 0, r.stderr
     d = eng_vault / "targets" / "room"
-    for f in ("state.md", "loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
-              "walkthrough.md", "Deadends.md"):
+    for f in ("state.md", "loot.md", "Approach.md", "scope.md", "Deadends.md"):
         assert (d / f).exists()
     assert "Kill-Chain Board" in (d / "Approach.md").read_text()
-    assert not (d / "hot.md").exists()   # per-engagement hot.md removed
+    for f in ("Killchain.md", "log.md", "walkthrough.md", "eval.md", "hot.md"):
+        assert not (d / f).exists()
     for sub in ("ingest", "poc"):
         assert (d / sub).is_dir()
     assert not (d / "recon").exists()   # auto firehose retired
@@ -131,10 +131,27 @@ def test_new_engagement_pentest_full(eng_vault):
     r = _run_new(eng_vault, "pt", "pentest")
     assert r.returncode == 0, r.stderr
     d = eng_vault / "targets" / "pt"
-    for f in ("oob.md", "Vuln-index.md"):
-        assert (d / f).exists()          # full set (backward compat)
+    for f in ("oob.md", "Vuln-index.md", "Killchain.md", "log.md", "walkthrough.md", "eval.md"):
+        assert (d / f).exists()          # full set (backward compat, unaffected by the ctf trim)
     assert not (d / "coverage.md").exists()   # coverage retired -> board 4a table
     assert (d / "poc").is_dir()          # poc/ now scaffolded at init
+
+
+def test_new_engagement_campaign_files_pentest_bb_only(eng_vault):
+    r = _run_new(eng_vault, "pt2", "pentest")
+    assert r.returncode == 0, r.stderr
+    d = eng_vault / "targets" / "pt2"
+    for f in ("identities.md", "source-ledger.md", "write-ledger.md"):
+        assert (d / f).exists()
+    assert not (d / "decisions.md").exists()   # decisions.md is on-demand for every type
+
+
+def test_new_engagement_ctf_omits_campaign_driver_files(eng_vault):
+    r = _run_new(eng_vault, "room7", "ctf")
+    assert r.returncode == 0, r.stderr
+    d = eng_vault / "targets" / "room7"
+    for f in ("identities.md", "source-ledger.md", "write-ledger.md", "decisions.md"):
+        assert not (d / f).exists()
 
 
 def test_new_engagement_ctf_with_flags(eng_vault):
