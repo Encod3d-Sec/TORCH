@@ -192,6 +192,14 @@ def test_new_engagement_no_scope_flag_unchanged(eng_vault):
     assert parsed["in_scope"] == []
 
 
+def test_targets_md_documents_ctf_chain_split():
+    p = os.path.join(REPO, "targets", "TARGETS.md")
+    if not os.path.exists(p):
+        pytest.skip("targets/TARGETS.md is gitignored; local-only check")
+    t = open(p, encoding="utf-8").read()
+    assert "## Chain" in t and "## Status" in t   # ctf's Killchain/log split documented
+
+
 def test_new_engagement_scope_rejects_malformed_value(eng_vault):
     r = _run_new(eng_vault, "room6", "ctf", "--scope", "bad host;rm")
     assert r.returncode == 0, r.stderr    # creation still succeeds

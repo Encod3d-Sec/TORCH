@@ -8,7 +8,7 @@ TORCH/
 ├── targets/                     <- engagements (PRIVATE; client data only here, git-ignored)
 │   ├── active.md                <- pointer: current engagement dir name
 │   ├── scrub-terms.txt          <- private leak-check extras (not shipped)
-│   └── <eng>/                   <- self-healed set (state,loot,Killchain,Approach,log,scope,walkthrough,eval,oob,hot,Vuln-index,Deadends) + ingest/ + poc/ (curated PoC shots) + Vulns/ (pentest)
+│   └── <eng>/                   <- pentest/bugbounty self-healed set (state,loot,Killchain,Approach,log,scope,walkthrough,eval,oob,Vuln-index,Deadends) + ingest/ + poc/ (curated PoC shots) + Vulns/ (pentest); ctf: lean upfront set (state,loot,Approach,scope,Deadends); Killchain/log stay pentest/bugbounty-only, walkthrough/eval/decisions self-create on demand
 ├── wiki/
 │   ├── index.md                 <- catalog of all wiki pages
 │   ├── moc.md                   <- graph map-of-content (domain hubs; navigate here)

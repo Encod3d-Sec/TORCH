@@ -13,9 +13,9 @@ targets/<eng>/                  # created by new-engagement.sh, self-healed by e
 ├── scope.md            -- in/out-of-scope + RoE flags (no_bruteforce/no_dos/passive_only)   [all types]
 ├── state.md            -- primary target map: host/service/access table (per-type columns)  [all types]
 ├── loot.md             -- captured credentials / keys / flags + reuse map                    [all types]
-├── Killchain.md         -- open/blocked attack paths + next moves (LIVE attack-chain tracker) [all types]
-├── log.md              -- append-only audit trail (terse)                                     [all types]
-├── walkthrough.md      -- full copy-pasteable boot-to-root reproduction (FINAL attack chain) [all types]
+├── Killchain.md         -- open/blocked attack paths + next moves (LIVE attack-chain tracker) [pentest/bugbounty; ctf: folds into state.md's ## Chain/## Status]
+├── log.md              -- append-only audit trail (terse)                                     [pentest/bugbounty]
+├── walkthrough.md      -- full copy-pasteable boot-to-root reproduction (FINAL attack chain) [all types, self-created at close-out if missing; scaffolded upfront for pentest/bugbounty]
 ├── Deadends.md         -- false positives + exhausted/blocked vectors (anti-loop)             [all types]
 ├── ingest/             -- raw tool output, consumed by the ingest skill                       [all types]
 ├── recon/              -- auto-captured scan-tool screenshot cards (nmap/ffuf/nuclei/...)     [all types]
@@ -34,7 +34,11 @@ Not auto-created: `Vulns/` is made on the first FIND (pentest/bugbounty); make a
 `reports/` dir or a `scope/` IP/domain sub-list by hand only if an engagement needs
 them. A ctf engagement omits `coverage.md`, `oob.md`, and the severity `Vuln-index.md`
 at init (all dead across THM rooms); create them on demand with `--with-coverage` /
-`--with-oob`, or `ensure_optional_file()` when a coverage check or a blind bug runs.
+`--with-oob`, or `ensure_optional_file()` when a coverage check or a blind bug runs. A
+ctf engagement ALSO omits `Killchain.md` and `log.md` entirely (its live attack chain
+lives in `state.md`'s own `## Chain`/`## Status` sections instead), and `walkthrough.md`
+/ `eval.md` / `decisions.md` self-create on demand at their own trigger rather than
+being scaffolded upfront, see `setup/templates/ctf/state.md`.
 
 ---
 
