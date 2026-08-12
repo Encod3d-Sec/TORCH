@@ -17,9 +17,7 @@ python3 scripts/campaign.py done <row> --poc <img> --kind req   # | --dead R | -
 ```
 
 Every `next` now prints an `APPROACH:`/`AVOID:`/`REFS:` block for the served row (the distilled
-ctf-box method for that vuln class) - read it before acting. If you drift into hand-rolled exploit
-loops without touching the wiki/board, the `recon-capture` hook posts a one-line REMINDER to run
-`next` and load the routed hunt skill; it never blocks, so act on it rather than riding past it.
+ctf-box method for that vuln class) - read it before acting.
 
 ## Start / resume
 

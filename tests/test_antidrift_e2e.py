@@ -1,8 +1,5 @@
 """End-to-end: a web-asset recon state produces a board whose web row prints the userdir
-APPROACH, and a simulated free-style burst makes the hook reminder fire once."""
-import datetime
-import importlib.util
-import json
+APPROACH."""
 import os
 import shutil
 import subprocess
@@ -15,15 +12,7 @@ CAMPAIGN = os.path.join(VAULT, "scripts", "campaign.py")
 FIX = os.path.join(HERE, "fixtures", "campaign")
 
 
-def _rc():
-    spec = importlib.util.spec_from_file_location(
-        "rc", os.path.join(VAULT, "skills", "hooks", "recon-capture.py"))
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
-
-
-def test_web_box_board_prints_userdir_and_reminder_fires(tmp_path):
+def test_web_box_board_prints_userdir_approach(tmp_path):
     d = tmp_path / "eng"
     shutil.copytree(FIX, d)
     open(d / "state.md", "w").write(
@@ -47,11 +36,3 @@ def test_web_box_board_prints_userdir_and_reminder_fires(tmp_path):
     out = subprocess.run([sys.executable, CAMPAIGN, "--eng", str(d), "next"],
                          capture_output=True, text=True).stdout
     assert "APPROACH" in out and "userdir" in out
-
-    # simulate the free-style burst: 8 curl calls, no wiki/skill
-    now = datetime.datetime.now(datetime.timezone.utc)
-    evs = [{"kind": "tool", "tool": "Bash", "bins": ["curl"],
-            "ts": (now - datetime.timedelta(minutes=i)).isoformat()} for i in range(8, 0, -1)]
-    (d / ".events.jsonl").write_text("\n".join(json.dumps(e) for e in evs) + "\n")
-    rc = _rc()
-    assert rc._drift_reminder(str(d), "curl -s 'http://t/login.php' --data \"u=1' OR SLEEP(5)#\"")

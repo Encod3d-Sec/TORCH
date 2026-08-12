@@ -1095,6 +1095,7 @@ def cmd_next(a):
     if effort >= ceiling:
         print("  effort ceiling reached -> resolve this row:")
         print("  - campaign.py done %s --dead <reason>   (or --park <question>)" % rid)
+        print("  stuck? consider Skill(redteamlead) for a wiki-grounded redirect before grinding further.")
         return 0
 
     n = 1

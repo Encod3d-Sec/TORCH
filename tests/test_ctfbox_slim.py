@@ -22,6 +22,6 @@ def test_ctfbox_is_substantially_slimmer():
 def test_ctfworkflow_documents_approach_and_fixes_4b_claim():
     txt = open(WF, encoding="utf-8").read()
     assert "APPROACH" in txt                       # new per-row output documented
-    assert "REMINDER" in txt or "reminder" in txt  # the drift reminder documented
+    assert "REMINDER" not in txt                   # the removed drift reminder is not documented
     # the old false claim ("writes 4a foothold rows plus 4b pspy/linpeas ... rows") must be corrected
     assert "4b pspy/linpeas/sudo/docker privesc rows" not in txt

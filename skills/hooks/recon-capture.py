@@ -14,7 +14,6 @@ Two jobs after a recon/exec tool runs:
 Keyword matching only (no structured/version-fragile parsing).
 Emits Claude Code JSON additionalContext. Non-fatal: any error exits 0 silent.
 """
-import datetime
 import json
 import os
 import re
@@ -588,114 +587,6 @@ def _is_serial_enum_loop(cmd):
     return bool(_LOOP_RE.search(cmd) and _FETCH_RE.search(cmd) and not _THREADED_RE.search(cmd))
 
 
-# Net-touching binaries: local copy of campaign.py's NET_BINS (a hook must not import the 1600-line
-# CLI). Keep roughly in sync; drift here only changes reminder sensitivity, never correctness.
-_NET_BINS = {"curl", "wget", "nmap", "rustscan", "nc", "ncat", "ffuf", "feroxbuster", "gobuster",
-             "sqlmap", "nuclei", "nxc", "netexec", "hydra", "httpx", "katana", "wpscan", "nikto",
-             "dig", "openssl"}
-_DRIFT_MIN = 5        # minutes since last wiki/skill/board touch
-_DRIFT_CALLS = 6      # net-exploit Bash calls since last touch
-
-
-def _read_events(d):
-    out = []
-    try:
-        with open(os.path.join(d, ".events.jsonl"), encoding="utf-8") as fh:
-            for ln in fh:
-                try:
-                    out.append(json.loads(ln))
-                except Exception:
-                    continue
-    except OSError:
-        pass
-    return out
-
-
-def _last_discipline_ts(events):
-    """Latest ts among discipline touches: a wiki-page read (`wiki` set), a Skill fire, or a
-    wiki-search MCP call. None if none seen."""
-    best = None
-    for e in events:
-        if e.get("kind") != "tool":
-            continue
-        tool = e.get("tool") or ""
-        if e.get("wiki") or tool == "Skill" or tool.startswith("mcp__wiki-search"):
-            # ts compared lexicographically; safe because tool-telemetry.py always writes
-            # uniform UTC microsecond ISO timestamps.
-            ts = e.get("ts") or ""
-            if best is None or ts > best:
-                best = ts
-    return best
-
-
-def _minutes_since(ts):
-    if not ts:
-        return None
-    try:
-        t = datetime.datetime.fromisoformat(ts)
-        if t.tzinfo is None:
-            t = t.replace(tzinfo=datetime.timezone.utc)
-        return (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() / 60.0
-    except Exception:
-        return None
-
-
-def _drift_reminder_arm(d, since):
-    """Fire at most once per drift-window. The window is keyed by the last discipline ts: once we
-    remind for a given `since`, stay silent until a NEW discipline touch advances it (re-arm)."""
-    p = os.path.join(d, ".drift-reminded")
-    try:
-        prev = open(p, encoding="utf-8").read().strip()
-    except OSError:
-        prev = ""
-    key = since or "START"
-    if prev == key:
-        return False
-    try:
-        open(p, "w", encoding="utf-8").write(key)
-    except OSError:
-        pass
-    return True
-
-
-def _drift_reminder(d, cmd):
-    """Advisory reminder-not-block: when exploit calls pile up while the wiki/skill/board goes
-    untouched, remind the agent back to the loop; go quiet the moment it runs one (re-arm). This
-    is the volume/time backstop the route-triggered, capped GATE-1 nudge does not cover. The
-    trigger command must be exploit-shaped (`_is_exploit_cmd`) OR a web probe/fetch against an
-    http(s) target (`_is_web_probe`, e.g. a curl carrying an injection payload); narrow
-    EXPLOIT_TOOLS alone misses the common curl-with-payload case this reflex targets. Returns
-    the reminder string or None. Fail-open by construction (any error -> None)."""
-    try:
-        import _engagement
-        if not (_is_exploit_cmd(cmd) or _is_web_probe(cmd)) or _is_framework_meta(cmd) \
-                or _engagement.is_solved(d):
-            return None
-        events = _read_events(d)
-        if not events:
-            return None
-        since = _last_discipline_ts(events)
-        netcalls = sum(1 for e in events
-                       if e.get("kind") == "tool" and e.get("tool") == "Bash"
-                       and (since is None or (e.get("ts") or "") > since)
-                       and any(b in _NET_BINS for b in (e.get("bins") or [])))
-        ref = since or (events[0].get("ts") if events else None)
-        mins = _minutes_since(ref)
-        over = (mins is not None and mins > _DRIFT_MIN) or netcalls > _DRIFT_CALLS
-        if not over or not _drift_reminder_arm(d, since):
-            return None
-        unmet = _gate1_unmet(d)
-        who = ("Skill(%s) (routed for this row, still not invoked)" % unmet[0]) if unmet \
-            else "the routed hunt skill for this row"
-        return ("REMINDER (advisory): %d exploit/probe calls / ~%s min since your last wiki query, "
-                "hunt-skill, or board touch. Run `python3 scripts/campaign.py next` for the "
-                "APPROACH, load %s, and log a dead-end (`done <row> --dead <reason>`) if a vector "
-                "is spent - don't hand-roll from memory."
-                % (netcalls, ("%.0f" % mins) if mins is not None else "?", who))
-    except Exception:
-        return None
-
-
 def main():
     raw = sys.stdin.read()
     try:
@@ -805,14 +696,6 @@ def main():
                 open(marker, "w").close()
             except OSError:
                 pass
-
-    # drift reminder (time/volume backstop, re-armed on any wiki/skill/board touch): the GATE-1
-    # nudge is route-triggered and capped; this fires when exploit calls pile up while the wiki
-    # goes untouched, and goes quiet the moment the agent runs one. Advisory, fail-open.
-    if d and _engagement:
-        msg = _drift_reminder(d, cmd)
-        if msg:
-            blocks.append(msg)
 
     # recon-completeness reflex (coverage, not methodology): record which discovery axes ran
     # (content-discovery + nuclei), and while EITHER is missing, nudge on each web exploit/probe --

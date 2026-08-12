@@ -1426,3 +1426,11 @@ def test_close_out_silent_when_not_solved(vault):
     p = run_hook("close-out.py", {}, _env(vault))
     assert not (eng / "walkthrough.md").is_file()
     assert "walkthrough.md is not assembled" not in p.stdout
+
+
+def test_drift_reminder_removed():
+    import os
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     "skills", "hooks", "recon-capture.py")
+    src = open(p).read()
+    assert "_drift_reminder" not in src and "import datetime" not in src
