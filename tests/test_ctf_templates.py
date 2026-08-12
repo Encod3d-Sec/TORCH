@@ -338,6 +338,15 @@ def test_ctf_state_template_has_chain_and_status_sections():
     assert text.index("## Status") > text.index("## Chain")
 
 
+def test_scope_template_comments_moved_to_frontmatter():
+    p = os.path.join(REPO, "setup", "templates", "_scope.md")
+    text = open(p, encoding="utf-8").read()
+    _, fm, body = text.split("---", 2)
+    assert "<!--" not in body
+    for hint in ("In scope", "Out of scope", "Allowed tooling", "Rules of engagement"):
+        assert hint in fm
+
+
 def test_ensure_optional_backfills_decisions(vault, monkeypatch):
     eng = _mk(vault / "targets" / "room8", "ctf")
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
