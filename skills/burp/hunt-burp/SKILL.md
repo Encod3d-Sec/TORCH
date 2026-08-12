@@ -96,6 +96,6 @@ Confirmed:
 Create Vulns/Research/FIND-XXX-SEVERITY-<class>-<host>.md   (capture the raw request/response as evidence: Skill(screenshot-burp) -> a Burp Repeater PoC image)
 Add row to Vuln-index.md: | FIND-XXX | <issue> via Burp | host | CONFIRMED |
 ```
-Capture signals into `state.md`/`loot.md`/`paths.md` as you go. Exhausted a vector -> one line in `Deadends.md`.
+Capture signals into `state.md`/`loot.md`/`Killchain.md` as you go. Exhausted a vector -> one line in `Deadends.md`.
 
 Report: mode used, tools driven, signals found, FINDs created.

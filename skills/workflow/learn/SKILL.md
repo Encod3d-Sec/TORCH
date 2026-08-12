@@ -40,7 +40,7 @@ execution loop) and check each mandated step against what actually happened on d
 | Discipline it prescribes | How to check it was (not) done | Common drift |
 |---|---|---|
 | Recon tooling complete (nmap AND ffuf AND nuclei-read for web) | `ls targets/$ENG/recon/*.png`, `.recon-tools` marker, tmux window names, `log.md` | ffuf never run; nuclei launched but output never read |
-| Screenshot EVERY finding as it lands | count deliberate `poc/*.png` vs findings in `paths.md`; `.screenshot-nudged` | shots only at the very end; transient states lost |
+| Screenshot EVERY finding as it lands | count deliberate `poc/*.png` vs findings in `Killchain.md`; `.screenshot-nudged` | shots only at the very end; transient states lost |
 | Wiki-first before exploiting each fingerprinted service | wiki queries in transcript / `log.md` | jumped to exploitation from memory |
 | A hook nudge fired -> was it acted on? | grep the transcript for a nudge (e.g. "switch to ffuf") whose action never followed | nudge ignored under momentum |
 | State-first / capture-as-you-go | `state.md`/`loot.md` updated mid-box vs all-at-end | prose-in-chat lost |
@@ -126,11 +126,11 @@ explicitly. Do not harvest an in-flight engagement unless asked.
 Read the full engagement and list every candidate GENERIC lesson:
 - `state.md` - tech/service/version that mattered and how it was handled.
 - `loot.md` - default or vendor-known creds (NOT client-set passwords).
-- `paths.md` + `walkthrough.md` - the chain that actually worked, with exact commands.
+- `Killchain.md` + `walkthrough.md` - the chain that actually worked, with exact commands.
 - `Deadends.md` - what failed. Negative knowledge is reusable: a bypass that does NOT
   work on tech X, a default cred changed in vendor version Y, a false-positive pattern.
 - `Vuln-index.md` / `Vulns/` - findings and their reusable exploitation technique.
-- `killchain.md`, `log.md` - anything else non-obvious that recurs.
+- `Approach.md`, `log.md` - anything else non-obvious that recurs.
 
 A candidate is worth harvesting only if it is REUSABLE on the next engagement. Skip
 one-off client trivia.
@@ -219,7 +219,7 @@ host/IP/domain in either.
 - **Dedup first.** Enrich the existing page; do not create a second page for a class
   wiki already covers. `qmd` before staging, every time.
 - **No fabrication.** Harvest only what the engagement files actually record. If a
-  lesson is not backed by the state/loot/paths/walkthrough/Deadends record, drop it.
+  lesson is not backed by the state/loot/Killchain/walkthrough/Deadends record, drop it.
 - **Read-only on the engagement.** Phase 0 may edit HARNESS files (`skills/`, `skills/hooks/`,
   `scripts/`, `tests/`, `docs/superpowers/harness-retro.md`) and Phases 1-7 write to `wiki/`
   (via the gate) and the `.learn-done` marker - but NEVER the engagement's own findings/narrative.

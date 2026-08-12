@@ -77,7 +77,7 @@ condition, OOB and two-account readiness, ban control, and budget/report-only. W
 (e.g. when the `wiki-search` MCP drops). During a campaign the driver above is the enforcement and the
 steps below are what it sequences; off-campaign (driver unavailable, or a quick manual engagement) run
 each step in order yourself, do not skip under momentum:
-0. **Board-first.** Work `targets/<eng>/killchain.md` (the kill-chain board) one open item (`[ ]`/`[~]`)
+0. **Board-first.** Work `targets/<eng>/Approach.md` (the plan board) one open item (`[ ]`/`[~]`)
    at a time, marking `[x]` as each lands. In a campaign the driver generates this board and enforces
    its gates: no exploit before the row's arsenal card (G1), no `[x]` without a `poc/` image (G3), and
    an exhausted vector goes `[!]` + one `Deadends.md` line then you move to the next open item, never
@@ -105,7 +105,7 @@ each step in order yourself, do not skip under momentum:
    exploit/lead request, and screenshot each success to `poc/` the moment
    it lands (`capture.sh ev` / `capture.sh tmux` / `shot.py`), never at the end. Evidence is captured
    live now (no auto-card staging). NEVER hand-write / fabricate an evidence card.
-4. **Persist immediately.** A host/cred/path/flag lands -> write `state.md`/`loot.md`/`paths.md` before
+4. **Persist immediately.** A host/cred/path/flag lands -> write `state.md`/`loot.md`/`Killchain.md` before
    the next move; a dead-end -> one `Deadends.md` line.
 5. **Close out.** Objective landed (both flags, or a target-severity finding) -> set `## STATUS: SOLVED`
    in state.md at once, then run the per-type close-out chain the driver prints (`campaign.py`'s
@@ -114,8 +114,8 @@ each step in order yourself, do not skip under momentum:
 Token control and real findings come from the same rule: do not repeat work.
 
 - **Scope-first.** Read `targets/<eng>/scope.md` before acting. Never touch an out-of-scope target or use forbidden tooling (`no_bruteforce`/`no_dos`/`passive_only` flags). The `next-move` analyzer already filters out-of-scope hosts and suppresses spray/active probing per RoE; respect the same bounds in everything else.
-- **State-first.** Before any recon, spray, or exploit attempt, read the active engagement `state.md`, `loot.md`, `paths.md`, and `Deadends.md`. Never re-run a documented dead-end or re-spray a known-failed cred without new input (new cred, new pivot, new payload class).
-- **Stop condition.** A vector is exhausted after a bounded effort (e.g. OOB sink: ~30-40 payloads zero callbacks; spray: full user x pass matrix once). On exhaustion: append one line to `Deadends.md` + update `paths.md` status, then switch vector. Do not grind, do not re-loop.
+- **State-first.** Before any recon, spray, or exploit attempt, read the active engagement `state.md`, `loot.md`, `Killchain.md`, and `Deadends.md`. Never re-run a documented dead-end or re-spray a known-failed cred without new input (new cred, new pivot, new payload class).
+- **Stop condition.** A vector is exhausted after a bounded effort (e.g. OOB sink: ~30-40 payloads zero callbacks; spray: full user x pass matrix once). On exhaustion: append one line to `Deadends.md` + update `Killchain.md` status, then switch vector. Do not grind, do not re-loop.
 - **Capture as you go.** After a recon/cred tool runs, extract results into `state.md`/`loot.md` immediately (state-first discipline: capture the moment a tool returns). Prose in chat is lost; tables persist across sessions and devices.
 - **Tooling-first.** Use the installed tool (nmap/ffuf/nuclei/nxc/linpeas), not a hand-rolled bash reimplementation - better output, fires the fingerprint router, and `recon-capture.py` snaps it to evidence. Hand-rolled bash only when no tool fits (say why). Enforced by the `ctf-box` + `hunt-*` skills, not a runtime hook.
 - **Read-first (recon), not grep.** Before declaring any page/endpoint/file enumerated, READ its full source end-to-end: every `.js` bundle + inline `<script>`, every button `onclick`/`href`, every returned response/config. A keyword grep is NOT a read: the initial attack vector repeatedly hides in an AJAX handler / commented route / alternate endpoint that a narrow `grep <keyword>` skips (THM Buzz: the `/fetch` pickle sink lived in an unopened `dropdown.js`). Use grep to LOCATE inside a huge file, then read the surrounding block; never let grep BE the read. Enforced by the `ctf-box` + `wiki-recon` skills, not a runtime hook.
@@ -137,23 +137,23 @@ Engagement-state hooks (live via `~/.claude/vault-hooks` symlink -> `skills/hook
 |------|-------|--------|
 | `engagement-init.py` | SessionStart | Self-heals the engagement file set; injects state summary + top next-moves + session cache + OOB HITs + drift warnings. |
 | `hunt-trigger.py` | UserPromptSubmit | Routes to hunt skills from `triggers.json` (surfaces the relevant Skill; the skill carries the mandate); leak-safe telemetry to `.trigger-fire.jsonl`. Skips injected/non-prompt content. |
-| `recon-capture.py` | PostToolUse/Bash | Routes detected tech -> the hunt Skill (`playbook.json`), auto-correlates OOB callbacks (waiting -> HIT), and fires a once-per-engagement GATE-1 wiki-first nudge when an exploit-shaped command runs while `killchain.md` Weaponize is undone. Framework-meta guard suppresses false fires. Advisory. |
+| `recon-capture.py` | PostToolUse/Bash | Routes detected tech -> the hunt Skill (`playbook.json`), auto-correlates OOB callbacks (waiting -> HIT), and fires a once-per-engagement GATE-1 wiki-first nudge when an exploit-shaped command runs while `Approach.md` Weaponize is undone. Framework-meta guard suppresses false fires. Advisory. |
 | `scope-guard.py` | PreToolUse/Bash | ENFORCES (denies the command) on out-of-scope host/IP (CIDR-aware) or RoE-forbidden tooling. Fail-open; `.enforce-off` marker downgrades to advisory. |
 | `session-guard.py` | PreToolUse/Write | Warns when a write would put a client marker into a generic `session/*` file. Advisory, never blocks. |
 
 Register/repair the set per-device with `bash setup/install-hooks.sh`; `engagement-init` warns at SessionStart if a hook is unregistered (canonical set in `scripts/check-hooks.py`).
 
-Active engagement set by `targets/active.md`. Create one with `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>`. Per-type schema from `setup/templates/<type>/`; `engagement_type` in state.md frontmatter drives analyzer + self-heal. Files: `targets/<eng>/{state,loot,paths,killchain,log,scope,walkthrough,eval,Vuln-index,Deadends,oob}.md` + `ingest/` + `poc/` (curated exploit/PoC/flag shots) (all self-healed by `engagement-init`). `eval.md` = per-engagement AGENT self-assessment (tokens/time/drift estimates), filled at close-out by `Skill(learn)`. `killchain.md` = the wiki-wired kill-chain board (phase checklist + `### 4a` coverage table + the three GATE lines). `walkthrough.md` = full copy-pasteable boot-to-root reproduction (distinct from the terse `log.md` audit); `log.md` doubles as the per-engagement continuity cache (its newest block is surfaced at SessionStart, so client narrative goes there, never in generic `session/hot.md`). Missing wiki pages surfaced by `scripts/wiki-gaps.py`.
+Active engagement set by `targets/active.md`. Create one with `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>`. Per-type schema from `setup/templates/<type>/`; `engagement_type` in state.md frontmatter drives analyzer + self-heal. Files: `targets/<eng>/{state,loot,Killchain,Approach,log,scope,walkthrough,eval,Vuln-index,Deadends,oob}.md` + `ingest/` + `poc/` (curated exploit/PoC/flag shots) (all self-healed by `engagement-init`). `eval.md` = per-engagement AGENT self-assessment (tokens/time/drift estimates), filled at close-out by `Skill(learn)`. `Approach.md` = the wiki-wired plan board (phase checklist + `### 4a` coverage table + the three GATE lines). `Killchain.md` = the evolving discovered attack chain (open/blocked attack-path rows + the Confirmed-chain header). `walkthrough.md` = full copy-pasteable boot-to-root reproduction (distinct from the terse `log.md` audit); `log.md` doubles as the per-engagement continuity cache (its newest block is surfaced at SessionStart, so client narrative goes there, never in generic `session/hot.md`). Missing wiki pages surfaced by `scripts/wiki-gaps.py`.
 
 Framework subsystems (each is a script + an on-demand skill; detail in `docs/auto-triggers.md`):
 
 | Subsystem | Entry point | Key rule |
 |-----------|-------------|----------|
-| Ingest | `ingest` skill | Drop raw output in `targets/<eng>/ingest/`; the skill synthesizes -> state/loot/paths then archives. |
+| Ingest | `ingest` skill | Drop raw output in `targets/<eng>/ingest/`; the skill synthesizes -> state/loot/Killchain then archives. |
 | Next-move | `scripts/next_move.py` / `next-move` | Ranks moves (type + scope aware). Update tables after acting so the next run re-ranks. |
 | Fingerprint testing | `scripts/playbook.json` | Maps tech -> targeted tests + hunt skill + the `wiki/payloads/` arsenal. Extend both as you learn new tech. |
 | Chaining | `scripts/chains.json` / `next-move` | Data-driven `finding -> pivot` edges (horizontal complement to playbook's vertical fingerprint->test). A CONFIRMED/PARTIAL finding surfaces ranked pivot candidates; suggestions only, `gate:oob` edges need an operator callback first. Add edges, no code. |
-| Coverage | `killchain.md` 4a table / `coverage` skill | Per-asset untested classes live in the kill-chain board's `### 4a` table. Add a row with status `[x]` + a `poc/` image when you test a class, or the gap recurs (`next_move.py` surfaces `[gap]` moves). |
+| Coverage | `Approach.md` 4a table / `coverage` skill | Per-asset untested classes live in the plan board's `### 4a` table. Add a row with status `[x]` + a `poc/` image when you test a class, or the gap recurs (`next_move.py` surfaces `[gap]` moves). |
 | Finding quality | `scripts/find-lint.py` | Findings scaffold from `setup/templates/_find.md`; run find-lint before /evidence and before a report. |
 
 **Client-data boundary (hard rule):** all client/engagement specifics (hosts, IPs, creds, domains, findings, narrative) live ONLY under `targets/<eng>/` (git-ignored). Never write them into `session/*`, `wiki/`, tracked `docs/`, scripts, or commit messages; per-engagement narrative goes to `targets/<eng>/log.md` (audit + continuity cache). `session-guard.py` advises on violations; run `bash scripts/check-leaks.sh` before sharing. Full detail: `docs/sharing.md`.

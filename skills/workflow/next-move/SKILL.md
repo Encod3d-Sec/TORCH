@@ -1,6 +1,6 @@
 ---
 name: next-move
-description: Ranked next offensive moves from engagement state. Reads state/loot/paths, runs the deterministic analyzer, elaborates the top move. Use when asked "what next", "where to focus", "prioritize", or at the start of an engagement session.
+description: Ranked next offensive moves from engagement state. Reads state/loot/Killchain, runs the deterministic analyzer, elaborates the top move. Use when asked "what next", "where to focus", "prioritize", or at the start of an engagement session.
 ---
 
 # Next Move (deprecated - now an input to /redteamlead)
@@ -14,5 +14,5 @@ The deterministic ranker stays and is unchanged:
 ```
 python3 scripts/next_move.py --json
 ```
-RTL reads this `--json` output (plus state/loot/paths/log and the wiki) to produce
+RTL reads this `--json` output (plus state/loot/Killchain/log and the wiki) to produce
 its ranked directions. Nothing else in this file is load-bearing anymore.

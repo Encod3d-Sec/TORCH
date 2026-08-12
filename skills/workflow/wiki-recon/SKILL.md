@@ -92,7 +92,7 @@ For each discovered live host, add a row to the target's Attack-surface.md:
 
 Add newly discovered hosts to `scope/` IP/domain lists.
 
-Record recon progress in `targets/<eng>/killchain.md` Phase 1 items.
+Record recon progress in `targets/<eng>/Approach.md` Phase 1 items.
 
 If nuclei finds CRITICAL or HIGH severity issues: create a FIND-XXX entry immediately.
 

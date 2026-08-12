@@ -8,7 +8,7 @@ description: Boot-to-root methodology for a full machine (THM/HTB/PG/CTF box, "g
 Own a whole machine: recon -> service triage -> foothold -> user.txt -> privesc -> root.txt.
 **Run everything from the engagement tooling host (e.g. Kali in tmux), capture into `targets/<eng>/`.**
 
-Track progress in `targets/<eng>/killchain.md` -- work the current phase's open items, mark `[x]` as each
+Track progress in `targets/<eng>/Approach.md` -- work the current phase's open items, mark `[x]` as each
 lands; honor GATE 1 (no hand-rolled exploit before its wiki item is `[x]`), GATE 2 (no exploit step `[x]`
 without a `poc/` image), GATE 3 (exhausted vector -> `[!]` + one `Deadends.md` line, never re-run it).
 
@@ -163,13 +163,13 @@ Box-specific chains now live in wiki (see the technique pages linked per class i
 
 ## Capture (engagement discipline)
 
-After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -> `loot.md`, chain -> `paths.md`, vulns -> `Vuln-index.md`, dead-ends -> `Deadends.md`, narrative -> `log.md`. Flags go in the writeup, never in `session/*` or `wiki/`.
+After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -> `loot.md`, chain -> `Killchain.md`, vulns -> `Vuln-index.md`, dead-ends -> `Deadends.md`, narrative -> `log.md`. Flags go in the writeup, never in `session/*` or `wiki/`.
 
-**Board hygiene, live (GATE 3).** `paths.md`/`Deadends.md` rot under momentum while `state.md` absorbs prose instead; the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its `paths.md` status BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
+**Board hygiene, live (GATE 3).** `Killchain.md`/`Deadends.md` rot under momentum while `state.md` absorbs prose instead; the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its `Killchain.md` status BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
 
 **Live-capture machinery; evidence is never backfilled at close-out:**
 - **Auto-card is a backstop, not primary.** The Stop hook (`scripts/autocard.sh`, capped `AUTOCARD_MAX=2`/run) renders any finished scan tmux tab into `recon/`; hand-carding as you go (Phase 1: `capture.sh recon <eng> <slug> <tab>`) stays PRIMARY. 0 cards while tabs finished = VM down / `timeout` missing; hand-card now.
-- **Hand-card exploit-state shots** (the flag, the RCE firing, an authed panel) the moment they land; persist to `state.md`/`loot.md`/`paths.md` immediately, never deferred.
+- **Hand-card exploit-state shots** (the flag, the RCE firing, an authed panel) the moment they land; persist to `state.md`/`loot.md`/`Killchain.md` immediately, never deferred.
 - **A PoC card is ONE human-authored command**, concrete values, full paths, NO `export`/`$VAR`, NO `;`/`&&`-chains, NO echo banners, NO base64/pty wrappers. Re-run the clean single command for the capture even if a messy pipeline was needed to work the box (that stays in `log.md`).
 
 **`log.md` gets every real command live, AS each step lands**, including the messy automation (base64 wrappers, pty helpers). **`walkthrough.md` is the clean human version** (concrete one-liners, no `$VAR`s); the automation stays in `log.md`/`poc/scripts/`.
@@ -190,14 +190,14 @@ After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -
 
 <!-- auto-wired: documented tools to reach for; do not hand-roll -->
 - [[wiki/tools/nmap]]
-- [[rustscan]]
+- [[wiki/tools/rustscan]]
 - [[naabu]]
-- [[ffuf]]
+- [[wiki/tools/ffuf]]
 - [[feroxbuster]]
 - [[gobuster]]
-- [[nuclei]]
+- [[wiki/tools/nuclei]]
 - [[nikto]]
-- [[whatweb]]
+- [[wiki/tools/whatweb]]
 - [[arjun]]
 - [[dalfox]]
 - [[swaks]]

@@ -352,12 +352,12 @@ def test_exploit_script_preservation_step_present():
 
 def test_ctfbox_reframed_on_kill_chain_phases():
     """The ctf-box spine is the four cyber-kill-chain phases; it anchors on the
-    killchain.md board, checks /opt/arsenal first, and captures evidence via capture.sh.
+    Approach.md board, checks /opt/arsenal first, and captures evidence via capture.sh.
     The privesc discipline (pspy + linpeas) and exploit-script preservation are kept."""
     text = open(os.path.join(REPO, "skills", "workflow", "ctf-box", "SKILL.md"), encoding="utf-8").read()
     for phase in ("Recon", "Weaponize", "Deliver", "Exploit"):
         assert phase in text, "ctf-box missing kill-chain phase: %s" % phase
-    assert "killchain.md" in text
+    assert "Approach.md" in text
     assert "/opt/arsenal" in text
     assert "capture.sh" in text
     assert "pspy" in text and "linpeas" in text

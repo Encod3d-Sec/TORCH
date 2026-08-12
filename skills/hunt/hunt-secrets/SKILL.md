@@ -114,7 +114,7 @@ Rated on what the validated key reaches, not the mechanism.
 
 ## Coverage / evasion
 
-Do not stop at the dotfile probe. A single clean `main.js` is not "no client-side secrets" - walk every bundle, webpack chunk, and `*.js.map`, plus inline `<script>` and `__NEXT_DATA__`. Deleted commits frequently survive in fork/gist/cache; a private repo today may have leaked in a public commit yesterday. Log each surface you cleared so `killchain.md`'s 4a table shows the class as actually tested.
+Do not stop at the dotfile probe. A single clean `main.js` is not "no client-side secrets" - walk every bundle, webpack chunk, and `*.js.map`, plus inline `<script>` and `__NEXT_DATA__`. Deleted commits frequently survive in fork/gist/cache; a private repo today may have leaked in a public commit yesterday. Log each surface you cleared so `Approach.md`'s 4a table shows the class as actually tested.
 
 ## Deadends
 

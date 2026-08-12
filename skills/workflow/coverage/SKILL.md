@@ -6,11 +6,11 @@ description: Show per-asset vuln-class coverage gaps for the active engagement s
 # Coverage
 
 Systematic thoroughness: which phase items and applicable vuln classes have NOT been done.
-Coverage now lives in the kill-chain board (`targets/<eng>/killchain.md`), not a separate file.
+Coverage now lives in the plan board (`targets/<eng>/Approach.md`), not a separate file.
 
 ## Read the board
 ```
-cat targets/<active>/killchain.md
+cat targets/<active>/Approach.md
 python3 scripts/next_move.py      # ranks [gap] test moves from the 4a table + findings + Deadends
 ```
 - Phase items still `[ ]` (todo) or `[~]` (doing) are the open work, in kill-chain order.
@@ -22,7 +22,7 @@ python3 scripts/next_move.py      # ranks [gap] test moves from the 4a table + f
 1. For each asset, the untested applicable classes ARE the to-do. Prioritise by impact + the
    `[gap]`/`[now]` moves from `next_move.py` (fingerprint-targeted).
 2. Pull payloads from `wiki/payloads/<class>` for each untested class (or `Skill(arsenal)`).
-3. After testing a class on an asset, **add a `### 4a` row to `killchain.md`** with the class,
+3. After testing a class on an asset, **add a `### 4a` row to `Approach.md`** with the class,
    the tool/payload, `status` `[x]`, and the `poc/` image (GATE 2). Otherwise the gap recurs.
 4. A phase is done only when every applicable item is `[x]` or `[-]` (n/a) or `[!]` (deadend).
 

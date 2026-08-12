@@ -79,6 +79,6 @@ When `next` prints the close-out chain, run it: `Skill(triage)` -> `Skill(eviden
 
 ## If the driver is unavailable
 
-Manual fallback, same gates by hand: read `killchain.md`, take the top open row for the current
+Manual fallback, same gates by hand: read `Approach.md`, take the top open row for the current
 asset, run its wiki lookup then its hunt skill, capture `req` evidence, mark it `[x]`; on exhaustion
 one `Deadends.md` line and `[!]`.

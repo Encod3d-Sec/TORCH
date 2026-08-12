@@ -87,5 +87,5 @@ Run the printed chain: `Skill(walkthrough)` -> `Skill(learn)`.
 
 ## If the driver is unavailable
 
-Manual fallback: read `killchain.md`, take the top open row, run its wiki lookup then its hunt skill
+Manual fallback: read `Approach.md`, take the top open row, run its wiki lookup then its hunt skill
 or `Skill(ctf-box)`, capture evidence, mark `[x]`; on exhaustion one `Deadends.md` line + `[!]`.

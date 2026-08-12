@@ -39,7 +39,7 @@ research ingest (external source -> wiki): the source here is the finished engag
 Use `Skill(learn)` at close-out, once the engagement is `SOLVED` and its walkthrough is
 assembled.
 
-1. **Inventory** what the engagement taught from `state/loot/paths/killchain/Deadends/
+1. **Inventory** what the engagement taught from `state/loot/Killchain/Approach/Deadends/
    Vuln-index/walkthrough/hot/log`.
 2. **Generalize** each lesson (product + technique/cred/endpoint + impact); strip every
    client host/IP/domain/cred value.
@@ -74,9 +74,9 @@ When the user starts working on a target, follow the state-first discipline (ful
    - `scope.md` -- in/out-of-scope + RoE flags; read before ANY action
    - `state.md` -- hosts/services/access (and owned status)
    - `loot.md` -- captured credentials + reuse map
-   - `paths.md` -- open/blocked attack paths and their next moves
+   - `Killchain.md` -- the evolving attack chain: open/blocked attack-path rows + the Confirmed-chain header
    - `Deadends.md` -- exhausted vectors (do not re-test without new input)
-   - `killchain.md` -- per-asset vuln classes already tested (the `### 4a` table)
+   - `Approach.md` -- the plan board: phase checklist + per-asset vuln classes already tested (the `### 4a` table)
    - `Vuln-index.md` -- confirmed findings and chains; `hot.md` -- rolling session cache
 
 2. **Search wiki before each attack phase:**
@@ -86,9 +86,9 @@ When the user starts working on a target, follow the state-first discipline (ful
 
 3. **Capture as you go** (prose in chat is lost; the tables persist across sessions and devices):
    - `state.md` / `loot.md` -- new hosts/services/access + credentials (drop raw tool output in `ingest/` and run the ingest skill, or edit the tables directly)
-   - `paths.md` -- update when a path opens or blocks
+   - `Killchain.md` -- update when an attack path opens or blocks
    - `Vulns/` + `Vuln-index.md` -- write each finding as `FIND-NNN-SEVERITY-title.md`; run `scripts/find-lint.py` before /evidence
-   - record a tested vuln class in the killchain.md 4a table (add a row with status `[x]`) so `next_move` / `coverage` stop re-surfacing it
+   - record a tested vuln class in the Approach.md 4a table (add a row with status `[x]`) so `next_move` / `coverage` stop re-surfacing it
    - `Deadends.md` -- log a bounded-out vector immediately, one line, then switch vector
 
 4. **After the session:** run `gsd:pause-work` -- append a named entry to the engagement `log.md` (audit) and refresh `hot.md` (rolling cache). Generic/framework learnings (no client specifics) go to `session/log.md` + `session/hot.md`.

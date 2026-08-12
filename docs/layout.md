@@ -8,7 +8,7 @@ TORCH/
 ├── targets/                     <- engagements (PRIVATE; client data only here, git-ignored)
 │   ├── active.md                <- pointer: current engagement dir name
 │   ├── scrub-terms.txt          <- private leak-check extras (not shipped)
-│   └── <eng>/                   <- self-healed set (state,loot,paths,killchain,log,scope,walkthrough,eval,oob,hot,Vuln-index,Deadends) + ingest/ + poc/ (curated PoC shots) + Vulns/ (pentest)
+│   └── <eng>/                   <- self-healed set (state,loot,Killchain,Approach,log,scope,walkthrough,eval,oob,hot,Vuln-index,Deadends) + ingest/ + poc/ (curated PoC shots) + Vulns/ (pentest)
 ├── wiki/
 │   ├── index.md                 <- catalog of all wiki pages
 │   ├── moc.md                   <- graph map-of-content (domain hubs; navigate here)

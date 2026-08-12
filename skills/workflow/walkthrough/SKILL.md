@@ -1,6 +1,6 @@
 ---
 name: walkthrough
-description: Assemble a report-ready walkthrough.md for a SOLVED engagement - populate the Evidence gallery from the poc/ images captured during the engagement, and draft the step-by-step reproduction from state/loot/paths/log.md without fabricating. Use when asked to "write the walkthrough", "assemble the walkthrough", "close out the box/engagement", or at close-out once an engagement is marked SOLVED.
+description: Assemble a report-ready walkthrough.md for a SOLVED engagement - populate the Evidence gallery from the poc/ images captured during the engagement, and draft the step-by-step reproduction from state/loot/Killchain.md/log.md without fabricating. Use when asked to "write the walkthrough", "assemble the walkthrough", "close out the box/engagement", or at close-out once an engagement is marked SOLVED.
 ---
 
 # Walkthrough auto-assembly
@@ -42,7 +42,7 @@ populates the `## Evidence` gallery from every rendered card on disk. Never clob
 narrative -- safe to re-run after step (a).
 
 ### (c) Draft the narrative -- never fabricate
-Read `state.md`, `loot.md`, `paths.md`, and `log.md` for the active engagement, and write the
+Read `state.md`, `loot.md`, `Killchain.md`, and `log.md` for the active engagement, and write the
 step-by-step reproduction into the non-Evidence sections (Access -> Recon -> Foothold ->
 Privilege escalation -> root/flag), using the EXACT commands, creds, and per-step results already
 captured in those files. If a fact needed for a section is not present in the state files, do NOT

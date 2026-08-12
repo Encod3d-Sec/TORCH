@@ -59,5 +59,5 @@ with `PATH=/opt/prep_report/.venv/bin:$PATH` or every finding loses its severity
 
 ## If the driver is unavailable
 
-Manual fallback: read `killchain.md`, take the top open row for the current host, run its wiki lookup
+Manual fallback: read `Approach.md`, take the top open row for the current host, run its wiki lookup
 then its hunt skill, capture `req` evidence, mark `[x]`; on exhaustion one `Deadends.md` line + `[!]`.
