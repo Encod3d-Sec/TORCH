@@ -1504,18 +1504,27 @@ def cmd_done(a):
         print("  Agent: %s" % _load_cfg().get("refuter_prompt", "")[:120] + " ...")
         edges = _chains().get(cls, {}).get("then", [])
         if edges:
-            pth = os.path.join(d, "Killchain.md")
-            for e in edges:
-                mv = (e.get("move") or "").replace("{asset}", row.get("asset") or "")
-                _append_line(pth, "| %s->%s | 4 | open | | %s |"
-                             % (cls, e.get("to_class", "?"), mv))
+            # ctf has no Killchain.md (its live chain lives in state.md's ## Chain
+            # section instead, operator-maintained; see design "No new driver
+            # auto-writing of the chain"). Board growth below is independent of this
+            # text-file append and still runs for every type.
+            if st.get("approach") != "ctf":
+                pth = os.path.join(d, "Killchain.md")
+                for e in edges:
+                    mv = (e.get("move") or "").replace("{asset}", row.get("asset") or "")
+                    _append_line(pth, "| %s->%s | 4 | open | | %s |"
+                                 % (cls, e.get("to_class", "?"), mv))
             # ...AND grow the board itself, so a confirmed finding turns into servable next-rows
             # instead of a note the driver never re-serves.
             addn, skipn = _append_pivot_rows(d, st, row.get("asset") or "", cls)
             _save_state(d, st)
-            print("PATHS: +%d pivot row(s) -> Killchain.md ; BOARD: +%d pivot row(s) [ ]%s"
-                  % (len(edges), addn,
-                     (", %d dup/dead skipped" % skipn) if skipn else ""))
+            if st.get("approach") != "ctf":
+                print("PATHS: +%d pivot row(s) -> Killchain.md ; BOARD: +%d pivot row(s) [ ]%s"
+                      % (len(edges), addn,
+                         (", %d dup/dead skipped" % skipn) if skipn else ""))
+            else:
+                print("BOARD: +%d pivot row(s) [ ]%s"
+                      % (addn, (", %d dup/dead skipped" % skipn) if skipn else ""))
         _append_line(os.path.join(d, "Vuln-index.md"),
                      "<!-- %s | %s | %s | CONFIRMED -->" % (a.find, row.get("asset"), cls))
     return 0

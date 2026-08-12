@@ -554,3 +554,16 @@ def test_eval_template_exists():
     assert os.path.isfile(p)
     body = open(p, encoding="utf-8").read()
     assert "{{ENGAGEMENT}}" in body and "Drift moments" in body
+
+
+def test_summary_fails_open_when_ctf_has_no_killchain(tmp_path):
+    (tmp_path / "state.md").write_text(
+        "---\ntype: engagement-state\nengagement_type: ctf\n---\n\n"
+        "| target | service | port | foothold | access | flag | notes |\n"
+        "|---|---|---|---|---|---|---|\n", encoding="utf-8")
+    (tmp_path / "loot.md").write_text(
+        "---\ntype: engagement-loot\n---\n\n| item | type | source | where | status |\n"
+        "|---|---|---|---|---|\n", encoding="utf-8")
+    # no Killchain.md file at all
+    rows = _engagement._parse_table(str(tmp_path / "Killchain.md"))
+    assert rows == []   # fail-open: missing file -> empty list, never an exception
