@@ -1438,6 +1438,9 @@ def cmd_done(a):
         _save_state(d, st)
         print("campaign done: %s dead [!] (dry_streak=%d) -> Deadends.md"
               % (a.row, st["dry_streak"]))
+        if st["dry_streak"] >= 2:
+            print("  stuck? %d dead-ends with no progress - consider Skill(redteamlead) for a "
+                  "wiki-grounded redirect before grinding further." % st["dry_streak"])
         return 0
 
     # --poc / --find both close [x] and both require evidence gates

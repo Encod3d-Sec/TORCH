@@ -221,6 +221,18 @@ def test_done_dead_appends_deadend_and_bumps_streak(eng):
     assert st["dry_streak"] == 1
 
 
+def test_done_dead_streak_nudges_redteamlead(eng):
+    _init(eng)
+    run(eng, "board", expect=0)
+    rows, _ = _first_row_id(eng)
+    ids = [r["id"] for r in rows][:2]
+    assert len(ids) == 2, "fixture board should have >=2 rows for a dead-end streak"
+    r1 = run(eng, "done", ids[0], "--dead", "vector 1 exhausted", expect=0)
+    assert "redteamlead" not in r1.stdout          # 1st dead-end (dry_streak=1): routine, no nudge
+    r2 = run(eng, "done", ids[1], "--dead", "vector 2 exhausted", expect=0)
+    assert "Skill(redteamlead)" in r2.stdout        # 2nd consecutive dead-end: nudge fires
+
+
 # --------------------------------------------------------------------------- Task 12 pass-done
 
 def test_pass_done_pass4_refuses_empty_board(eng):
