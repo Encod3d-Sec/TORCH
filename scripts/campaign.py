@@ -6,7 +6,7 @@ output printed fresh every turn. The three workflow skills are thin: run `next`,
 it prints, `done`, repeat.
 
   init  --type bb|pt|ctf     validate scope + envelope, write .campaign.json
-  board                      (re)generate killchain 4a rows from state.md x playbook.json
+  board                      (re)generate Approach 4a rows from state.md x playbook.json
   next                       print the one required-action block for the current row
   note  <row> --arsenal S    fill a row's arsenal cell (G1 release), verifying the card
   done  <row> ...            close/kill/park a row, enforcing G2/G3
@@ -186,11 +186,11 @@ def _seed_assets_from_scope(d):
 # --------------------------------------------------------------------------- board table io
 
 def _needs_migration(d):
-    """True when killchain.md has a 4a table in the OLD schema (a `vuln class` header but no `id`
+    """True when Approach.md has a 4a table in the OLD schema (a `vuln class` header but no `id`
     column). Detected by the HEADER, not the rows, so an EMPTY old board is caught too - otherwise
     write_board's `| id |` regex misses it and appends a duplicate table. A fresh board from the
     current template already has the `id` header, so this only fires on pre-overhaul engagements."""
-    p = os.path.join(d, "killchain.md")
+    p = os.path.join(d, "Approach.md")
     if not os.path.isfile(p):
         return False
     try:
@@ -216,8 +216,8 @@ def _board_section(text):
 
 
 def read_board(d):
-    """List of row dicts (lowercased keys) from killchain.md 4a. [] if none."""
-    return E._parse_table(os.path.join(d, "killchain.md"))
+    """List of row dicts (lowercased keys) from Approach.md 4a. [] if none."""
+    return E._parse_table(os.path.join(d, "Approach.md"))
 
 
 def _fmt_row(r):
@@ -225,8 +225,8 @@ def _fmt_row(r):
 
 
 def write_board(d, rows):
-    """Replace the 4a table body with `rows`, preserving everything else in killchain.md."""
-    p = os.path.join(d, "killchain.md")
+    """Replace the 4a table body with `rows`, preserving everything else in Approach.md."""
+    p = os.path.join(d, "Approach.md")
     text = open(p, encoding="utf-8", errors="ignore").read()
     sec = _board_section(text)
     header = "| " + " | ".join(BOARD_COLS) + " |\n"
@@ -1239,7 +1239,7 @@ def _reframe_or_closeout(d, st, rows, tconf):
     st["dry_rounds"] = 0 if added else st.get("dry_rounds", 0) + 1
     st["pass"] = 5
     _save_state(d, st)
-    _append_line(os.path.join(d, "killchain.md"),
+    _append_line(os.path.join(d, "Approach.md"),
                  "<!-- reframe lens '%s': +%d rows (dry_rounds=%d) -->" % (lens, added, st["dry_rounds"]))
     print("REFRAME lens '%s': +%d new rows (dry_rounds=%d). Run `next` to work them."
           % (lens, added, st["dry_rounds"]))
@@ -1495,12 +1495,12 @@ def cmd_done(a):
             if rank is not None and rank > st.get("max_sev_rank", -1):
                 st["max_sev_rank"] = rank
                 _save_state(d, st)
-        # refuter (the only subagent), then chains.json pivots -> paths.md + Vuln-index.md
+        # refuter (the only subagent), then chains.json pivots -> Killchain.md + Vuln-index.md
         print("REFUTER (spawn one adversarial verifier before recording CONFIRMED):")
         print("  Agent: %s" % _load_cfg().get("refuter_prompt", "")[:120] + " ...")
         edges = _chains().get(cls, {}).get("then", [])
         if edges:
-            pth = os.path.join(d, "paths.md")
+            pth = os.path.join(d, "Killchain.md")
             for e in edges:
                 mv = (e.get("move") or "").replace("{asset}", row.get("asset") or "")
                 _append_line(pth, "| %s->%s | 4 | open | | %s |"
@@ -1509,7 +1509,7 @@ def cmd_done(a):
             # instead of a note the driver never re-serves.
             addn, skipn = _append_pivot_rows(d, st, row.get("asset") or "", cls)
             _save_state(d, st)
-            print("PATHS: +%d pivot row(s) -> paths.md ; BOARD: +%d pivot row(s) [ ]%s"
+            print("PATHS: +%d pivot row(s) -> Killchain.md ; BOARD: +%d pivot row(s) [ ]%s"
                   % (len(edges), addn,
                      (", %d dup/dead skipped" % skipn) if skipn else ""))
         _append_line(os.path.join(d, "Vuln-index.md"),
@@ -1565,7 +1565,7 @@ def cmd_migrate(a):
     d = _resolve(a.eng)
     if not d:
         _die("no engagement")
-    p = os.path.join(d, "killchain.md")
+    p = os.path.join(d, "Approach.md")
     old = E._parse_table(p)
     if a.unmigrate:
         if old and not any("id" in r for r in old):

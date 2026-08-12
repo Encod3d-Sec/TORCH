@@ -48,12 +48,12 @@ def deadend_lines(d, limit=3):
 
 
 def board_phase(d):
-    """(where, open_n, dead_n) from killchain.md: highest-numbered phase with an open item,
+    """(where, open_n, dead_n) from Approach.md: highest-numbered phase with an open item,
     or the explicit `current_phase` frontmatter field when set and in-scope (see
     _engagement.phase_explicit). Mirrors engagement-init.board_status; kept here so
     status.py has no hook dependency."""
     import _engagement
-    p = os.path.join(d, "killchain.md")
+    p = os.path.join(d, "Approach.md")
     if not os.path.isfile(p):
         return None
     open_n = dead_n = 0
@@ -77,7 +77,7 @@ def board_phase(d):
 def render_coverage(base, assets, tested_by_asset):
     """Pure formatter -> the full asset x vuln-class coverage grid (x=tested . =untested),
     UNCAPPED (unlike next_move's top-5 per-asset shortlist), so the coverage skill sees every
-    in-scope asset against every base class instead of eyeballing killchain.md. `tested_by_asset`
+    in-scope asset against every base class instead of eyeballing Approach.md. `tested_by_asset`
     maps an asset name -> its set of tested class names (lowercased). Deterministic."""
     if not base or not assets:
         return "coverage: no in-scope assets or no class checklist for this engagement type."

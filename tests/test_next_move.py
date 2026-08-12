@@ -14,8 +14,8 @@ def _patch(monkeypatch, etype, state, loot, paths, scope=None, killchain=None):
     monkeypatch.setattr(_engagement, "active_dir", lambda: "/fake")
     monkeypatch.setattr(_engagement, "engagement_type", lambda d=None: etype)
     monkeypatch.setattr(_engagement, "scope", lambda d=None: scope or _scope())
-    tables = {"state.md": state, "loot.md": loot, "paths.md": paths,
-              "killchain.md": killchain or []}
+    tables = {"state.md": state, "loot.md": loot, "Killchain.md": paths,
+              "Approach.md": killchain or []}
     monkeypatch.setattr(_engagement, "_parse_table",
                         lambda p: tables.get(p.rsplit("/", 1)[-1], []))
 
@@ -174,7 +174,7 @@ def test_passive_only_suppresses_acquisition(monkeypatch):
 # --- coverage-gap floor moves -------------------------------------------------
 
 def test_coverage_gap_surfaces_untested(monkeypatch):
-    # in-scope asset, no killchain.md 4a rows -> untested base classes enter the
+    # in-scope asset, no Approach.md 4a rows -> untested base classes enter the
     # shortlist as [gap] moves, highest-severity (list order) first.
     _patch(monkeypatch, "bugbounty", [{"asset": "api.x", "access": "recon"}], [], [])
     gaps = [s for s in next_move.suggest(limit=99) if s.startswith("[gap]")]
@@ -183,7 +183,7 @@ def test_coverage_gap_surfaces_untested(monkeypatch):
 
 
 def test_coverage_gap_excludes_tested(monkeypatch):
-    # killchain.md 4a rows credit a class as tested when its status cell is done.
+    # Approach.md 4a rows credit a class as tested when its status cell is done.
     _patch(monkeypatch, "bugbounty", [{"asset": "api.x", "access": "recon"}], [], [],
            killchain=[{"asset": "api.x", "vuln class": "rce", "status": "[x]"},
                       {"asset": "api.x", "vuln class": "sqli", "status": "[x]"}])
@@ -236,7 +236,7 @@ def test_coverage_gap_per_asset_not_flattened(monkeypatch):
 
 
 def test_fingerprint_suppressed_after_tested(monkeypatch):
-    # graphql marked [x] on api.x in killchain 4a -> its re-ranked [test] move disappears.
+    # graphql marked [x] on api.x in Approach 4a -> its re-ranked [test] move disappears.
     _patch(monkeypatch, "bugbounty",
            [{"asset": "api.x", "tech": "GraphQL Apollo", "access": "tested"}], [], [],
            killchain=[{"asset": "api.x", "vuln class": "graphql", "status": "[x]"}])
@@ -269,7 +269,7 @@ def test_allowlist_cidr_matches_host_by_ip_column(monkeypatch):
 
 
 def test_tested_credit_matches_across_url_host_drift(monkeypatch):
-    # MED regression: a killchain 4a cell written as a URL must still credit a state asset
+    # MED regression: an Approach 4a cell written as a URL must still credit a state asset
     # tracked by bare host (host-normalized join). Otherwise scheme/path drift orphans the
     # credit and a cleared class wrongly regresses to a [gap].
     _patch(monkeypatch, "bugbounty", [{"asset": "api.x", "access": "recon"}], [], [],
@@ -304,7 +304,7 @@ def test_chain_candidate_emitted_and_scored(monkeypatch):
 
 
 def test_chain_suppressed_when_dest_class_tested(monkeypatch):
-    # killchain 4a marks rce [x] on web01 -> the ssrf->rce pivot is already covered there
+    # Approach 4a marks rce [x] on web01 -> the ssrf->rce pivot is already covered there
     _chain_patch(monkeypatch,
                  [{"class": "ssrf", "asset": "web01", "severity": "HIGH", "status": "confirmed"}],
                  killchain=[{"asset": "web01", "vuln class": "rce", "status": "[x]"}])

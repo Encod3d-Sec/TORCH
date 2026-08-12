@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """next_move.py - rank the next offensive moves from engagement state.
 
-Read-only analyzer. Reads the active engagement's state/loot/paths tables and
+Read-only analyzer. Reads the active engagement's state/loot/killchain tables and
 applies internal-pentest heuristics to produce a ranked, deduped list of
 actionable moves. Deterministic + cheap (no model tokens). The model elaborates
 on demand via the `next-move` skill; the SessionStart hook surfaces the top few.
 
 Also emits low-ranked [gap] floor moves, PER IN-SCOPE ASSET, for untested vuln classes
 (the per-type checklist in coverage-classes.json minus THAT asset's own tested classes,
-credited from the killchain.md 4a table + written findings + Deadends.md), so a class
+credited from the Approach.md 4a table + written findings + Deadends.md), so a class
 tested on asset A still surfaces as a gap on asset B. Skill(coverage) / status.py
 --coverage print the full uncapped asset x class matrix; these are just the top-5
 per-asset "don't forget class X" nudge.
@@ -108,7 +108,7 @@ def _chain_asset_in_scope(asset, sc):
 
 def tested_lookup(d, etype, base):
     """(glob_lower_set, {normalized_asset: tested_set}) for `base` classes. The per-asset tested
-    map (killchain 4a [x] + findings + Deadends, via _engagement.tested_classes) has its join key
+    map (Approach 4a [x] + findings + Deadends, via _engagement.tested_classes) has its join key
     host-normalized (_host_of) so a 4a cell written as a URL (https://api.x/graphql) still credits
     an asset tracked by bare host (api.x); otherwise scheme/port/path drift orphans the credit and
     regresses a cleared class back to a gap. Shared by the ranker gap floor and status.py's
@@ -158,7 +158,7 @@ def _ranked(limit=5):
     sc = _engagement.scope(d)
     state = _engagement._parse_table(os.path.join(d, "state.md"))
     loot = _engagement._parse_table(os.path.join(d, "loot.md"))
-    paths = _engagement._parse_table(os.path.join(d, "paths.md"))
+    paths = _engagement._parse_table(os.path.join(d, "Killchain.md"))
 
     sugg = []  # (score, tag, text)
 
@@ -168,7 +168,7 @@ def _ranked(limit=5):
     def in_scope(r):
         return _row_in_scope(r, etype, sc)
 
-    # per-asset tested-class state, computed once (killchain.md 4a [x] + written findings +
+    # per-asset tested-class state, computed once (Approach.md 4a [x] + written findings +
     # Deadends.md, via _engagement.tested_classes - do NOT reimplement that here). Consumed
     # twice below: the fingerprint block suppresses a re-surfaced [test] move once its class
     # is done/dead on the asset, and the coverage-gap floor subtracts each asset's OWN tested

@@ -1,8 +1,8 @@
 ---
-title: "Kill-Chain Board - {{ENGAGEMENT}}"
-type: engagement-killchain
+title: "Approach - {{ENGAGEMENT}}"
+type: engagement-approach
 engagement_type: bugbounty
-tags: [engagement, killchain, board]
+tags: [engagement, approach, board]
 date_created: "{{DATE}}"
 date_updated: "{{DATE}}"
 sources: []

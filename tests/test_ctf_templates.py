@@ -34,10 +34,10 @@ def test_ensure_ctf_heals_lean_set(vault, monkeypatch):
     eng = _mk(vault / "targets" / "room", "ctf")
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
     created = _engagement.ensure_state_files()
-    for f in ("loot.md", "paths.md", "killchain.md", "log.md", "scope.md",
+    for f in ("loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
               "walkthrough.md", "Deadends.md"):
         assert f in created and (eng / f).exists()
-    assert "Kill-Chain Board" in (eng / "killchain.md").read_text()
+    assert "Kill-Chain Board" in (eng / "Approach.md").read_text()
     assert "hot.md" not in created and not (eng / "hot.md").exists()   # removed
     for dsub in ("ingest/", "poc/"):
         assert dsub in created
@@ -52,7 +52,7 @@ def test_ensure_pentest_heals_full_set(vault, monkeypatch):
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
     created = _engagement.ensure_state_files()
     for f in ("oob.md", "Vuln-index.md",
-              "loot.md", "paths.md", "killchain.md", "walkthrough.md"):
+              "loot.md", "Killchain.md", "Approach.md", "walkthrough.md"):
         assert f in created and (eng / f).exists()
     assert (eng / "poc").is_dir()
 
@@ -114,10 +114,10 @@ def test_new_engagement_ctf_lean(eng_vault):
     r = _run_new(eng_vault, "room", "ctf")
     assert r.returncode == 0, r.stderr
     d = eng_vault / "targets" / "room"
-    for f in ("state.md", "loot.md", "paths.md", "killchain.md", "log.md", "scope.md",
+    for f in ("state.md", "loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
               "walkthrough.md", "Deadends.md"):
         assert (d / f).exists()
-    assert "Kill-Chain Board" in (d / "killchain.md").read_text()
+    assert "Kill-Chain Board" in (d / "Approach.md").read_text()
     assert not (d / "hot.md").exists()   # per-engagement hot.md removed
     for sub in ("ingest", "poc"):
         assert (d / sub).is_dir()
@@ -305,7 +305,7 @@ def test_targets_md_tree_matches_scaffold():
     t = open(p, encoding="utf-8").read()
     assert "poc/" in t                                  # scaffolded for all types
     assert "first FIND" in t                            # Vulns/ documented as lazy
-    assert "paths.md" in t and "walkthrough.md" in t    # one live + one final attack-chain home
+    assert "Killchain.md" in t and "walkthrough.md" in t    # one live + one final attack-chain home
     assert "ctf" in t.lower()                           # ctf-specific omissions noted
     for phantom in ("├── scope/", "└── reports/"):      # never auto-scaffolded -> not promised as auto
         assert phantom not in t

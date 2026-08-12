@@ -73,7 +73,7 @@ def test_board_generates_rows_with_skill(eng):
     sys_path = os.path.join(VAULT, "skills", "hooks")
     if sys_path not in sys.path:
         sys.path.insert(0, sys_path)
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     assert rows, "board produced no rows"
     # every row has an asset + class + a skill populated
     assert all(row.get("asset") and row.get("vuln class") for row in rows)
@@ -85,7 +85,7 @@ def test_board_suppresses_deadend_pair(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     pairs = {(r["asset"].lower(), r["vuln class"].lower()) for r in rows}
     assert ("asset-2", "sqli") not in pairs, "G4: dead-end pair must be suppressed"
 
@@ -104,9 +104,9 @@ def test_board_empty_state_exits_2(eng):
 def test_board_idempotent(eng):
     _init(eng)
     run(eng, "board", expect=0)
-    b1 = open(os.path.join(eng, "killchain.md")).read()
+    b1 = open(os.path.join(eng, "Approach.md")).read()
     run(eng, "board", expect=0)
-    b2 = open(os.path.join(eng, "killchain.md")).read()
+    b2 = open(os.path.join(eng, "Approach.md")).read()
     assert b1 == b2, "board must be idempotent"
 
 
@@ -137,7 +137,7 @@ def test_next_never_asks_a_question(eng):
 def _first_row_id(eng):
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     return rows, rows[0]["id"]
 
 
@@ -172,7 +172,7 @@ def test_web_render_refused_on_nonvisual_class(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     # pick a non-visual row (secrets/idor/etc)
     target = next((r for r in rows if r["vuln class"] not in
                    ("xss", "ssti", "upload-preview", "ui-authz", "flag-onscreen")), rows[0])
@@ -186,7 +186,7 @@ def test_g2_refuses_close_when_skill_never_fired(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     # a row whose skill is NOT hunt-secrets (the only fired skill in the fixture events)
     target = next((r for r in rows if r.get("skill") and r["skill"] != "hunt-secrets"), None)
     if not target:
@@ -202,7 +202,7 @@ def test_g2_fails_open_when_events_absent(eng):
     os.remove(os.path.join(eng, ".events.jsonl"))
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     target = next((r for r in rows if r.get("skill")), rows[0])
     r = run(eng, "done", target["id"], "--poc", "p.png", "--kind", "req")
     assert r.returncode == 0, r.stderr
@@ -240,7 +240,7 @@ def test_behavioural_rows_from_endpoint_semantics(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     classes = {r["vuln class"] for r in rows}
     # asset-4 /coupon/redeem -> race-condition + business-logic; asset-2 ?id -> idor.
     # None of these have a tech fingerprint; they come from endpoint/param semantics.
@@ -253,7 +253,7 @@ def test_race_row_parks_under_write_policy_none(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     race = next(r for r in rows if r["vuln class"] == "race-condition")
     assert race["status"] == "[?]", "a write-class row must park when write_policy forbids writes"
     assert os.path.isfile(os.path.join(eng, "decisions.md"))
@@ -267,7 +267,7 @@ def test_race_row_runs_under_write_policy_full(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     race = next(r for r in rows if r["vuln class"] == "race-condition")
     assert race["status"] == "[ ]", "write_policy: full should let the race row run"
 
@@ -291,7 +291,7 @@ def test_all_paused_does_not_close_out(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     for a in {r["asset"] for r in rows if r["status"] in ("[ ]", "[~]")}:
         run(eng, "pause-host", a, expect=0)
     r = run(eng, "next", expect=0)
@@ -302,7 +302,7 @@ def test_all_paused_does_not_close_out(eng):
 def test_empty_old_board_needs_migration(tmp_path):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text(
+    (eng / "Approach.md").write_text(
         "---\ntitle: t\n---\n### 4a\n\n| host | vuln class | wiki | payload/tool | status | poc |\n"
         "|------|-----------|------|--------------|--------|-----|\n")   # EMPTY old-schema table
     json.dump({"type": "bb", "approach": "bugbounty", "pass": 5}, open(eng / ".campaign.json", "w"))
@@ -310,7 +310,7 @@ def test_empty_old_board_needs_migration(tmp_path):
     assert r.returncode == 2 and "migrate" in r.stderr
     run(str(eng), "migrate", expect=0)
     # after migrate, exactly one table, new header
-    txt = open(eng / "killchain.md").read()
+    txt = open(eng / "Approach.md").read()
     assert txt.count("vuln class") == 1 and "| id |" in txt
 
 
@@ -325,7 +325,7 @@ def test_idor_row_needs_second_account(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     idor = next(r for r in rows if r["vuln class"] == "idor")
     _write_arsenal(eng, "idor")
     run(eng, "note", idor["id"], "--arsenal", "idor", expect=0)
@@ -380,7 +380,7 @@ def test_row_effort_ceiling_from_telemetry(eng):
     r = run(eng, "next", expect=0)  # serves a row, stamps row_started
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rid = next(x for x in E._parse_table(os.path.join(eng, "killchain.md"))
+    rid = next(x for x in E._parse_table(os.path.join(eng, "Approach.md"))
                if x["status"] in ("[ ]", "[~]"))["id"]
     # flood telemetry past the ceiling (bb ceiling = 25)
     with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
@@ -427,7 +427,7 @@ def test_next_before_board_guides_recon_not_reframe(eng):
     # and no board rows were created
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    assert E._parse_table(os.path.join(eng, "killchain.md")) == []
+    assert E._parse_table(os.path.join(eng, "Approach.md")) == []
 
 
 def test_board_advances_to_driving(eng):
@@ -448,14 +448,14 @@ def test_find_requires_evidence(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     rid = rows[0]["id"]
     with open(os.path.join(eng, ".events.jsonl"), "a") as fh:  # satisfy G2 honestly
         fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
                              "tool": "Skill", "skill": rows[0]["skill"]}) + "\n")
     r = run(eng, "done", rid, "--find", "FIND-001-HIGH-x")
     assert r.returncode == 2 and "G3" in r.stderr
-    rows2 = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
     assert next(x for x in rows2 if x["id"] == rid)["status"] != "[x]"
     assert "CONFIRMED" not in open(os.path.join(eng, "Vuln-index.md")).read()
 
@@ -467,7 +467,7 @@ def test_depth_first_cursor_is_sticky(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     # find an asset with >= 2 open rows
     from collections import Counter
     cnt = Counter(r["asset"] for r in rows if r["status"] == "[ ]")
@@ -492,7 +492,7 @@ def _prep_ssrf_row(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     ssrf = next(r for r in rows if r["vuln class"] == "ssrf")
     _write_arsenal(eng, "ssrf")
     run(eng, "note", ssrf["id"], "--arsenal", "ssrf", expect=0)
@@ -552,28 +552,28 @@ preserve me
 def test_migrate_roundtrip_preserves_findings(tmp_path):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text(OLD_BOARD)
+    (eng / "Approach.md").write_text(OLD_BOARD)
     json.dump({"type": "bb", "approach": "bugbounty", "pass": 5},
               open(eng / ".campaign.json", "w"))
     eng = str(eng)
     run(eng, "migrate", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     assert len(rows) == 2 and all("id" in r for r in rows)
     assert rows[0]["status"] == "[x]" and rows[0]["poc"] == "poc/a.png"
-    assert "preserve me" in open(os.path.join(eng, "killchain.md")).read()
+    assert "preserve me" in open(os.path.join(eng, "Approach.md")).read()
     # exactly one table
-    assert open(os.path.join(eng, "killchain.md")).read().count("vuln class") == 1
+    assert open(os.path.join(eng, "Approach.md")).read().count("vuln class") == 1
     run(eng, "migrate", "--unmigrate", expect=0)
-    rows2 = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
     assert all("id" not in r for r in rows2) and len(rows2) == 2
 
 
 def test_next_refuses_unmigrated_board(tmp_path):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text(OLD_BOARD)
+    (eng / "Approach.md").write_text(OLD_BOARD)
     json.dump({"type": "bb", "approach": "bugbounty", "pass": 5},
               open(eng / ".campaign.json", "w"))
     r = run(str(eng), "next")
@@ -595,7 +595,7 @@ def test_doctor_all_green():
 def _deadend_all_open(eng):
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    for r in E._parse_table(os.path.join(eng, "killchain.md")):
+    for r in E._parse_table(os.path.join(eng, "Approach.md")):
         if r["status"] in ("[ ]", "[~]"):
             run(eng, "done", r["id"], "--dead", "x")
 
@@ -606,10 +606,10 @@ def test_reframe_offplaybook_adds_coverage_rows(eng):
     _deadend_all_open(eng)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    before = len(E._parse_table(os.path.join(eng, "killchain.md")))
+    before = len(E._parse_table(os.path.join(eng, "Approach.md")))
     r = run(eng, "next", expect=0)          # board exhausted -> reframe lens 1 (off-playbook)
     assert "REFRAME lens 'off-playbook'" in r.stdout
-    after = len(E._parse_table(os.path.join(eng, "killchain.md")))
+    after = len(E._parse_table(os.path.join(eng, "Approach.md")))
     assert after > before, "off-playbook must seed coverage-class rows"
 
 
@@ -685,7 +685,7 @@ def test_full_happy_path_close_a_row(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     target = next((r for r in rows if r.get("skill")), rows[0])
     # the test controls its own G2 precondition: fire the target row's own skill
     with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
@@ -694,7 +694,7 @@ def test_full_happy_path_close_a_row(eng):
     _write_arsenal(eng, "card1")
     run(eng, "note", target["id"], "--arsenal", "card1", expect=0)
     run(eng, "done", target["id"], "--poc", "poc/x.png", "--kind", "req", expect=0)
-    rows2 = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
     closed = next(r for r in rows2 if r["id"] == target["id"])
     assert closed["status"] == "[x]" and closed["poc"] == "poc/x.png"
 
@@ -706,7 +706,7 @@ def test_foothold_records_window_and_next_routes_post_ex_through_vm_rsh(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     rid = next(r["id"] for r in rows if r["asset"] == "asset-1")   # default-creds / trufflehog
     _write_arsenal(eng, "mc")
     run(eng, "note", rid, "--arsenal", "mc", expect=0)             # arms G1 + makes asset-1 sticky
@@ -733,7 +733,7 @@ def test_next_without_foothold_emits_bare_tool(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     rid = next(r["id"] for r in rows if r["asset"] == "asset-1")
     _write_arsenal(eng, "mc")
     run(eng, "note", rid, "--arsenal", "mc", expect=0)
@@ -747,7 +747,7 @@ def test_done_win_records_foothold_on_close(eng):
     run(eng, "board", expect=0)
     sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
     import _engagement as E
-    rows = E._parse_table(os.path.join(eng, "killchain.md"))
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
     target = next(r for r in rows if r["asset"] == "asset-1")
     with open(os.path.join(eng, ".events.jsonl"), "a") as fh:      # satisfy G2 like the happy-path test
         fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",

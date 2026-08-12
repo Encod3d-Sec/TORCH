@@ -1,8 +1,8 @@
 ---
-title: "Attack Paths - {{ENGAGEMENT}}"
-type: engagement-paths
+title: "Kill-Chain - {{ENGAGEMENT}}"
+type: engagement-killchain
 engagement_type: ctf
-tags: [engagement, attack-paths, ctf]
+tags: [engagement, killchain, ctf]
 date_created: "{{DATE}}"
 date_updated: "{{DATE}}"
 sources: []

@@ -1,8 +1,8 @@
 ---
-title: "Attack Paths - {{ENGAGEMENT}}"
-type: engagement-paths
+title: "Kill-Chain - {{ENGAGEMENT}}"
+type: engagement-killchain
 engagement_type: bugbounty
-tags: [engagement, attack-paths, bugbounty]
+tags: [engagement, killchain, bugbounty]
 date_created: "{{DATE}}"
 date_updated: "{{DATE}}"
 sources: []

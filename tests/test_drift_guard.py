@@ -21,11 +21,11 @@ def _run(cmd, env):
 def _campaign(eng, pass_=5, emitted=None, board=True):
     json.dump({"type": "ctf", "pass": pass_, "emitted_bins": emitted or []},
               open(eng / ".campaign.json", "w"))
-    kc = ("---\ntype: engagement-killchain\n---\n\n### 4a\n\n"
+    kc = ("---\ntype: engagement-approach\n---\n\n### 4a\n\n"
           "| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n")
     if board:
         kc += "| r1 | 10.0.0.5 | sqli | sqlmap | [ ] |\n"
-    (eng / "killchain.md").write_text(kc)
+    (eng / "Approach.md").write_text(kc)
 
 
 def test_off_board_escalates_then_denies(vault):
@@ -57,7 +57,7 @@ def test_post_foothold_never_denies(vault):
     (blocking privesc enum is the over-fire the review warned about). Deny stays for pre-foothold."""
     eng = vault / "targets" / "acme"
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
-    (eng / "killchain.md").write_text(
+    (eng / "Approach.md").write_text(
         "### 4a\n| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n"
         "| r1 | 10.0.0.5 | privesc | linpeas | [ ] |\n")
     (eng / "state.md").write_text("| asset | access |\n|--|--|\n| 10.0.0.5 | foothold |\n")
@@ -119,7 +119,7 @@ def test_end_of_board_allows(vault):
     probes)."""
     eng = vault / "targets" / "acme"
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
-    (eng / "killchain.md").write_text(
+    (eng / "Approach.md").write_text(
         "### 4a\n| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n"
         "| r1 | 10.0.0.5 | sqli | sqlmap | [x] |\n| r2 | 10.0.0.5 | rce | nuclei | [!] |\n")
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))

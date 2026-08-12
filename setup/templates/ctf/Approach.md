@@ -1,8 +1,8 @@
 ---
-title: "Kill-Chain Board - {{ENGAGEMENT}}"
-type: engagement-killchain
+title: "Approach - {{ENGAGEMENT}}"
+type: engagement-approach
 engagement_type: ctf
-tags: [engagement, killchain, board]
+tags: [engagement, approach, board]
 date_created: "{{DATE}}"
 date_updated: "{{DATE}}"
 sources: []
@@ -57,7 +57,7 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 |----|-------|-----------|---------|-------|------|--------|-----|----------|
 
 cred attacks:  sqlmap / hydra / medusa / john / hashcat
-  -> [[sqlmap]] [[hydra]] [[medusa]] [[john]] [[hashcat]] [[password-attacks]] [[wordlists]] [[default-credentials]]
+  -> [[sqlmap]] [[hydra]] [[medusa]] [[wiki/tools/john]] [[hashcat]] [[password-attacks]] [[wordlists]] [[default-credentials]]
 route by class: Skill(arsenal) -> Skill(`hunt-<class>`)
 
 ### 4b. Post-Ex / Privesc  ([[linux-privesc]] · [[privesc-exploit-arsenal]])

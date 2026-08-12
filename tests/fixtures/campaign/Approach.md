@@ -1,8 +1,8 @@
 ---
-title: "Kill-Chain Board - campaign-fixture"
-type: engagement-killchain
+title: "Approach - campaign-fixture"
+type: engagement-approach
 engagement_type: bugbounty
-tags: [engagement, killchain, board]
+tags: [engagement, approach, board]
 date_created: "2026-08-07"
 date_updated: "2026-08-07"
 current_phase: ""

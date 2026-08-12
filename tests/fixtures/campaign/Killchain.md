@@ -1,8 +1,8 @@
 ---
-title: "Attack Paths - campaign-fixture"
-type: engagement-paths
+title: "Kill-Chain - campaign-fixture"
+type: engagement-killchain
 engagement_type: bugbounty
-tags: [engagement, attack-paths, bugbounty]
+tags: [engagement, killchain, bugbounty]
 date_created: "2026-08-07"
 date_updated: "2026-08-07"
 sources: []

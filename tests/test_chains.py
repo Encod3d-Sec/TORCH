@@ -132,7 +132,7 @@ def test_chains_json_schema_valid():
 
 
 KILLCHAIN = """---
-type: engagement-killchain
+type: engagement-approach
 current_phase: "Phase 5 Post-Ex"
 entered_because: "FIND-001 RCE on web01 (CONFIRMED) -> post-ex edge"
 ---
@@ -145,7 +145,7 @@ entered_because: "FIND-001 RCE on web01 (CONFIRMED) -> post-ex edge"
 def test_phase_explicit_prefers_field(tmp_path, monkeypatch):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text(KILLCHAIN, encoding="utf-8")
+    (eng / "Approach.md").write_text(KILLCHAIN, encoding="utf-8")
     monkeypatch.setattr(_engagement, "scope",
                         lambda d=None: {"in_scope": [], "out_of_scope": []})
     assert _engagement.phase_explicit(str(eng)) == "Phase 5 Post-Ex"
@@ -154,7 +154,7 @@ def test_phase_explicit_prefers_field(tmp_path, monkeypatch):
 def test_phase_explicit_ignores_out_of_scope_citation(tmp_path, monkeypatch):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text(KILLCHAIN, encoding="utf-8")
+    (eng / "Approach.md").write_text(KILLCHAIN, encoding="utf-8")
     monkeypatch.setattr(_engagement, "scope",
                         lambda d=None: {"in_scope": [], "out_of_scope": ["web01"]})
     assert _engagement.phase_explicit(str(eng)) is None   # citation names an out-of-scope host
@@ -163,7 +163,7 @@ def test_phase_explicit_ignores_out_of_scope_citation(tmp_path, monkeypatch):
 def test_phase_explicit_absent_field(tmp_path):
     eng = tmp_path / "eng"
     eng.mkdir()
-    (eng / "killchain.md").write_text("---\ntype: engagement-killchain\n---\n\n## 1. Recon\n",
+    (eng / "Approach.md").write_text("---\ntype: engagement-approach\n---\n\n## 1. Recon\n",
                                       encoding="utf-8")
     assert _engagement.phase_explicit(str(eng)) is None
 
@@ -180,11 +180,11 @@ def test_tested_classes_honors_explicit_class(tmp_path):
     assert "ssrf" in per_asset.get("web09", set())
 
 
-def test_killchain_templates_document_phase_keys():
+def test_approach_templates_document_phase_keys():
     for etype in ("pentest", "bugbounty", "ctf"):
         # use _engagement.VAULT (repo-root self-location); _engagement.py is in skills/hooks/,
         # so dirname(dirname(__file__)) would wrongly land in skills/.
-        txt = open(os.path.join(_engagement.VAULT, "setup", "templates", etype, "killchain.md"),
+        txt = open(os.path.join(_engagement.VAULT, "setup", "templates", etype, "Approach.md"),
                    encoding="utf-8").read()
-        assert "current_phase" in txt, f"{etype} killchain missing current_phase key"
-        assert "entered_because" in txt, f"{etype} killchain missing entered_because key"
+        assert "current_phase" in txt, f"{etype} Approach.md missing current_phase key"
+        assert "entered_because" in txt, f"{etype} Approach.md missing entered_because key"

@@ -40,7 +40,7 @@ def test_deadend_lines_skips_template_placeholder(tmp_path):
 
 def test_board_phase_picks_highest_open(tmp_path):
     st = _load()
-    (tmp_path / "killchain.md").write_text(
+    (tmp_path / "Approach.md").write_text(
         "## 1. Recon\n- [x] nmap\n## 2. Weaponize\n- [ ] pick payload\n"
         "## 4. Exploit\n- [~] foothold\n- [!] dead vector\n", encoding="utf-8")
     where, open_n, dead_n = st.board_phase(str(tmp_path))
@@ -53,7 +53,7 @@ def test_board_phase_prefers_explicit_current_phase_over_heuristic(tmp_path):
     (tmp_path / "scope.md").write_text(
         "## In Scope\n- host1.internal\n## Out of Scope\n- other.internal\n",
         encoding="utf-8")
-    (tmp_path / "killchain.md").write_text(
+    (tmp_path / "Approach.md").write_text(
         "---\n"
         "current_phase: Phase 2 Weaponize (explicit)\n"
         "entered_because: pivot via host1.internal\n"

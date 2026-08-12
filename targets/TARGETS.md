@@ -13,7 +13,7 @@ targets/<eng>/                  # created by new-engagement.sh, self-healed by e
 ├── scope.md            -- in/out-of-scope + RoE flags (no_bruteforce/no_dos/passive_only)   [all types]
 ├── state.md            -- primary target map: host/service/access table (per-type columns)  [all types]
 ├── loot.md             -- captured credentials / keys / flags + reuse map                    [all types]
-├── paths.md            -- open/blocked attack paths + next moves (LIVE attack-chain tracker) [all types]
+├── Killchain.md         -- open/blocked attack paths + next moves (LIVE attack-chain tracker) [all types]
 ├── log.md              -- append-only audit trail (terse)                                     [all types]
 ├── walkthrough.md      -- full copy-pasteable boot-to-root reproduction (FINAL attack chain) [all types]
 ├── Deadends.md         -- false positives + exhausted/blocked vectors (anti-loop)             [all types]
@@ -74,11 +74,11 @@ FIND-015-MEDIUM-s3-buckets-publicly-listable.md
 ## Vuln-index.md Format
 
 This severity index is a pentest/bugbounty artifact. A ctf room does not init it:
-its attack chain has one live home (`paths.md`, read by next_move) and one final
+its attack chain has one live home (`Killchain.md`, read by next_move) and one final
 home (`walkthrough.md`, the TL;DR chain line and the boot-to-root recipe). If a ctf
 writeup wants a flat findings roll-up, `ensure_optional_file("vuln-index")` creates
 the slim `setup/templates/ctf/vuln-index.md` (a plain list, no severity/CVSS, no Key
-Attack Chains). Keep chain narrative out of a ctf Vuln-index; it belongs in paths /
+Attack Chains). Keep chain narrative out of a ctf Vuln-index; it belongs in Killchain.md /
 walkthrough.
 
 ```markdown

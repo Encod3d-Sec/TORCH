@@ -65,11 +65,11 @@ def _bb_classes():
 
 def test_tested_classes_autocredit(tmp_path):
     """coverage self-maintains from the files the discipline already writes:
-    the killchain.md 4a table + written findings + Deadends.md."""
+    the Approach.md 4a table + written findings + Deadends.md."""
     import _engagement
     d = tmp_path / "eng"
     (d / "Vulns").mkdir(parents=True)
-    (d / "killchain.md").write_text(
+    (d / "Approach.md").write_text(
         "| asset | vuln class | wiki | payload/tool | status | poc |\n"
         "|---|---|---|---|---|---|\n"
         "| api.x | csrf | [[csrf]] | - | [x] | poc/1.png |\n")
@@ -81,7 +81,7 @@ def test_tested_classes_autocredit(tmp_path):
         "- SSRF on api.x via ?url=: all schemes blocked, 40 payloads 0 callbacks\n")
     per_asset, glob = _engagement.tested_classes(str(d), "bugbounty", _bb_classes())
     got = per_asset.get("api.x", set())
-    assert "csrf" in got     # explicit killchain.md 4a row (status [x])
+    assert "csrf" in got     # explicit Approach.md 4a row (status [x])
     assert "sqli" in got     # finding title/slug -> tested-and-found
     assert "ssrf" in got     # dead-end attributed to api.x -> tested-and-cleared
     assert "xss" not in got  # never touched -> still a gap
@@ -418,9 +418,9 @@ def test_tested_classes_list_affected_and_dash(tmp_path):
     (d / "Vulns").mkdir(parents=True)
     (d / "Vulns" / "FIND-001-HIGH-xss.md").write_text(   # block-list affected
         '---\ntitle: "Stored XSS"\ntype: finding\naffected:\n  - host-a\n  - host-b\n---\n')
-    # killchain.md 4a row with a dash in the 'vuln class' cell (done status): the dash
+    # Approach.md 4a row with a dash in the 'vuln class' cell (done status): the dash
     # placeholder must NOT be credited as a tested class (the re.fullmatch('-+') guard).
-    (d / "killchain.md").write_text(
+    (d / "Approach.md").write_text(
         "| asset | vuln class | wiki | payload/tool | status | poc |\n"
         "|---|---|---|---|---|---|\n"
         "| host-a | - | - | - | [x] | - |\n")

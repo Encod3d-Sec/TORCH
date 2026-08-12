@@ -48,7 +48,7 @@ def main():
     except Exception:
         pass
     if not _engagement.is_solved(d):
-        # During the box: state-discipline reflex. Loot captured but paths.md has no chain
+        # During the box: state-discipline reflex. Loot captured but Killchain.md has no chain
         # rows -> nudge to write the attack path now, not at close-out. Deduped on the loot
         # row-count (a marker) so it re-fires only when a NEW finding lands, never every Stop.
         gap = _engagement.paths_write_gap(d)
@@ -60,14 +60,14 @@ def main():
             except Exception:
                 last = 0
             if gap > last:
-                print("State-discipline: loot.md has %d finding(s) but paths.md has no chain "
+                print("State-discipline: loot.md has %d finding(s) but Killchain.md has no chain "
                       "rows. Write the attack path NOW (one row per hop: what -> stage -> "
                       "status) so the chain persists across sessions -- do not defer it to "
                       "close-out." % gap)
                 try:
                     open(marker, "w").write(str(gap))
                     import _telemetry
-                    _telemetry.drift("close-out", "loot captured but paths.md empty (state discipline)")
+                    _telemetry.drift("close-out", "loot captured but Killchain.md empty (state discipline)")
                     _telemetry.hook("close-out", action="paths-nudge")
                 except Exception:
                     pass

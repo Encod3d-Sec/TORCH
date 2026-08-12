@@ -49,8 +49,8 @@ def vault(tmp_path, monkeypatch):
            "---\ntype: engagement-loot\nengagement_type: pentest\n---\n\n# Loot\n\n"
            "| cred | type | source | valid-where | reused-where | status |\n"
            "|------|------|--------|-------------|--------------|--------|\n")
-    _write(str(eng / "paths.md"),
-           "---\ntype: engagement-paths\nengagement_type: pentest\n---\n\n# Paths\n\n"
+    _write(str(eng / "Killchain.md"),
+           "---\ntype: engagement-killchain\nengagement_type: pentest\n---\n\n# Paths\n\n"
            "| path | stage | status | blocker | next-move |\n"
            "|------|-------|--------|---------|-----------|\n"
            "| coerce->relay->DC | relay | open | - | relay to DC |\n"

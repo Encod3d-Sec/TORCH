@@ -148,7 +148,7 @@ def main():
     # ON-BOARD escape 1: no OPEN ([ ]/[~]) rows -> empty board (generic tech) OR end-of-board.
     # Either way the driver has nothing to hold the agent to, so allow (fail-open). Checking OPEN
     # status (not mere presence) stops end-of-board verification probes from being false-blocked.
-    rows = _engagement._parse_table(os.path.join(d, "killchain.md"))
+    rows = _engagement._parse_table(os.path.join(d, "Approach.md"))
     open_rows = [r for r in rows if (r.get("status") or "[ ]").strip() in ("[ ]", "[~]", "")]
     if not open_rows:
         return

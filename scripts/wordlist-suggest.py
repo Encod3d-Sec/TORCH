@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Suggest NEW generic web path/param tokens for the harness wordlists.
 
-Mines targets/*/ (paths, walkthrough, state, log, Vuln-index) for path segments and
+Mines targets/*/ (Killchain, walkthrough, state, log, Vuln-index) for path segments and
 param names that are NOT already in scripts/wordlists/harness-{paths,params}.txt, then
 prints them for review. READ-ONLY: it never writes the lists (you curate via wl-add.sh),
 so client-specific branding stays out of the tracked, shippable wordlist.
@@ -130,7 +130,7 @@ def mine():
         if not os.path.isdir(d):
             continue
         blob = ""
-        for f in ("paths.md", "walkthrough.md", "state.md", "log.md", "Vuln-index.md"):
+        for f in ("Killchain.md", "walkthrough.md", "state.md", "log.md", "Vuln-index.md"):
             blob += "\n" + "\n".join(_read_lines(os.path.join(d, f)))
         # path segments: from URLs, /route notation, and *.php/.py files
         segs = []

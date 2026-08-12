@@ -7,10 +7,10 @@
 # Scaffolds targets/<name>/ with the type-aware file set + ingest/ poc/ dirs,
 # and points targets/active.md at it. Engagement data stays under targets/ (private).
 #   - pentest/bugbounty: full set (adds oob.md, Vuln-index.md).
-#   - ctf: lean set (state,loot,paths,killchain,log,scope,walkthrough,Deadends); oob is
+#   - ctf: lean set (state,loot,Killchain,Approach,log,scope,walkthrough,Deadends); oob is
 #     opt-in via --with-oob; the severity Vuln-index is skipped (a slim ctf findings
 #     list is created on demand by ensure_optional_file). Per-asset coverage lives in
-#     the killchain.md 4a table for all types.
+#     the Approach.md 4a table for all types.
 #   - --scope <host> (repeatable): seed scope.md's "## In scope" bullets at creation
 #     time, so scope-gated evidence auto-capture is live immediately instead of
 #     waiting on a hand-edit. Validated against a conservative host/CIDR charset;
@@ -110,9 +110,9 @@ TODAY="$(date +%F)"
 # tool output. Vulns/ is created lazily on the first FIND.
 mkdir -p "$DEST/ingest" "$DEST/poc"
 
-# state/loot/paths/killchain from the type's own template dir (per-type columns).
+# state/loot/Killchain/Approach from the type's own template dir (per-type columns).
 # Keep in sync with STATE_FILES in skills/hooks/_engagement.py.
-for f in state loot paths killchain; do
+for f in state loot Killchain Approach; do
   sub "$TPL/$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
 done
 # shared core, healed for EVERY type (SHARED_CORE in _engagement.py)
@@ -153,7 +153,7 @@ done
 
 printf '%s\n' "$NAME" > "$VAULT/targets/active.md"
 
-FILES="state, loot, paths, killchain, log, scope, walkthrough, eval, Deadends"
+FILES="state, loot, Killchain, Approach, log, scope, walkthrough, eval, Deadends"
 [ "$WITH_OOB" = 1 ] && FILES="$FILES, oob"
 [ "$TYPE" != "ctf" ] && FILES="$FILES, Vuln-index"
 echo "created $TYPE engagement: targets/$NAME/ ($FILES, ingest/, poc/)"

@@ -1,6 +1,6 @@
 """Shared helpers for engagement-state hooks.
 
-Resolves the active engagement and parses its state/loot/paths markdown tables.
+Resolves the active engagement and parses its state/loot/killchain markdown tables.
 Everything here is best-effort and never raises to the caller: callers wrap use
 in try/except, but these helpers also degrade to empty/None on any problem.
 """
@@ -21,19 +21,19 @@ TARGETS = os.path.join(VAULT, "targets")
 # Templates live OUTSIDE targets/ (which is git-ignored) so they ship with the
 # shareable repo. Engagement instances stay private under targets/.
 TEMPLATES = os.path.join(VAULT, "setup", "templates")
-STATE_FILES = ("state.md", "loot.md", "paths.md", "killchain.md")
+STATE_FILES = ("state.md", "loot.md", "Killchain.md", "Approach.md")
 TYPES = ("pentest", "bugbounty", "ctf")
 # entity identifier columns by engagement type. Defined once here; next_move and
 # coverage both import it so the mapping cannot drift between the two analyzers.
 ENTITY_KEY = {"pentest": ("host", "ip"), "ctf": ("target",), "bugbounty": ("asset", "url")}
 
-# Per-engagement-type heal set. state/loot/paths/killchain (STATE_FILES) come from the
+# Per-engagement-type heal set. state/loot/Killchain/Approach (STATE_FILES) come from the
 # type's own template dir and are healed for every type. The shared type-agnostic files
 # split into a common core (every type) and a pentest/bugbounty-only extension
 # (Vuln-index/oob). CTF rooms never use the severity/OOB machinery (dead across every
 # THM room), so ctf heals only the core; those two become opt-in via
 # ensure_optional_file() (see below) or new-engagement.sh --with-oob. Per-asset test
-# coverage now lives in the killchain.md 4a table (killchain.md is in STATE_FILES).
+# coverage now lives in the Approach.md 4a table (Approach.md is in STATE_FILES).
 SHARED_CORE = (("log.md", "_log.md"), ("scope.md", "_scope.md"),
                ("walkthrough.md", "_walkthrough.md"),
                ("Deadends.md", "_deadends.md"),
@@ -308,7 +308,7 @@ def tested_classes(d, etype, classes):
     """Vuln classes credited as TESTED for the engagement, inferred from the files the
     state-first discipline already produces -- so coverage stays current with no manual
     bookkeeping:
-      1. killchain.md 4a table        -> explicit, per-asset ('vuln class' when status done)
+      1. Approach.md 4a table         -> explicit, per-asset ('vuln class' when status done)
       2. Vulns/**/FIND-*.md           -> tested-and-found, per 'affected' asset
       3. Deadends.md lines            -> tested-and-cleared (a named class, bounded-out)
     Returns (per_asset: {asset_lower: set}, glob: set); glob credits apply to every asset
@@ -326,10 +326,10 @@ def tested_classes(d, etype, classes):
         else:
             glob.update(hits)
 
-    # 1. explicit killchain.md 4a table: credit a row's 'vuln class' as tested when its
+    # 1. explicit Approach.md 4a table: credit a row's 'vuln class' as tested when its
     #    status cell is done ([x] or "done"). Drop dash placeholders.
     try:
-        for r in _parse_table(os.path.join(d, "killchain.md")):
+        for r in _parse_table(os.path.join(d, "Approach.md")):
             status = (r.get("status", "") or "").strip().lower()
             if "[x]" not in status and "done" not in status:
                 continue
@@ -508,7 +508,7 @@ def summary():
         return None
     name = os.path.basename(d)
     state = _parse_table(os.path.join(d, "state.md"))
-    paths = _parse_table(os.path.join(d, "paths.md"))
+    paths = _parse_table(os.path.join(d, "Killchain.md"))
     loot = _parse_table(os.path.join(d, "loot.md"))
     owned = sum(1 for r in state if r.get("owned", "").lower() == "yes")
     open_paths = [r for r in paths if r.get("status", "").lower() == "open"]
@@ -541,7 +541,7 @@ def summary_text():
 
 
 def engagement_type(d=None):
-    """Read engagement_type from any existing state/loot/paths frontmatter.
+    """Read engagement_type from any existing state/loot/killchain frontmatter.
     Defaults to 'pentest' when unknown."""
     d = d or active_dir()
     if not d:
@@ -597,13 +597,13 @@ def scope(d=None):
 
 
 def phase_explicit(d):
-    """The killchain frontmatter `current_phase`, IFF present and its `entered_because`
+    """The Approach frontmatter `current_phase`, IFF present and its `entered_because`
     names no out-of-scope asset; else None (caller falls back to the heuristic phase scan).
     The citation-scope check keeps a phase transition in scope. Deterministic, no network."""
     if not d:
         return None
     try:
-        raw = open(os.path.join(d, "killchain.md"), encoding="utf-8", errors="ignore").read()
+        raw = open(os.path.join(d, "Approach.md"), encoding="utf-8", errors="ignore").read()
     except OSError:
         return None
     fm = _frontmatter(raw)
@@ -898,14 +898,14 @@ def _table_data_rows(text):
 
 def paths_write_gap(d):
     """Live state-discipline reflex: LOOT was captured (a cred/key/flag/technique row in
-    loot.md) but paths.md still has ZERO chain rows -- a finding landed and the attack chain
-    was never written down (the drift where paths.md is filled only at close-out). Returns the
+    loot.md) but Killchain.md still has ZERO chain rows -- a finding landed and the attack chain
+    was never written down (the drift where Killchain.md is filled only at close-out). Returns the
     loot data-row count when a gap exists, else 0. Fail-open (0 on any error)."""
     if not d:
         return 0
     try:
         loot = open(os.path.join(d, "loot.md"), encoding="utf-8", errors="ignore").read()
-        paths = open(os.path.join(d, "paths.md"), encoding="utf-8", errors="ignore").read()
+        paths = open(os.path.join(d, "Killchain.md"), encoding="utf-8", errors="ignore").read()
         loot_rows = _table_data_rows(loot)
         if loot_rows >= 1 and _table_data_rows(paths) == 0:
             return loot_rows
@@ -1024,10 +1024,35 @@ def flag_accounting_gap(d):
         return ""
 
 
+_MIGRATE_TYPE = {"Approach.md": "engagement-approach", "Killchain.md": "engagement-killchain"}
+
+
+def _rewrite_type(path, newtype):
+    try:
+        txt = open(path, encoding="utf-8", errors="ignore").read()
+        new = re.sub(r"(?m)^type:.*$", "type: " + newtype, txt, count=1)
+        if new != txt:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(new)
+    except OSError:
+        pass
+
+
+def _migrate_schema_names(d):
+    """Rename the pre-swap files in an EXISTING engagement dir. killchain.md (old plan board) ->
+    Approach.md; paths.md (old chain) -> Killchain.md. Case-insensitive FS: rename killchain.md
+    FIRST (Killchain.md aliases it), then paths.md. Idempotent + non-destructive."""
+    for old, new in (("killchain.md", "Approach.md"), ("paths.md", "Killchain.md")):
+        op, np = os.path.join(d, old), os.path.join(d, new)
+        if os.path.exists(op) and not os.path.exists(np):
+            os.rename(op, np)
+            _rewrite_type(np, _MIGRATE_TYPE[new])
+
+
 def ensure_state_files():
     """Create any missing per-engagement files (from the type's template) and the
     standard dirs in the active engagement. The shared set is type-aware: a ctf
-    engagement heals only the lean core (state/loot/paths/killchain/log/scope/
+    engagement heals only the lean core (state/loot/Killchain/Approach/log/scope/
     walkthrough/Deadends), skipping the Vuln-index/oob severity machinery that is dead
     across CTF rooms; pentest/bugbounty heal the full set. poc/ is scaffolded for
     every type; Vulns/ is created lazily on the first FIND, never here. Returns the
@@ -1042,6 +1067,7 @@ def ensure_state_files():
     if not os.path.isdir(tpldir):
         tpldir = os.path.join(TEMPLATES, "pentest")
     created = []
+    _migrate_schema_names(d)   # rename pre-swap killchain.md/paths.md before self-heal recreates them
 
     def _emit(dest, tpl):
         if os.path.exists(dest) or not os.path.isfile(tpl):

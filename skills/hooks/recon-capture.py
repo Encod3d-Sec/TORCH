@@ -533,12 +533,12 @@ def _gate1_unmet(d):
 
 
 def _weaponize_undone(d):
-    """GATE 1 signal: True iff the active killchain.md has a '## 2. Weaponize' section that
+    """GATE 1 signal: True iff the active Approach.md has a '## 2. Weaponize' section that
     has open '[ ]' items but NO '[~]'/'[x]' -- i.e. exploitation is starting before the
     wiki/CVE weaponization step. Fail-closed to False (no nudge) if the board or section is
     absent/unreadable, so this never fires spuriously."""
     try:
-        txt = open(os.path.join(d, "killchain.md"), encoding="utf-8", errors="ignore").read()
+        txt = open(os.path.join(d, "Approach.md"), encoding="utf-8", errors="ignore").read()
     except OSError:
         return False
     m = re.search(r"^##\s+2\.\s+Weaponize\b.*?(?=^##\s+\d|\Z)", txt, re.M | re.S)
@@ -552,13 +552,13 @@ _CHECKLIST_RE = re.compile(r"^\s*-\s*\[[ x~!\-]\]", re.I | re.M)
 
 
 def _board_never_built(d):
-    """GATE signal: True iff killchain.md EXISTS but carries no real board content -- no
+    """GATE signal: True iff Approach.md EXISTS but carries no real board content -- no
     checklist item (`- [ ]`/`[x]`/`[~]`/`[!]`/`[-]`) AND no populated table data row. This is
     the 'campaign board was never built' state: `campaign.py board` was never run, so the 4a
     table + recon checklist are still the bare stub. Fail-closed to False (no nudge) when the
     board is absent/unreadable OR has any content, so it never fires spuriously. A MISSING
-    killchain is deliberately NOT this case (a non-campaign engagement, board command N/A)."""
-    p = os.path.join(d, "killchain.md")
+    Approach.md is deliberately NOT this case (a non-campaign engagement, board command N/A)."""
+    p = os.path.join(d, "Approach.md")
     if not os.path.isfile(p):
         return False
     try:
@@ -740,7 +740,7 @@ def main():
             )
 
     # GATE 1 nudge (fire-once per engagement, advisory, fail-open): an exploit-shaped command
-    # while killchain.md Weaponize shows no progress means jumping to exploitation without the
+    # while Approach.md Weaponize shows no progress means jumping to exploitation without the
     # wiki/CVE lookup. Framework-meta commands are exempt. This is the only ENFORCEMENT the
     # board's GATE lines get -- one cheap reminder, not a block.
     if d and _engagement and not _is_framework_meta(cmd):
@@ -765,7 +765,7 @@ def main():
                 marker = os.path.join(d, ".gate1-nudged")
                 if not os.path.exists(marker):
                     blocks.append(
-                        "GATE 1 (wiki-first): exploiting, but killchain.md Weaponize has no "
+                        "GATE 1 (wiki-first): exploiting, but Approach.md Weaponize has no "
                         "progress. Query the wiki for this tech/CVE first (Skill(arsenal) / "
                         "qmd_query), pull the payload from wiki/payloads/, mark the Weaponize "
                         "item, THEN exploit.")
@@ -775,14 +775,14 @@ def main():
                         pass
 
     # board-never-built nudge (fire-once per engagement, advisory, fail-open): an exploit-shaped
-    # command while killchain.md has NO board content (checklist empty + 4a table empty) means the
+    # command while Approach.md has NO board content (checklist empty + 4a table empty) means the
     # campaign board was never generated. Skipping `campaign.py board` loses foothold-recording,
     # vm-rsh routing, and the G3 typed-evidence gate. Framework-meta commands are exempt.
     if d and _engagement and not _is_framework_meta(cmd):
         marker = os.path.join(d, ".board-nudged")
         if not os.path.exists(marker) and _is_exploit_cmd(cmd) and _board_never_built(d):
             blocks.append(
-                "BOARD NOT BUILT: an exploit-shaped command ran but killchain.md has no board rows "
+                "BOARD NOT BUILT: an exploit-shaped command ran but Approach.md has no board rows "
                 "-- the campaign board was never generated. Run `python3 scripts/campaign.py board` "
                 "first: skipping it loses foothold-recording, vm-rsh routing, and the G3 typed-"
                 "evidence gate.")
@@ -983,7 +983,7 @@ def main():
             if seeded:
                 blocks.append(
                     "state.md auto-populated from the scan: added %d asset row(s) (%s). "
-                    "Run `python3 scripts/campaign.py board` to build the killchain from these."
+                    "Run `python3 scripts/campaign.py board` to build the Approach board from these."
                     % (len(seeded), ", ".join(seeded[:8])))
         except Exception:
             pass

@@ -675,8 +675,8 @@ def test_recon_capture_oob_silent_without_callback(vault):
 
 
 def _write_board(eng, weaponize_body):
-    (eng / "killchain.md").write_text(
-        "---\ntype: engagement-killchain\n---\n\n# Board\n\n"
+    (eng / "Approach.md").write_text(
+        "---\ntype: engagement-approach\n---\n\n# Board\n\n"
         "## 1. Recon\n- [x] nmap\n\n"
         "## 2. Weaponize\n" + weaponize_body + "\n\n"
         "## 3. Deliver\n- [ ] shell\n", encoding="utf-8")
@@ -723,11 +723,11 @@ def test_gate1_fires_once(vault):
 
 
 def _write_empty_board(eng):
-    # a killchain.md that EXISTS but was never built: frontmatter + gate legend + empty section
+    # an Approach.md that EXISTS but was never built: frontmatter + gate legend + empty section
     # headers + a 4a table with header/separator only. No `- [ ]` checklist items, no data rows.
     # The legend line's `[ ]`/`[x]`/... are prose (not `- [ ]` list items) and must not count.
-    (eng / "killchain.md").write_text(
-        "---\ntype: engagement-killchain\n---\n\n# Kill-Chain Board\n\n"
+    (eng / "Approach.md").write_text(
+        "---\ntype: engagement-approach\n---\n\n# Kill-Chain Board\n\n"
         "Status: `[ ]` todo | `[~]` doing | `[x]` done | `[-]` n/a | `[!]` deadend\n"
         "GATE 1 (wiki): no hand-rolled exploit until its Weaponize wiki item is `[x]`.\n\n"
         "## 1. Recon\n\n## 2. Weaponize\n\n## 4. Exploit\n\n### 4a. Foothold\n"
@@ -737,7 +737,7 @@ def _write_empty_board(eng):
 
 
 def test_board_nudge_fires_on_exploit_with_empty_board(vault):
-    # exploit-shaped cmd + killchain exists but has no board rows -> BOARD NOT BUILT nudge, marker set
+    # exploit-shaped cmd + Approach.md exists but has no board rows -> BOARD NOT BUILT nudge, marker set
     eng = vault / "targets" / "acme"
     _write_empty_board(eng)
     out = run_hook("recon-capture.py",
@@ -1005,7 +1005,7 @@ def test_web_evidence_gaps(tmp_path):
 
 
 def test_paths_write_gap(tmp_path):
-    """State-discipline reflex: loot captured but paths.md still empty -> gap = loot row count;
+    """State-discipline reflex: loot captured but Killchain.md still empty -> gap = loot row count;
     once a path row exists (or loot is still stub) -> 0. Header/separator rows never count."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("_eng_pg", os.path.join(HOOKS, "_engagement.py"))
@@ -1015,13 +1015,13 @@ def test_paths_write_gap(tmp_path):
     paths_hdr = "| path | stage | status | blocker | next-move |\n|------|-------|--------|---------|-----------|\n"
     # both stubs (header+separator only) -> no findings -> no gap
     (d / "loot.md").write_text(loot_hdr, encoding="utf-8")
-    (d / "paths.md").write_text(paths_hdr, encoding="utf-8")
+    (d / "Killchain.md").write_text(paths_hdr, encoding="utf-8")
     assert e.paths_write_gap(str(d)) == 0
     # loot has 2 findings, paths still stub -> gap = 2
     (d / "loot.md").write_text(loot_hdr + "| admin cred | cred | web | login | works |\n| id_rsa | key | ftp | ssh | works |\n", encoding="utf-8")
     assert e.paths_write_gap(str(d)) == 2
     # write a path row -> gap clears
-    (d / "paths.md").write_text(paths_hdr + "| web->cred->ssh | user | done | - | - |\n", encoding="utf-8")
+    (d / "Killchain.md").write_text(paths_hdr + "| web->cred->ssh | user | done | - | - |\n", encoding="utf-8")
     assert e.paths_write_gap(str(d)) == 0
     # fail-open on missing dir
     assert e.paths_write_gap(None) == 0

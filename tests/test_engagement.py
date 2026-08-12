@@ -49,15 +49,15 @@ def test_ensure_state_files_creates_missing(vault, monkeypatch):
         "---\ntype: engagement-state\nengagement_type: bugbounty\n---\n", encoding="utf-8")
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
     created = _engagement.ensure_state_files()
-    assert "loot.md" in created and "paths.md" in created
+    assert "loot.md" in created and "Killchain.md" in created
     assert "log.md" in created and "ingest/" in created
     # bugbounty template used -> bugbounty column present
     assert "asset" in (eng / "state.md").read_text() or (eng / "loot.md").exists()
     assert (eng / "ingest").is_dir()
 
 
-def test_state_files_includes_killchain():
-    assert "killchain.md" in _engagement.STATE_FILES
+def test_state_files_includes_approach_board():
+    assert "Approach.md" in _engagement.STATE_FILES
 
 
 def test_recon_dir_not_scaffolded():
@@ -77,7 +77,7 @@ def _load_engagement_init():
 def test_board_status_surfaces_phase_and_counts(vault, monkeypatch):
     ei = _load_engagement_init()
     eng = vault / "targets" / "acme"
-    (eng / "killchain.md").write_text(
+    (eng / "Approach.md").write_text(
         "# Kill-Chain Board\n\n"
         "## 1. Recon\n- [x] rustscan\n- [ ] nmap\n\n"
         "## 4. Exploit\n### 4a. Foothold\n- [~] sqli\n- [!] xxe deadend\n",
@@ -110,7 +110,7 @@ def test_killchain_healed_for_every_type(vault, monkeypatch):
             "---\ntype: engagement-state\nengagement_type: %s\n---\n" % etype, encoding="utf-8")
         monkeypatch.setattr(_engagement, "active_dir", lambda e=eng: str(e))
         _engagement.ensure_state_files()
-        board = eng / "killchain.md"
+        board = eng / "Approach.md"
         assert board.exists()
         text = board.read_text()
         assert "Kill-Chain Board" in text

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SessionStart hook: self-heal engagement state + inject summary + board + gap report.
 
-- Creates any missing state/loot/paths/killchain files in the active engagement
+- Creates any missing state/loot/Killchain/Approach files in the active engagement
   from templates (self-heal; never overwrites).
 - Injects the active-engagement summary, scope, OOB HITs, and the kill-chain board
   status (current phase + open/deadend counts) so you re-orient to the board.
@@ -51,7 +51,7 @@ def board_status():
         d = _engagement.active_dir()
         if not d:
             return None
-        p = os.path.join(d, "killchain.md")
+        p = os.path.join(d, "Approach.md")
         if not os.path.isfile(p):
             return None
         open_n = dead_n = 0

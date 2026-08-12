@@ -5,7 +5,7 @@ Verify an engagement's declared type is consistent everywhere, and that its `sta
 schema matches that type.
 
 Why this exists: a bug-bounty engagement carried `engagement_type: pentest`. That one value
-selects the killchain template, the self-heal set, the playbook `approach` filter and the
+selects the Approach template, the self-heal set, the playbook `approach` filter and the
 coverage-classes list -- so the whole campaign was ranked against the 9-class pentest checklist
 instead of the 27-class bugbounty one. It also gave that engagement the pentest `state.md`
 schema (host/ip/os/services/signing/winrm/smbv1) on a web target, where recon output
