@@ -34,11 +34,11 @@ def test_ensure_ctf_heals_lean_set(vault, monkeypatch):
     eng = _mk(vault / "targets" / "room", "ctf")
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
     created = _engagement.ensure_state_files()
-    for f in ("loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
-              "walkthrough.md", "Deadends.md"):
+    for f in ("loot.md", "Approach.md", "scope.md", "Deadends.md"):
         assert f in created and (eng / f).exists()
     assert "Kill-Chain Board" in (eng / "Approach.md").read_text()
-    assert "hot.md" not in created and not (eng / "hot.md").exists()   # removed
+    for f in ("Killchain.md", "log.md", "walkthrough.md", "eval.md", "hot.md"):
+        assert f not in created and not (eng / f).exists()
     for dsub in ("ingest/", "poc/"):
         assert dsub in created
     assert "recon/" not in created and not (eng / "recon").exists()   # auto firehose retired
