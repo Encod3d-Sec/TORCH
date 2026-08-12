@@ -93,7 +93,10 @@ API target", "a single-host web bug-bounty campaign") and name nothing. Run `bas
 scripts/check-leaks.sh` after writing the retro; a FAIL here almost always means the dir name leaked.
 
 ### 0d. Fill the engagement's agent eval (per-engagement, gitignored)
-`targets/$ENG/eval.md` (self-healed from `_eval.md`) has two halves - auto (real data) and judgement (you):
+`targets/$ENG/eval.md` has two halves - auto (real data) and judgement (you). Scaffolded upfront
+from `_eval.md` for pentest/bugbounty; for ctf it self-creates the moment the next step
+(`eval_metrics.py --write`, already run once by close-out.py at SOLVED) writes to it, so it may not
+exist yet if you are running this by hand before close-out fired:
 
 **Auto first - REAL numbers, no estimation:**
 ```bash

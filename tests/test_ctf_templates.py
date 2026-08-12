@@ -336,3 +336,13 @@ def test_ctf_state_template_has_chain_and_status_sections():
     # both live AFTER the host table, so a mid-box SOLVED edit can never split it again
     assert text.index("## Chain") > text.index("| target | service")
     assert text.index("## Status") > text.index("## Chain")
+
+
+def test_ensure_optional_backfills_decisions(vault, monkeypatch):
+    eng = _mk(vault / "targets" / "room8", "ctf")
+    monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
+    assert not (eng / "decisions.md").exists()
+    assert _engagement.ensure_optional_file("decisions") == "decisions.md"
+    txt = (eng / "decisions.md").read_text()
+    assert "## Decision log" in txt and "room8" in txt
+    assert _engagement.ensure_optional_file("decisions") == ""   # already exists -> ''

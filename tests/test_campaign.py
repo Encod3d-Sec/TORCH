@@ -269,6 +269,7 @@ def test_race_row_parks_under_write_policy_none(eng):
     race = next(r for r in rows if r["vuln class"] == "race-condition")
     assert race["status"] == "[?]", "a write-class row must park when write_policy forbids writes"
     assert os.path.isfile(os.path.join(eng, "decisions.md"))
+    assert "## Decision log" in open(os.path.join(eng, "decisions.md")).read()
 
 
 def test_race_row_runs_under_write_policy_full(eng):

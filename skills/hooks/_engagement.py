@@ -76,7 +76,8 @@ def _heal_shared_set(etype):
 # actually runs, or a manual findings roll-up (vuln-index). vuln-index is type-aware:
 # ctf uses a slim findings list.
 OPTIONAL_FILES = {"oob": ("oob.md", "_oob.md"),
-                  "vuln-index": ("Vuln-index.md", "_vuln-index.md")}
+                  "vuln-index": ("Vuln-index.md", "_vuln-index.md"),
+                  "decisions": ("decisions.md", "_decisions.md")}
 
 
 def ensure_optional_file(kind, d=None):

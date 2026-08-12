@@ -768,8 +768,7 @@ def cmd_board(a):
             status = "[?]"
             parked += 1
             dec = os.path.join(d, "decisions.md")
-            if not os.path.isfile(dec):
-                _append_line(dec, "# Decisions - park queue\n\n| # | row | question | kind | asked | answer |\n|---|-----|----------|------|-------|--------|")
+            E.ensure_optional_file("decisions", d)
             _append_line(dec, "| - | %s | %s x %s needs write_policy %s (envelope=%s) | out-of-envelope | %s | |"
                          % (rid, asset, cls, "/".join(wp_ok), write_policy, _now()[:10]))
         rows.append({"id": rid, "asset": asset, "vuln class": cls, "arsenal": "",
@@ -1422,8 +1421,7 @@ def cmd_done(a):
         row["status"] = "[?]"
         write_board(d, rows)
         dec = os.path.join(d, "decisions.md")
-        if not os.path.isfile(dec):
-            _append_line(dec, "# Decisions - park queue\n\n| # | row | question | kind | asked | answer |\n|---|-----|----------|------|-------|--------|")
+        E.ensure_optional_file("decisions", d)
         _append_line(dec, "| - | %s | %s | out-of-envelope | %s | |" % (a.row, a.park, _now()[:10]))
         print("campaign done: %s parked [?] -> decisions.md (loop advances)" % a.row)
         return 0
