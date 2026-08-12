@@ -30,15 +30,15 @@ Only after the wiki has nothing do you write a custom PoC. Do not reinvent what 
 
 Use the standard toolkit. Do NOT hand-roll recon scripts.
 
-**Preflight (every engagement, before scanning): prune the tooling VM's `/etc/hosts` and `/etc/krb5.conf` of PRIOR-box entries.** The VM persists across boxes, so a stale `<ip> <domain>/<realm>` line (or a stale `default_realm`) silently mis-resolves this box while nxc/certipy (explicit IP) look fine — impacket Kerberos hangs on a dead KDC instead. `bash /root/vm.sh 'grep -vE "^#|^127\.|^::1|^$" /etc/hosts'`, delete any line not for this box, add only this target; `bash /root/vm.sh 'grep -i default_realm /etc/krb5.conf'`, blank/reset it.
+**Preflight (every engagement, before scanning): prune the tooling VM's `/etc/hosts` and `/etc/krb5.conf` of PRIOR-box entries.** The VM persists across boxes, so a stale `<ip> <domain>/<realm>` line (or a stale `default_realm`) silently mis-resolves this box while nxc/certipy (explicit IP) look fine; impacket Kerberos hangs on a dead KDC instead. `bash /root/vm.sh 'grep -vE "^#|^127\.|^::1|^$" /etc/hosts'`, delete any line not for this box, add only this target; `bash /root/vm.sh 'grep -i default_realm /etc/krb5.conf'`, blank/reset it.
 
-Tooling-first: rustscan/nmap/feroxbuster/ffuf/nuclei/nxc — never a hand-rolled `/dev/tcp` or curl fuzz loop (skips the fingerprint router). **feroxbuster is the DEFAULT web content-discovery tool** (recursive, faster than ffuf/big.txt) — launch it the moment nmap shows a web port; ffuf is for param-mining + vhosts.
+Tooling-first: rustscan/nmap/feroxbuster/ffuf/nuclei/nxc, never a hand-rolled `/dev/tcp` or curl fuzz loop (skips the fingerprint router). **feroxbuster is the DEFAULT web content-discovery tool** (recursive, faster than ffuf/big.txt); launch it the moment nmap shows a web port; ffuf is for param-mining + vhosts.
 
-**Card EVERY scan tab AS it finishes, not at the end:** `scripts/capture.sh recon <eng> <slug> <tab>` renders the tmux tab into `recon/` — rustscan, nmap, feroxbuster, ffuf, nuclei, whatweb (its own tab). Even an empty result gets a card. `status.py` surfaces the recon-card count.
+**Card EVERY scan tab AS it finishes, not at the end:** `scripts/capture.sh recon <eng> <slug> <tab>` renders the tmux tab into `recon/`, rustscan, nmap, feroxbuster, ffuf, nuclei, whatweb (its own tab). Even an empty result gets a card. `status.py` surfaces the recon-card count.
 
-**ONE tmux session per engagement, one WINDOW per parallel scan.** `bash scripts/vm-scan.sh <eng> <target> '<scan>'` for the first, then `--win nuclei`/`--win ferox`/`--win whatweb` for the rest on the same host — never bump the session name to dodge a collision. Screenshot a tab with `Skill(screenshot) --tmux <eng>:<tab>`.
+**ONE tmux session per engagement, one WINDOW per parallel scan.** `bash scripts/vm-scan.sh <eng> <target> '<scan>'` for the first, then `--win nuclei`/`--win ferox`/`--win whatweb` for the rest on the same host; never bump the session name to dodge a collision. Screenshot a tab with `Skill(screenshot) --tmux <eng>:<tab>`.
 
-**`vm.sh` drops long foreground commands (exit 255, no output) past ~2 min.** Run scans/cracks/sprays DETACHED (a tmux tab via `vm-scan.sh`, or `nohup <cmd> >/tmp/out 2>&1 &` + poll for a DONE marker), never blocking one `vm.sh` call. Stdin is not forwarded through `vm.sh` — push files via base64 (`echo <b64> | base64 -d > ~/file`), write+run in one call.
+**`vm.sh` drops long foreground commands (exit 255, no output) past ~2 min.** Run scans/cracks/sprays DETACHED (a tmux tab via `vm-scan.sh`, or `nohup <cmd> >/tmp/out 2>&1 &` + poll for a DONE marker), never blocking one `vm.sh` call. Stdin is not forwarded through `vm.sh`; push files via base64 (`echo <b64> | base64 -d > ~/file`), write+run in one call.
 
 ```bash
 T=<ip>
@@ -64,15 +64,15 @@ wpscan -u http://$T                              # if WordPress
 
 **Missing `-w` wordlist = ffuf prints help text and silently finds NOTHING** (a false "no hidden endpoints"). Preflight every fuzz (`ls "$W" || W=/usr/share/wordlists/dirb/big.txt`); seclists may be absent on the VM, push harness lists over via base64 first.
 
-**On any web surface, before moving to exploitation — all of this, in parallel where possible:**
+**On any web surface, before moving to exploitation, all of this, in parallel where possible:**
 - **Capture it as-is first**: `capture.sh web <eng> <slug> http://T:PORT/` (browser shot) + `curl -s http://T:PORT/ > poc/<slug>-source.html` (raw source), for EVERY distinct surface (login, dashboards, OSINT/social apps) as you open it.
-- **Read full, not grep.** Fetch a file/response (source, config, HLS manifest, JS bundle) and read it END-TO-END — the vuln hides in the line a narrow `grep` skips. Never pipe an exploit/lead response through `head`/`grep` before reading it whole.
+- **Read full, not grep.** Fetch a file/response (source, config, HLS manifest, JS bundle) and read it END-TO-END; the vuln hides in the line a narrow `grep` skips. Never pipe an exploit/lead response through `head`/`grep` before reading it whole.
 - **Exploit requests -> Burp.** curl is fine for quick loops; push every load-bearing request (SSRF/LFI/SQLi/BFLA/deser/flag-returning) into Repeater via `Skill(hunt-burp)`, card with `capture.sh burp`.
-- **Source-read primitive first.** The moment you can read files (LFI/.git/backup), read ALL the app source before brute-forcing a login/DB — the vuln is usually in source you can already read.
-- **Read the client JS and snippet what it reveals.** Grep bundles for `fetch(`/`axios`/`/api`/`token`/`secret`/`admin` — a JS/SPA's POST-only JSON API is invisible to feroxbuster/ffuf (they GET, a bare `/api` 404s so recursion never descends). The moment source reveals something load-bearing, capture it: `scripts/capture.sh snippet <eng> <slug> <url-or-file> '<pattern>' '<what it reveals>'` -> paste the fenced block into walkthrough.md Recon.
-- **Launch scanners in parallel the moment a web port appears** — feroxbuster + nuclei + whatweb, one tmux tab each, don't wait serially; card each on finish. Never conclude "no web vuln" until both feroxbuster and nuclei have run AND been read.
+- **Source-read primitive first.** The moment you can read files (LFI/.git/backup), read ALL the app source before brute-forcing a login/DB; the vuln is usually in source you can already read.
+- **Read the client JS and snippet what it reveals.** Grep bundles for `fetch(`/`axios`/`/api`/`token`/`secret`/`admin`; a JS/SPA's POST-only JSON API is invisible to feroxbuster/ffuf (they GET, a bare `/api` 404s so recursion never descends). The moment source reveals something load-bearing, capture it: `scripts/capture.sh snippet <eng> <slug> <url-or-file> '<pattern>' '<what it reveals>'` -> paste the fenced block into walkthrough.md Recon.
+- **Launch scanners in parallel the moment a web port appears**, feroxbuster + nuclei + whatweb, one tmux tab each, don't wait serially; card each on finish. Never conclude "no web vuln" until both feroxbuster and nuclei have run AND been read.
 
-Fingerprint the exact app + version. **`Skill(arsenal)` FIRST** on any fingerprinted surface (maps it to `wiki/tools/` automation), then INVOKE `Skill(hunt-<class>)` for each fingerprinted vuln class — actually load and follow it, not just the router's advisory nudge (a routed-but-never-invoked hunt skill is drift in eval.md). Record HOW each vuln was discovered, not just the exploit; screenshot findings as they land. **OT/ICS ports (502/102/44818/1880, an HMI web app) -> `Skill(hunt-ics)`.** A web surface -> `scripts/recon-web.sh <eng> <url>` (fans out feroxbuster+nuclei+whatweb+backup-sweep); re-run per new vhost/path, nothing auto-launches it.
+Fingerprint the exact app + version. **`Skill(arsenal)` FIRST** on any fingerprinted surface (maps it to `wiki/tools/` automation), then INVOKE `Skill(hunt-<class>)` for each fingerprinted vuln class; actually load and follow it, not just the router's advisory nudge (a routed-but-never-invoked hunt skill is drift in eval.md). Record HOW each vuln was discovered, not just the exploit; screenshot findings as they land. **OT/ICS ports (502/102/44818/1880, an HMI web app) -> `Skill(hunt-ics)`.** A web surface -> `scripts/recon-web.sh <eng> <url>` (fans out feroxbuster+nuclei+whatweb+backup-sweep); re-run per new vhost/path, nothing auto-launches it.
 
 ## Phase 2 Weaponize: pick the exploit
 
@@ -165,26 +165,26 @@ Box-specific chains now live in wiki (see the technique pages linked per class i
 
 After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -> `loot.md`, chain -> `paths.md`, vulns -> `Vuln-index.md`, dead-ends -> `Deadends.md`, narrative -> `log.md`. Flags go in the writeup, never in `session/*` or `wiki/`.
 
-**Board hygiene, live (GATE 3).** `paths.md`/`Deadends.md` rot under momentum while `state.md` absorbs prose instead — the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its `paths.md` status BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
+**Board hygiene, live (GATE 3).** `paths.md`/`Deadends.md` rot under momentum while `state.md` absorbs prose instead; the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its `paths.md` status BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
 
-**Live-capture machinery — evidence is never backfilled at close-out:**
-- **Auto-card is a backstop, not primary.** The Stop hook (`scripts/autocard.sh`, capped `AUTOCARD_MAX=2`/run) renders any finished scan tmux tab into `recon/`; hand-carding as you go (Phase 1: `capture.sh recon <eng> <slug> <tab>`) stays PRIMARY. 0 cards while tabs finished = VM down / `timeout` missing — hand-card now.
+**Live-capture machinery; evidence is never backfilled at close-out:**
+- **Auto-card is a backstop, not primary.** The Stop hook (`scripts/autocard.sh`, capped `AUTOCARD_MAX=2`/run) renders any finished scan tmux tab into `recon/`; hand-carding as you go (Phase 1: `capture.sh recon <eng> <slug> <tab>`) stays PRIMARY. 0 cards while tabs finished = VM down / `timeout` missing; hand-card now.
 - **Hand-card exploit-state shots** (the flag, the RCE firing, an authed panel) the moment they land; persist to `state.md`/`loot.md`/`paths.md` immediately, never deferred.
-- **A PoC card is ONE human-authored command** — concrete values, full paths, NO `export`/`$VAR`, NO `;`/`&&`-chains, NO echo banners, NO base64/pty wrappers. Re-run the clean single command for the capture even if a messy pipeline was needed to work the box (that stays in `log.md`).
+- **A PoC card is ONE human-authored command**, concrete values, full paths, NO `export`/`$VAR`, NO `;`/`&&`-chains, NO echo banners, NO base64/pty wrappers. Re-run the clean single command for the capture even if a messy pipeline was needed to work the box (that stays in `log.md`).
 
-**`log.md` gets every real command live, AS each step lands** — including the messy automation (base64 wrappers, pty helpers). **`walkthrough.md` is the clean human version** (concrete one-liners, no `$VAR`s) — the automation stays in `log.md`/`poc/scripts/`.
+**`log.md` gets every real command live, AS each step lands**, including the messy automation (base64 wrappers, pty helpers). **`walkthrough.md` is the clean human version** (concrete one-liners, no `$VAR`s); the automation stays in `log.md`/`poc/scripts/`.
 
-**Read UI/source hints literally before fuzzing.** A placeholder, button label, or leaked source usually states the intended input format directly — do not default to injection-fuzzing a field that already told you its format.
+**Read UI/source hints literally before fuzzing.** A placeholder, button label, or leaked source usually states the intended input format directly; do not default to injection-fuzzing a field that already told you its format.
 
-**Locally-substituted payloads = false-positive RCE.** `$(...)`/backticks/`$VAR` sent through the VM bridge or any local shell get substituted LOCALLY before reaching the target, and the tooling VM runs as root — a reflected `uid=0` may be YOUR box. Always single-quote or base64 injection payloads; confirm execution with a target-only marker (hostname, a file only it has) before claiming RCE.
+**Locally-substituted payloads = false-positive RCE.** `$(...)`/backticks/`$VAR` sent through the VM bridge or any local shell get substituted LOCALLY before reaching the target, and the tooling VM runs as root; a reflected `uid=0` may be YOUR box. Always single-quote or base64 injection payloads; confirm execution with a target-only marker (hostname, a file only it has) before claiming RCE.
 
-**Preserve exploit scripts and source reads.** Copy any exploit script or read target source into `targets/<eng>/poc/scripts/`, saved as `<name>.md` with a fenced code block (`sh`/`js`/`py`/`html`) — NOT a bare `.sh`/`.js`/`.py`, since Obsidian only previews `.md`/images. `capture.sh snippet <eng> <slug> <url-or-file> '<pattern>' '<reveals>'` for a targeted excerpt.
+**Preserve exploit scripts and source reads.** Copy any exploit script or read target source into `targets/<eng>/poc/scripts/`, saved as `<name>.md` with a fenced code block (`sh`/`js`/`py`/`html`), NOT a bare `.sh`/`.js`/`.py`, since Obsidian only previews `.md`/images. `capture.sh snippet <eng> <slug> <url-or-file> '<pattern>' '<reveals>'` for a targeted excerpt.
 
-**Video/media -> mp4 into `poc/` early.** `ffmpeg -i <in> -c copy poc/<slug>.mp4`, then hand it to the operator — a visual puzzle (shoulder-surf, on-screen code) is far cheaper read by a human than brute-analyzed frame-by-frame; frame extraction/OCR is the fallback, not the opening move.
+**Video/media -> mp4 into `poc/` early.** `ffmpeg -i <in> -c copy poc/<slug>.mp4`, then hand it to the operator; a visual puzzle (shoulder-surf, on-screen code) is far cheaper read by a human than brute-analyzed frame-by-frame; frame extraction/OCR is the fallback, not the opening move.
 
-**Screenshot every successful step live, not at the end.** No auto-capture net exists — `scripts/capture.sh` (`ev`/`req`/`tmux`/`burp`) captures straight into `poc/` the moment a step lands. `capture.sh ev <eng> <slug> "<url>" "<cmd-label>"` for a one-call output+request card; `capture.sh req <eng> <slug> -- <curl-args>` for a full request/response card; `capture.sh tmux` for a session card; `capture.sh burp` for a Repeater PoC. `Skill(screenshot)` covers authed/exploited GUI states. Never hand-write a `--term` card (fabricated evidence) — `tee` real output into the pane if it was redirected to a file. `python3 scripts/build-walkthrough.py <eng>` auto-populates the `## Evidence` gallery from every `poc/` card.
+**Screenshot every successful step live, not at the end.** No auto-capture net exists; `scripts/capture.sh` (`ev`/`req`/`tmux`/`burp`) captures straight into `poc/` the moment a step lands. `capture.sh ev <eng> <slug> "<url>" "<cmd-label>"` for a one-call output+request card; `capture.sh req <eng> <slug> -- <curl-args>` for a full request/response card; `capture.sh tmux` for a session card; `capture.sh burp` for a Repeater PoC. `Skill(screenshot)` covers authed/exploited GUI states. Never hand-write a `--term` card (fabricated evidence); `tee` real output into the pane if it was redirected to a file. `python3 scripts/build-walkthrough.py <eng>` auto-populates the `## Evidence` gallery from every `poc/` card.
 
-**Grow the harness wordlist.** A non-obvious route/param that cracked the box -> `python3 scripts/wordlist-suggest.py` (leak-safe) then `scripts/wl-add.sh paths <token>` / `wl-add.sh params <name>` — generic methodology names only, never client branding.
+**Grow the harness wordlist.** A non-obvious route/param that cracked the box -> `python3 scripts/wordlist-suggest.py` (leak-safe) then `scripts/wl-add.sh paths <token>` / `wl-add.sh params <name>`, generic methodology names only, never client branding.
 
 ## Context tools
 
