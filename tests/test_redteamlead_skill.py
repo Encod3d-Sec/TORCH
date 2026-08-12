@@ -19,4 +19,4 @@ def test_skill_references_the_new_schema_and_resilient_wiki():
 
 def test_skill_documents_decisions_on_demand_creation():
     txt = open(SKILL).read()
-    assert "ensure_optional_file" in txt or "on-demand" in txt.lower()
+    assert "ensure_optional_file" in txt

@@ -1506,7 +1506,8 @@ def cmd_done(a):
             # section instead, operator-maintained; see design "No new driver
             # auto-writing of the chain"). Board growth below is independent of this
             # text-file append and still runs for every type.
-            if st.get("approach") != "ctf":
+            is_ctf = st.get("approach") == "ctf"
+            if not is_ctf:
                 pth = os.path.join(d, "Killchain.md")
                 for e in edges:
                     mv = (e.get("move") or "").replace("{asset}", row.get("asset") or "")
@@ -1516,7 +1517,7 @@ def cmd_done(a):
             # instead of a note the driver never re-serves.
             addn, skipn = _append_pivot_rows(d, st, row.get("asset") or "", cls)
             _save_state(d, st)
-            if st.get("approach") != "ctf":
+            if not is_ctf:
                 print("PATHS: +%d pivot row(s) -> Killchain.md ; BOARD: +%d pivot row(s) [ ]%s"
                       % (len(edges), addn,
                          (", %d dup/dead skipped" % skipn) if skipn else ""))

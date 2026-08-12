@@ -81,7 +81,7 @@ OPTIONAL_FILES = {"oob": ("oob.md", "_oob.md"),
 
 
 def ensure_optional_file(kind, d=None):
-    """Back-fill one opt-in shared file (oob/vuln-index) on demand for the
+    """Back-fill one opt-in shared file (oob/vuln-index/decisions) on demand for the
     active (or given) engagement. Returns the created filename, or '' if it already
     exists / kind is unknown / no engagement / the template is missing. For
     kind='vuln-index' a ctf engagement gets the slim setup/templates/ctf/vuln-index.md;
