@@ -10,12 +10,12 @@ def _scope(**kw):
     return base
 
 
-def _patch(monkeypatch, etype, state, loot, paths, scope=None, killchain=None):
+def _patch(monkeypatch, etype, state, loot, killchain, scope=None, approach=None):
     monkeypatch.setattr(_engagement, "active_dir", lambda: "/fake")
     monkeypatch.setattr(_engagement, "engagement_type", lambda d=None: etype)
     monkeypatch.setattr(_engagement, "scope", lambda d=None: scope or _scope())
-    tables = {"state.md": state, "loot.md": loot, "Killchain.md": paths,
-              "Approach.md": killchain or []}
+    tables = {"state.md": state, "loot.md": loot, "Killchain.md": killchain,
+              "Approach.md": approach or []}
     monkeypatch.setattr(_engagement, "_parse_table",
                         lambda p: tables.get(p.rsplit("/", 1)[-1], []))
 
@@ -185,7 +185,7 @@ def test_coverage_gap_surfaces_untested(monkeypatch):
 def test_coverage_gap_excludes_tested(monkeypatch):
     # Approach.md 4a rows credit a class as tested when its status cell is done.
     _patch(monkeypatch, "bugbounty", [{"asset": "api.x", "access": "recon"}], [], [],
-           killchain=[{"asset": "api.x", "vuln class": "rce", "status": "[x]"},
+           approach=[{"asset": "api.x", "vuln class": "rce", "status": "[x]"},
                       {"asset": "api.x", "vuln class": "sqli", "status": "[x]"}])
     gaps = " ".join(s for s in next_move.suggest(limit=99) if s.startswith("[gap]"))
     assert "rce" not in gaps and "sqli" not in gaps   # tested -> not a gap
@@ -227,7 +227,7 @@ def test_coverage_gap_per_asset_not_flattened(monkeypatch):
     _patch(monkeypatch, "bugbounty",
            [{"asset": "a.x", "access": "recon"}, {"asset": "b.x", "access": "recon"}],
            [], [],
-           killchain=[{"asset": "a.x", "vuln class": "rce", "status": "[x]"}])
+           approach=[{"asset": "a.x", "vuln class": "rce", "status": "[x]"}])
     gaps = [s for s in next_move.suggest(limit=99) if s.startswith("[gap]")]
     a_gaps = " ".join(g for g in gaps if "a.x:" in g)
     b_gaps = " ".join(g for g in gaps if "b.x:" in g)
@@ -239,7 +239,7 @@ def test_fingerprint_suppressed_after_tested(monkeypatch):
     # graphql marked [x] on api.x in Approach 4a -> its re-ranked [test] move disappears.
     _patch(monkeypatch, "bugbounty",
            [{"asset": "api.x", "tech": "GraphQL Apollo", "access": "tested"}], [], [],
-           killchain=[{"asset": "api.x", "vuln class": "graphql", "status": "[x]"}])
+           approach=[{"asset": "api.x", "vuln class": "graphql", "status": "[x]"}])
     out = next_move.suggest(limit=99)
     assert not any(s.startswith("[test] api.x") and "introspection" in s for s in out)
 
@@ -273,7 +273,7 @@ def test_tested_credit_matches_across_url_host_drift(monkeypatch):
     # tracked by bare host (host-normalized join). Otherwise scheme/path drift orphans the
     # credit and a cleared class wrongly regresses to a [gap].
     _patch(monkeypatch, "bugbounty", [{"asset": "api.x", "access": "recon"}], [], [],
-           killchain=[{"asset": "https://api.x/graphql", "vuln class": "rce", "status": "[x]"}])
+           approach=[{"asset": "https://api.x/graphql", "vuln class": "rce", "status": "[x]"}])
     gaps = " ".join(s for s in next_move.suggest(limit=99) if s.startswith("[gap]"))
     assert "rce" not in gaps
 
@@ -285,8 +285,8 @@ _EDGE = {
 }
 
 
-def _chain_patch(monkeypatch, findings, scope=None, killchain=None):
-    _patch(monkeypatch, "bugbounty", [], [], [], scope=scope, killchain=killchain)
+def _chain_patch(monkeypatch, findings, scope=None, approach=None):
+    _patch(monkeypatch, "bugbounty", [], [], [], scope=scope, approach=approach)
     monkeypatch.setattr(next_move, "CHAINS", _EDGE)
     monkeypatch.setattr(_engagement, "confirmed_findings", lambda d: findings)
 
@@ -307,7 +307,7 @@ def test_chain_suppressed_when_dest_class_tested(monkeypatch):
     # Approach 4a marks rce [x] on web01 -> the ssrf->rce pivot is already covered there
     _chain_patch(monkeypatch,
                  [{"class": "ssrf", "asset": "web01", "severity": "HIGH", "status": "confirmed"}],
-                 killchain=[{"asset": "web01", "vuln class": "rce", "status": "[x]"}])
+                 approach=[{"asset": "web01", "vuln class": "rce", "status": "[x]"}])
     assert not any(c["tag"] == "chain" for c in next_move.suggest_json(limit=99))
 
 
