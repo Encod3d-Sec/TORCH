@@ -12,6 +12,10 @@ sources: []
 
 Chain graph toward impact. Dead paths cross-ref Deadends.md.
 
+## Confirmed chain so far
+
+`(recon) -> ...`   <!-- the realized spine; append each confirmed hop as a finding lands -->
+
 `path`: chain notation, e.g. `ssrf->imds->creds->ato`
 `status`: open / blocked / done / dead
 

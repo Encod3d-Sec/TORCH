@@ -12,6 +12,10 @@ sources: []
 
 Chain toward user/root. Dead paths cross-ref Deadends.md.
 
+## Confirmed chain so far
+
+`(recon) -> ...`   <!-- the realized spine; append each confirmed hop as a finding lands -->
+
 `path`: chain notation, e.g. `lfi->log-poison->rce->suid-root`
 `status`: open / blocked / done / dead
 
