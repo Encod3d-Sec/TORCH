@@ -326,3 +326,13 @@ def test_targets_md_tree_matches_scaffold():
     assert "ctf" in t.lower()                           # ctf-specific omissions noted
     for phantom in ("├── scope/", "└── reports/"):      # never auto-scaffolded -> not promised as auto
         assert phantom not in t
+
+
+def test_ctf_state_template_has_chain_and_status_sections():
+    p = os.path.join(REPO, "setup", "templates", "ctf", "state.md")
+    text = open(p, encoding="utf-8").read()
+    assert "## Chain" in text
+    assert "## Status" in text
+    # both live AFTER the host table, so a mid-box SOLVED edit can never split it again
+    assert text.index("## Chain") > text.index("| target | service")
+    assert text.index("## Status") > text.index("## Chain")
