@@ -1078,7 +1078,7 @@ def ensure_state_files():
             fh.write(text)
         return os.path.basename(dest)
 
-    # 1. state/loot/paths from the type's own template dir (per-type columns)
+    # 1. state/loot/Killchain/Approach from the type's own template dir (per-type columns)
     for fn in STATE_FILES:
         c = _emit(os.path.join(d, fn), os.path.join(tpldir, fn))
         if c:

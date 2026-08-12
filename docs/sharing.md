@@ -37,4 +37,4 @@ Copying the vault directory (zip, cloud folder, Obsidian Sync to a shared vault)
 - **Code stays client-agnostic.** Hooks/scripts self-locate and read `targets/active.md`; no hardcoded client names or IPs. Keep it that way.
 - **Docs/specs use placeholders** (`acme-internal`, `10.0.0.0/24`, `host1`), never real client data.
 - **Commit messages** describe mechanism, not client specifics. Git history is hard to scrub; keep it clean from the start.
-- **All client engagement data lives only under `targets/<engagement>/`** (state, loot, paths, ingest, findings, scope, poc).
+- **All client engagement data lives only under `targets/<engagement>/`** (state, loot, Killchain, ingest, findings, scope, poc).

@@ -35,7 +35,7 @@ from the Decision log it writes, not a standing agent. Give it this prompt (fill
 > - Where we are: targets/<ENG>/Approach.md (the plan board), targets/<ENG>/Killchain.md (the
 >   evolving discovered chain + Confirmed-chain header), targets/<ENG>/decisions.md (## Decision log,
 >   prior direction), state.md, loot.md, Deadends.md. Run
->   `python3 scripts/next_move.py --eng <ENG> --json` for the deterministic ranked anchor.
+>   `python3 scripts/next_move.py --json` for the deterministic ranked anchor.
 > - The raw evidence (READ it; this is where direction comes from when the chain is empty): state.md
 >   tech fingerprints, targets/<ENG>/recon/ cards, targets/<ENG>/ingest/, the source and .js the
 >   agent saved under targets/<ENG>/poc/, observed endpoints/params. When Killchain.md is
