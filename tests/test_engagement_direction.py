@@ -11,3 +11,9 @@ def test_direction_marker_lifecycle(vault):
     old = time.time() - 360                            # backdate 6 min
     os.utime(p, (old, old))
     assert E.seconds_since_direction(d) > 300
+
+
+def test_direction_marker_fail_open():
+    """Fail-open: nonexistent dir returns None, never raises."""
+    assert E.seconds_since_direction("/nonexistent/dir/xyz") is None
+    E.touch_direction("/nonexistent/dir/xyz")  # should not raise

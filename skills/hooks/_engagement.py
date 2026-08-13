@@ -160,10 +160,10 @@ def active_dir():
 def touch_direction(d=None):
     """Mark a 'direction event' (a board row -> [x], new loot/host/flag, or an RTL call). The file's
     mtime IS the payload; drift-guard reads it for the auto-RTL clock. Fail-open (never raises)."""
-    d = d or active_dir()
-    if not d:
-        return
     try:
+        d = d or active_dir()
+        if not d:
+            return
         p = os.path.join(d, ".last-direction")
         open(p, "a").close()
         os.utime(p, None)
@@ -173,10 +173,10 @@ def touch_direction(d=None):
 
 def seconds_since_direction(d=None):
     """Seconds since the last direction event; None if never marked (treated as 'just started')."""
-    d = d or active_dir()
-    if not d:
-        return None
     try:
+        d = d or active_dir()
+        if not d:
+            return None
         return time.time() - os.path.getmtime(os.path.join(d, ".last-direction"))
     except Exception:
         return None
