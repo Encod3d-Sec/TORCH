@@ -15,3 +15,8 @@ def test_skill_references_the_new_schema_and_resilient_wiki():
         assert token in txt, token
     # must NOT resurrect the old names
     assert "killchain.md" not in txt and "paths.md" not in txt
+
+
+def test_skill_documents_decisions_on_demand_creation():
+    txt = open(SKILL).read()
+    assert "ensure_optional_file" in txt

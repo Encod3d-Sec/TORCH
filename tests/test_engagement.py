@@ -56,8 +56,11 @@ def test_ensure_state_files_creates_missing(vault, monkeypatch):
     assert (eng / "ingest").is_dir()
 
 
-def test_state_files_includes_approach_board():
-    assert "Approach.md" in _engagement.STATE_FILES
+def test_state_files_type_aware():
+    for etype in ("pentest", "bugbounty"):
+        assert _engagement.state_files(etype) == ("state.md", "loot.md", "Killchain.md", "Approach.md")
+    assert _engagement.state_files("ctf") == ("state.md", "loot.md", "Approach.md")
+    assert "Killchain.md" not in _engagement.state_files("ctf")
 
 
 def test_recon_dir_not_scaffolded():
@@ -522,9 +525,20 @@ def test_captured_flags_skips_decoy_labeled_row(tmp_path):
     assert g and "2/3" in g
 
 
-def test_eval_in_shared_core_for_every_type():
-    for etype in ("ctf", "bugbounty", "pentest"):
+def test_eval_in_shared_core_for_pentest_bugbounty_only():
+    for etype in ("bugbounty", "pentest"):
         assert ("eval.md", "_eval.md") in _engagement._heal_shared_set(etype), etype
+    # ctf: eval.md self-creates on demand (close-out.py writes it at SOLVED), not
+    # scaffolded upfront, so it is no longer in the ctf heal set.
+    assert ("eval.md", "_eval.md") not in _engagement._heal_shared_set("ctf")
+
+
+def test_ctf_shared_heal_set_is_lean():
+    names = [d for d, _ in _engagement._heal_shared_set("ctf")]
+    assert names == ["scope.md", "Deadends.md"]
+    for etype in ("pentest", "bugbounty"):
+        full_names = [d for d, _ in _engagement._heal_shared_set(etype)]
+        assert "log.md" in full_names and "walkthrough.md" in full_names and "eval.md" in full_names
 
 
 def test_poc_md_file_no_longer_healed():
@@ -540,3 +554,16 @@ def test_eval_template_exists():
     assert os.path.isfile(p)
     body = open(p, encoding="utf-8").read()
     assert "{{ENGAGEMENT}}" in body and "Drift moments" in body
+
+
+def test_summary_fails_open_when_ctf_has_no_killchain(tmp_path):
+    (tmp_path / "state.md").write_text(
+        "---\ntype: engagement-state\nengagement_type: ctf\n---\n\n"
+        "| target | service | port | foothold | access | flag | notes |\n"
+        "|---|---|---|---|---|---|---|\n", encoding="utf-8")
+    (tmp_path / "loot.md").write_text(
+        "---\ntype: engagement-loot\n---\n\n| item | type | source | where | status |\n"
+        "|---|---|---|---|---|\n", encoding="utf-8")
+    # no Killchain.md file at all
+    rows = _engagement._parse_table(str(tmp_path / "Killchain.md"))
+    assert rows == []   # fail-open: missing file -> empty list, never an exception

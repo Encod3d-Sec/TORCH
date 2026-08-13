@@ -1027,6 +1027,20 @@ def test_paths_write_gap(tmp_path):
     assert e.paths_write_gap(None) == 0
 
 
+def test_paths_write_gap_gated_off_for_ctf(tmp_path):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_eng_pg2", os.path.join(HOOKS, "_engagement.py"))
+    e = importlib.util.module_from_spec(spec); spec.loader.exec_module(e)
+    d = tmp_path
+    (d / "state.md").write_text(
+        "---\ntype: engagement-state\nengagement_type: ctf\n---\n", encoding="utf-8")
+    loot_hdr = "| item | type | source | where | status |\n|------|------|--------|-------|--------|\n"
+    (d / "loot.md").write_text(
+        loot_hdr + "| admin cred | cred | web | login | works |\n", encoding="utf-8")
+    # no Killchain.md on disk at all for a ctf dir, must not crash and must not nudge
+    assert e.paths_write_gap(str(d)) == 0
+
+
 def test_unsprayed_cred_gap(tmp_path):
     """Cred-reuse reflex: >=2 credential rows in loot.md + not solved + no spray/reuse line in
     Deadends.md -> gap = cred row count. A single cred, a solved box, or a logged spray -> 0."""
@@ -1064,6 +1078,33 @@ def test_unsprayed_cred_gap(tmp_path):
     assert e.unsprayed_cred_gap(str(d)) == 0
     # fail-open on missing dir
     assert e.unsprayed_cred_gap(None) == 0
+
+
+def _clear_killchain_stub(eng):
+    (eng / "Killchain.md").write_text(
+        "---\ntype: engagement-killchain\n---\n\n# Paths\n\n"
+        "| path | stage | status | blocker | next-move |\n"
+        "|------|-------|--------|---------|-----------|\n", encoding="utf-8")
+
+
+def test_close_out_paths_nudge_gated_off_for_ctf(vault):
+    eng = vault / "targets" / "acme"
+    txt = (eng / "state.md").read_text().replace("engagement_type: pentest", "engagement_type: ctf")
+    (eng / "state.md").write_text(txt, encoding="utf-8")
+    _clear_killchain_stub(eng)
+    with open(eng / "loot.md", "a", encoding="utf-8") as fh:
+        fh.write("| admin cred | cred | web | login | works |\n")
+    p = run_hook("close-out.py", {}, _env(vault))
+    assert "Killchain.md has no chain" not in p.stdout
+
+
+def test_close_out_paths_nudge_still_fires_for_pentest(vault):
+    eng = vault / "targets" / "acme"
+    _clear_killchain_stub(eng)
+    with open(eng / "loot.md", "a", encoding="utf-8") as fh:
+        fh.write("| admin cred | cred | web | login | works |\n")
+    p = run_hook("close-out.py", {}, _env(vault))
+    assert "Killchain.md has no chain" in p.stdout
 
 
 # --- hunt-trigger framework-meta guard + intent-gate tightening (0.4) ---

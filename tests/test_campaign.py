@@ -269,6 +269,7 @@ def test_race_row_parks_under_write_policy_none(eng):
     race = next(r for r in rows if r["vuln class"] == "race-condition")
     assert race["status"] == "[?]", "a write-class row must park when write_policy forbids writes"
     assert os.path.isfile(os.path.join(eng, "decisions.md"))
+    assert "## Decision log" in open(os.path.join(eng, "decisions.md")).read()
 
 
 def test_race_row_runs_under_write_policy_full(eng):
@@ -470,6 +471,40 @@ def test_find_requires_evidence(eng):
     rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
     assert next(x for x in rows2 if x["id"] == rid)["status"] != "[x]"
     assert "CONFIRMED" not in open(os.path.join(eng, "Vuln-index.md")).read()
+
+
+def test_done_ctf_gates_off_killchain_append(eng):
+    _init(eng, t="ctf")
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    row = next(r for r in rows if r.get("vuln class") == "ssrf")
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": row["skill"]}) + "\n")
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf",
+            "--poc", "poc/01.png", "--kind", "req", expect=0)
+    assert "Killchain.md" not in r.stdout
+    killchain = open(os.path.join(eng, "Killchain.md")).read()
+    assert E._table_data_rows(killchain) == 0
+
+
+def test_done_bb_still_appends_killchain(eng):
+    _init(eng, t="bb")
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    row = next(r for r in rows if r.get("vuln class") == "ssrf")
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": row["skill"]}) + "\n")
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf",
+            "--poc", "poc/01.png", "--kind", "req", expect=0)
+    assert "Killchain.md" in r.stdout
+    killchain = open(os.path.join(eng, "Killchain.md")).read()
+    assert E._table_data_rows(killchain) == 1
 
 
 def test_depth_first_cursor_is_sticky(eng):

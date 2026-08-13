@@ -94,20 +94,21 @@ Sections:
 
 ## target pages (`targets/`)
 
-One directory per engagement, `targets/<eng>/`, created by `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>` and self-healed by the `engagement-init` hook. The `engagement_type` in `state.md` frontmatter drives the analyzer and self-heal. Root files (all git-ignored; client/engagement data lives ONLY here):
+One directory per engagement, `targets/<eng>/`, created by `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>` and self-healed by the `engagement-init` hook. The `engagement_type` in `state.md` frontmatter drives the analyzer and self-heal. A ctf engagement scaffolds a lean upfront set (`state`, `loot`, `Approach`, `scope`, `Deadends` + `ingest/`/`poc/`); pentest/bugbounty scaffold the full set below, including `Killchain.md` and `log.md`. Root files (all git-ignored; client/engagement data lives ONLY here):
 
 | File | Purpose |
 |------|---------|
 | `scope.md` | In/out-of-scope + RoE flags (`no_bruteforce`/`no_dos`/`passive_only`); read before any action |
 | `state.md` | Host/service/access table (per-type entity columns); the primary target map |
 | `loot.md` | Captured credentials + reuse map |
-| `Killchain.md` | The evolving kill-chain: attack-path rows (chain notation) built from findings + the Confirmed-chain header |
+| `Killchain.md` | The evolving kill-chain: attack-path rows (chain notation) built from findings + the Confirmed-chain header (pentest/bugbounty core; a ctf's live chain lives in `state.md`'s `## Chain`/`## Status` sections instead) |
 | `Approach.md` | The plan board: phase checklist + `### 4a` per-asset tested-class table + GATE lines |
 | `Deadends.md` | Exhausted vectors + false positives, with reason; never re-run without new input |
 | `Vuln-index.md` | Finding index by severity + attack chains + severity count table |
 | `oob.md` | Out-of-band callback tracking (the blind-bug gate) |
-| `log.md` | Append-only audit trail (terse) |
-| `walkthrough.md` | Full copy-pasteable boot-to-root reproduction |
+| `log.md` | Append-only audit trail (terse) (pentest/bugbounty; a ctf box has no separate audit log) |
+| `walkthrough.md` | Full copy-pasteable boot-to-root reproduction (scaffolded upfront for pentest/bugbounty; self-creates at close-out for every type if missing) |
+| `eval.md` | Per-engagement AGENT self-assessment (tokens/time/drift); `close-out.py` auto-writes its Metrics block at SOLVED, `Skill(learn)` fills the rest (scaffolded upfront for pentest/bugbounty; on-demand for ctf) |
 | `hot.md` | Rolling per-engagement session cache |
 
 **`Vulns/` subdirectory** (pentest): each finding is a `FIND-NNN-SEVERITY-title.md`. `find-lint` skips `Skipped*` / `False*` dirs, so group as: confirmed at the root or `Completed/`, `Research/` for in-progress, `False Positive/` for disproven, `Skipped-but-usefull/` for out-of-scope-but-noted.

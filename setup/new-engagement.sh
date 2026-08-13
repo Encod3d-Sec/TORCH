@@ -6,11 +6,15 @@
 #
 # Scaffolds targets/<name>/ with the type-aware file set + ingest/ poc/ dirs,
 # and points targets/active.md at it. Engagement data stays under targets/ (private).
-#   - pentest/bugbounty: full set (adds oob.md, Vuln-index.md).
-#   - ctf: lean set (state,loot,Killchain,Approach,log,scope,walkthrough,Deadends); oob is
-#     opt-in via --with-oob; the severity Vuln-index is skipped (a slim ctf findings
-#     list is created on demand by ensure_optional_file). Per-asset coverage lives in
-#     the Approach.md 4a table for all types.
+#   - pentest/bugbounty: full set (adds oob.md, Vuln-index.md, identities/source-ledger/
+#     write-ledger campaign-driver files).
+#   - ctf: lean set (state,loot,Approach,scope,Deadends); Killchain.md/log.md are
+#     pentest/bugbounty-only (a ctf's live chain lives in state.md's ## Chain/## Status
+#     sections instead); walkthrough.md/eval.md self-create on demand at their trigger
+#     (close-out.py / Skill(learn)) for every type, same as decisions.md (/redteamlead);
+#     oob is opt-in via --with-oob; the severity Vuln-index is skipped (a slim ctf
+#     findings list is created on demand by ensure_optional_file). Per-asset coverage
+#     lives in the Approach.md 4a table for all types.
 #   - --scope <host> (repeatable): seed scope.md's "## In scope" bullets at creation
 #     time, so scope-gated evidence auto-capture is live immediately instead of
 #     waiting on a hand-edit. Validated against a conservative host/CIDR charset;
@@ -110,15 +114,22 @@ TODAY="$(date +%F)"
 # tool output. Vulns/ is created lazily on the first FIND.
 mkdir -p "$DEST/ingest" "$DEST/poc"
 
-# state/loot/Killchain/Approach from the type's own template dir (per-type columns).
-# Keep in sync with STATE_FILES in skills/hooks/_engagement.py.
-for f in state loot Killchain Approach; do
+# state/loot/Approach (+ Killchain for pentest/bugbounty) from the type's own template
+# dir (per-type columns). Keep in sync with state_files() in skills/hooks/_engagement.py.
+CORE_FILES="state loot Approach"
+[ "$TYPE" != "ctf" ] && CORE_FILES="state loot Killchain Approach"
+for f in $CORE_FILES; do
   sub "$TPL/$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
 done
-# shared core, healed for EVERY type (SHARED_CORE in _engagement.py)
-for f in log scope walkthrough eval; do
-  sub "$VAULT/setup/templates/_$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
-done
+# shared core: ctf gets only scope (log/walkthrough/eval self-create at their own
+# trigger); pentest/bugbounty keep the full shared core (SHARED_CORE in _engagement.py).
+if [ "$TYPE" != "ctf" ]; then
+  for f in log scope walkthrough eval; do
+    sub "$VAULT/setup/templates/_$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
+  done
+else
+  sub "$VAULT/setup/templates/_scope.md" "$NAME" "$TODAY" "$DEST/scope.md"
+fi
 
 # stamp the precise box start time for the metrics/eval system (engagement-init back-fills
 # this for boxes created before telemetry; here we record the real creation instant).
@@ -146,14 +157,24 @@ sub "$VAULT/setup/templates/_deadends.md" "$NAME" "$TODAY" "$DEST/Deadends.md"
 # full-set extras (SHARED_FULL): default for pentest/bugbounty, opt-in for ctf
 [ "$WITH_OOB" = 1 ] && sub "$VAULT/setup/templates/_oob.md" "$NAME" "$TODAY" "$DEST/oob.md"
 [ "$TYPE" != "ctf" ] && sub "$VAULT/setup/templates/_vuln-index.md" "$NAME" "$TODAY" "$DEST/Vuln-index.md"
-# campaign-driver working files (Task 34c): identities/decisions/source-ledger/write-ledger.
-for f in identities decisions source-ledger write-ledger; do
-  sub "$VAULT/setup/templates/_$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
-done
+# campaign-driver working files: identities/source-ledger/write-ledger are pentest/
+# bugbounty-only (bug-bounty spray-identity + OSINT-provenance + write-budget machinery
+# a ctf box never touches). decisions.md is on-demand for EVERY type: /redteamlead (RTL)
+# creates it from setup/templates/_decisions.md the first time it (or `campaign.py done
+# --park`) writes to it; see skills/hooks/_engagement.py's ensure_optional_file().
+if [ "$TYPE" != "ctf" ]; then
+  for f in identities source-ledger write-ledger; do
+    sub "$VAULT/setup/templates/_$f.md" "$NAME" "$TODAY" "$DEST/$f.md"
+  done
+fi
 
 printf '%s\n' "$NAME" > "$VAULT/targets/active.md"
 
-FILES="state, loot, Killchain, Approach, log, scope, walkthrough, eval, Deadends"
+if [ "$TYPE" != "ctf" ]; then
+  FILES="state, loot, Killchain, Approach, log, scope, walkthrough, eval, Deadends"
+else
+  FILES="state, loot, Approach, scope, Deadends"
+fi
 [ "$WITH_OOB" = 1 ] && FILES="$FILES, oob"
 [ "$TYPE" != "ctf" ] && FILES="$FILES, Vuln-index"
 echo "created $TYPE engagement: targets/$NAME/ ($FILES, ingest/, poc/)"

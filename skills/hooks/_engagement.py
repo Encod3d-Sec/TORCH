@@ -21,19 +21,37 @@ TARGETS = os.path.join(VAULT, "targets")
 # Templates live OUTSIDE targets/ (which is git-ignored) so they ship with the
 # shareable repo. Engagement instances stay private under targets/.
 TEMPLATES = os.path.join(VAULT, "setup", "templates")
-STATE_FILES = ("state.md", "loot.md", "Killchain.md", "Approach.md")
+# Per-type core files: state/loot/Approach come from the type's own template dir for
+# every type; Killchain.md (the evolving discovered attack chain) is a pentest/
+# bugbounty-only core artifact; a ctf's live chain lives in state.md's own `## Chain`/
+# `## Status` sections instead (folded in, never a separate file).
+ALL_STATE_FILES = ("state.md", "loot.md", "Killchain.md", "Approach.md")
+_STATE_FILES_CTF = ("state.md", "loot.md", "Approach.md")
+
+
+def state_files(etype):
+    """Type-aware core file tuple: ctf omits Killchain.md; pentest/bugbounty keep it.
+    engagement_type() itself detects the type from ALL_STATE_FILES (the flat union)
+    BEFORE the type is known; a file absent for a given type is simply skipped."""
+    return _STATE_FILES_CTF if etype == "ctf" else ALL_STATE_FILES
+
+
 TYPES = ("pentest", "bugbounty", "ctf")
 # entity identifier columns by engagement type. Defined once here; next_move and
 # coverage both import it so the mapping cannot drift between the two analyzers.
 ENTITY_KEY = {"pentest": ("host", "ip"), "ctf": ("target",), "bugbounty": ("asset", "url")}
 
-# Per-engagement-type heal set. state/loot/Killchain/Approach (STATE_FILES) come from the
-# type's own template dir and are healed for every type. The shared type-agnostic files
-# split into a common core (every type) and a pentest/bugbounty-only extension
-# (Vuln-index/oob). CTF rooms never use the severity/OOB machinery (dead across every
-# THM room), so ctf heals only the core; those two become opt-in via
+# Per-engagement-type heal set. state/loot/Approach (+ Killchain for pentest/bugbounty)
+# come from the type's own template dir via state_files() and are healed for every type.
+# The shared type-agnostic files split three ways: a lean ctf core (scope + Deadends only;
+# log.md/walkthrough.md/eval.md self-create at their own trigger instead of being
+# scaffolded upfront: see close-out.py's eval-metrics write, build-walkthrough.py, and
+# Skill(learn)), the full pentest/bugbounty core (adds log/walkthrough/eval), and a
+# pentest/bugbounty-only extension (Vuln-index/oob). CTF rooms never use the severity/OOB
+# machinery (dead across every THM room); oob/vuln-index become opt-in via
 # ensure_optional_file() (see below) or new-engagement.sh --with-oob. Per-asset test
-# coverage now lives in the Approach.md 4a table (Approach.md is in STATE_FILES).
+# coverage lives in the Approach.md 4a table (Approach.md is in state_files()).
+SHARED_CORE_CTF = (("scope.md", "_scope.md"), ("Deadends.md", "_deadends.md"))
 SHARED_CORE = (("log.md", "_log.md"), ("scope.md", "_scope.md"),
                ("walkthrough.md", "_walkthrough.md"),
                ("Deadends.md", "_deadends.md"),
@@ -48,8 +66,9 @@ STATE_DIRS = ("ingest", "poc")
 
 def _heal_shared_set(etype):
     """Shared (dest, templatefile) pairs to heal for an engagement type. ctf gets the
-    lean core only; pentest/bugbounty get core + the Vuln-index/oob machinery."""
-    return SHARED_CORE if etype == "ctf" else SHARED_CORE + SHARED_FULL
+    lean core (scope + Deadends) only; pentest/bugbounty get the full core (adds log/
+    walkthrough/eval) + the Vuln-index/oob machinery."""
+    return SHARED_CORE_CTF if etype == "ctf" else SHARED_CORE + SHARED_FULL
 
 
 # Opt-in shared files a ctf engagement omits at init. Created on demand: the
@@ -57,11 +76,12 @@ def _heal_shared_set(etype):
 # actually runs, or a manual findings roll-up (vuln-index). vuln-index is type-aware:
 # ctf uses a slim findings list.
 OPTIONAL_FILES = {"oob": ("oob.md", "_oob.md"),
-                  "vuln-index": ("Vuln-index.md", "_vuln-index.md")}
+                  "vuln-index": ("Vuln-index.md", "_vuln-index.md"),
+                  "decisions": ("decisions.md", "_decisions.md")}
 
 
 def ensure_optional_file(kind, d=None):
-    """Back-fill one opt-in shared file (oob/vuln-index) on demand for the
+    """Back-fill one opt-in shared file (oob/vuln-index/decisions) on demand for the
     active (or given) engagement. Returns the created filename, or '' if it already
     exists / kind is unknown / no engagement / the template is missing. For
     kind='vuln-index' a ctf engagement gets the slim setup/templates/ctf/vuln-index.md;
@@ -546,7 +566,7 @@ def engagement_type(d=None):
     d = d or active_dir()
     if not d:
         return "pentest"
-    for fn in STATE_FILES:
+    for fn in ALL_STATE_FILES:
         p = os.path.join(d, fn)
         if not os.path.isfile(p):
             continue
@@ -900,10 +920,13 @@ def paths_write_gap(d):
     """Live state-discipline reflex: LOOT was captured (a cred/key/flag/technique row in
     loot.md) but Killchain.md still has ZERO chain rows -- a finding landed and the attack chain
     was never written down (the drift where Killchain.md is filled only at close-out). Returns the
-    loot data-row count when a gap exists, else 0. Fail-open (0 on any error)."""
+    loot data-row count when a gap exists, else 0. ctf has no Killchain.md (its live chain lives in
+    state.md's own ## Chain section instead), always clean there. Fail-open (0 on any error)."""
     if not d:
         return 0
     try:
+        if engagement_type(d) == "ctf":
+            return 0
         loot = open(os.path.join(d, "loot.md"), encoding="utf-8", errors="ignore").read()
         paths = open(os.path.join(d, "Killchain.md"), encoding="utf-8", errors="ignore").read()
         loot_rows = _table_data_rows(loot)
@@ -1051,12 +1074,14 @@ def _migrate_schema_names(d):
 
 def ensure_state_files():
     """Create any missing per-engagement files (from the type's template) and the
-    standard dirs in the active engagement. The shared set is type-aware: a ctf
-    engagement heals only the lean core (state/loot/Killchain/Approach/log/scope/
-    walkthrough/Deadends), skipping the Vuln-index/oob severity machinery that is dead
-    across CTF rooms; pentest/bugbounty heal the full set. poc/ is scaffolded for
-    every type; Vulns/ is created lazily on the first FIND, never here. Returns the
-    created names. Idempotent: never overwrites an existing file."""
+    standard dirs in the active engagement. Both the core set (state_files()) and the
+    shared set (_heal_shared_set()) are type-aware: a ctf engagement heals only the lean
+    set (state/loot/Approach/scope/Deadends), skipping Killchain.md (its live chain lives
+    in state.md's own ## Chain/## Status sections), log.md/walkthrough.md/eval.md (self-
+    create at their own trigger), and the Vuln-index/oob severity machinery (dead across
+    CTF rooms); pentest/bugbounty heal the full set. poc/ is scaffolded for every type;
+    Vulns/ is created lazily on the first FIND, never here. Returns the created names.
+    Idempotent: never overwrites an existing file."""
     d = active_dir()
     if not d:
         return []
@@ -1078,8 +1103,10 @@ def ensure_state_files():
             fh.write(text)
         return os.path.basename(dest)
 
-    # 1. state/loot/Killchain/Approach from the type's own template dir (per-type columns)
-    for fn in STATE_FILES:
+    # 1. state/loot/Approach (+ Killchain for pentest/bugbounty) from the type's own
+    # template dir (per-type columns); ctf's live chain lives in state.md's ## Chain
+    # instead, so it never gets a Killchain.md.
+    for fn in state_files(etype):
         c = _emit(os.path.join(d, fn), os.path.join(tpldir, fn))
         if c:
             created.append(c)

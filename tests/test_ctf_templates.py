@@ -34,11 +34,11 @@ def test_ensure_ctf_heals_lean_set(vault, monkeypatch):
     eng = _mk(vault / "targets" / "room", "ctf")
     monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
     created = _engagement.ensure_state_files()
-    for f in ("loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
-              "walkthrough.md", "Deadends.md"):
+    for f in ("loot.md", "Approach.md", "scope.md", "Deadends.md"):
         assert f in created and (eng / f).exists()
     assert "Kill-Chain Board" in (eng / "Approach.md").read_text()
-    assert "hot.md" not in created and not (eng / "hot.md").exists()   # removed
+    for f in ("Killchain.md", "log.md", "walkthrough.md", "eval.md", "hot.md"):
+        assert f not in created and not (eng / f).exists()
     for dsub in ("ingest/", "poc/"):
         assert dsub in created
     assert "recon/" not in created and not (eng / "recon").exists()   # auto firehose retired
@@ -114,11 +114,11 @@ def test_new_engagement_ctf_lean(eng_vault):
     r = _run_new(eng_vault, "room", "ctf")
     assert r.returncode == 0, r.stderr
     d = eng_vault / "targets" / "room"
-    for f in ("state.md", "loot.md", "Killchain.md", "Approach.md", "log.md", "scope.md",
-              "walkthrough.md", "Deadends.md"):
+    for f in ("state.md", "loot.md", "Approach.md", "scope.md", "Deadends.md"):
         assert (d / f).exists()
     assert "Kill-Chain Board" in (d / "Approach.md").read_text()
-    assert not (d / "hot.md").exists()   # per-engagement hot.md removed
+    for f in ("Killchain.md", "log.md", "walkthrough.md", "eval.md", "hot.md"):
+        assert not (d / f).exists()
     for sub in ("ingest", "poc"):
         assert (d / sub).is_dir()
     assert not (d / "recon").exists()   # auto firehose retired
@@ -131,10 +131,27 @@ def test_new_engagement_pentest_full(eng_vault):
     r = _run_new(eng_vault, "pt", "pentest")
     assert r.returncode == 0, r.stderr
     d = eng_vault / "targets" / "pt"
-    for f in ("oob.md", "Vuln-index.md"):
-        assert (d / f).exists()          # full set (backward compat)
+    for f in ("oob.md", "Vuln-index.md", "Killchain.md", "log.md", "walkthrough.md", "eval.md"):
+        assert (d / f).exists()          # full set (backward compat, unaffected by the ctf trim)
     assert not (d / "coverage.md").exists()   # coverage retired -> board 4a table
     assert (d / "poc").is_dir()          # poc/ now scaffolded at init
+
+
+def test_new_engagement_campaign_files_pentest_bb_only(eng_vault):
+    r = _run_new(eng_vault, "pt2", "pentest")
+    assert r.returncode == 0, r.stderr
+    d = eng_vault / "targets" / "pt2"
+    for f in ("identities.md", "source-ledger.md", "write-ledger.md"):
+        assert (d / f).exists()
+    assert not (d / "decisions.md").exists()   # decisions.md is on-demand for every type
+
+
+def test_new_engagement_ctf_omits_campaign_driver_files(eng_vault):
+    r = _run_new(eng_vault, "room7", "ctf")
+    assert r.returncode == 0, r.stderr
+    d = eng_vault / "targets" / "room7"
+    for f in ("identities.md", "source-ledger.md", "write-ledger.md", "decisions.md"):
+        assert not (d / f).exists()
 
 
 def test_new_engagement_ctf_with_flags(eng_vault):
@@ -173,6 +190,14 @@ def test_new_engagement_no_scope_flag_unchanged(eng_vault):
     d = eng_vault / "targets" / "room5"
     parsed = _engagement.scope(str(d))
     assert parsed["in_scope"] == []
+
+
+def test_targets_md_documents_ctf_chain_split():
+    p = os.path.join(REPO, "targets", "TARGETS.md")
+    if not os.path.exists(p):
+        pytest.skip("targets/TARGETS.md is gitignored; local-only check")
+    t = open(p, encoding="utf-8").read()
+    assert "## Chain" in t and "## Status" in t   # ctf's Killchain/log split documented
 
 
 def test_new_engagement_scope_rejects_malformed_value(eng_vault):
@@ -309,3 +334,32 @@ def test_targets_md_tree_matches_scaffold():
     assert "ctf" in t.lower()                           # ctf-specific omissions noted
     for phantom in ("├── scope/", "└── reports/"):      # never auto-scaffolded -> not promised as auto
         assert phantom not in t
+
+
+def test_ctf_state_template_has_chain_and_status_sections():
+    p = os.path.join(REPO, "setup", "templates", "ctf", "state.md")
+    text = open(p, encoding="utf-8").read()
+    assert "## Chain" in text
+    assert "## Status" in text
+    # both live AFTER the host table, so a mid-box SOLVED edit can never split it again
+    assert text.index("## Chain") > text.index("| target | service")
+    assert text.index("## Status") > text.index("## Chain")
+
+
+def test_scope_template_comments_moved_to_frontmatter():
+    p = os.path.join(REPO, "setup", "templates", "_scope.md")
+    text = open(p, encoding="utf-8").read()
+    _, fm, body = text.split("---", 2)
+    assert "<!--" not in body
+    for hint in ("In scope", "Out of scope", "Allowed tooling", "Rules of engagement"):
+        assert hint in fm
+
+
+def test_ensure_optional_backfills_decisions(vault, monkeypatch):
+    eng = _mk(vault / "targets" / "room8", "ctf")
+    monkeypatch.setattr(_engagement, "active_dir", lambda: str(eng))
+    assert not (eng / "decisions.md").exists()
+    assert _engagement.ensure_optional_file("decisions") == "decisions.md"
+    txt = (eng / "decisions.md").read_text()
+    assert "## Decision log" in txt and "room8" in txt
+    assert _engagement.ensure_optional_file("decisions") == ""   # already exists -> ''
