@@ -82,15 +82,21 @@ def _enforcing():
 
 
 def _post_foothold(d, _eng):
-    """True once any asset has reached foothold+ (state.md access). Post-foothold, privesc enum
-    (cat/sudo/find/linpeas over a shell) is legitimate and varied, so the guard must NEVER hard-deny
-    there - it only ADVISES. Hard-blocking privesc enum is the over-fire the review warned about;
-    the deny path stays for the pre-foothold scripted-exploit drift that actually lost the box."""
+    """Deny-suppression: True once the target is a confirmed-primitive/foothold asset, where varied
+    deepening is legitimate. Covers access>=foothold AND a `## CONFIRMED CHAIN`/breakthrough marker
+    (a confirmed primitive pre-shell - the redeploy case that hard-blocked confirmed re-establishment)."""
+    p = os.path.join(d, "state.md")
     try:
-        for r in _eng._parse_table(os.path.join(d, "state.md")):
+        for r in _eng._parse_table(p):
             acc = (r.get("access") or r.get("foothold") or "").strip().lower()
             if any(k in acc for k in ("foothold", "shell", "user", "root", "admin", "owned", "vuln")):
                 return True
+    except Exception:
+        pass
+    try:
+        txt = open(p, encoding="utf-8").read()
+        if re.search(r"^#{1,6}\s*(CONFIRMED CHAIN|BREAKTHROUGH|STATUS:\s*SOLVED)", txt, re.M | re.I):
+            return True
     except Exception:
         pass
     return False
