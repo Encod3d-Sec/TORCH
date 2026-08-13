@@ -76,7 +76,7 @@ Fingerprint the exact app + version. **`Skill(arsenal)` FIRST** on any fingerpri
 
 ## Phase 2 Weaponize: pick the exploit
 
-- **Version-known -> [[searchsploit]] AND [[metasploit]] FIRST (the quick-win reflex).** The instant a service is fingerprinted to a version, run BOTH before hand-rolling or deep-diving a CVE: `searchsploit <app> <ver>` (local Exploit-DB; `-m <id>` to copy a PoC, `-x` to read it) and `msfconsole -qx "search <app>; exit"` (a ready `use`-able module = often an instant shell). A matching msf module or a copy-pasteable searchsploit PoC beats writing your own. Cross-check with the wiki CVE lookup ([[cve-arsenal]] · [[metasploit]]); prefer the documented/ready PoC over a fresh one. (GATE 1 still holds: the wiki item for the tech is `[x]` before a hand-rolled PoC - but a canned searchsploit/msf exploit for a known version IS the wiki-blessed tool, use it.)
+- **Version-known -> [[wiki/tools/searchsploit]] AND [[metasploit]] FIRST (the quick-win reflex).** The instant a service is fingerprinted to a version, run BOTH before hand-rolling or deep-diving a CVE: `searchsploit <app> <ver>` (local Exploit-DB; `-m <id>` to copy a PoC, `-x` to read it) and `msfconsole -qx "search <app>; exit"` (a ready `use`-able module = often an instant shell). A matching msf module or a copy-pasteable searchsploit PoC beats writing your own. Cross-check with the wiki CVE lookup ([[cve-arsenal]] · [[metasploit]]); prefer the documented/ready PoC over a fresh one. (GATE 1 still holds: the wiki item for the tech is `[x]` before a hand-rolled PoC - but a canned searchsploit/msf exploit for a known version IS the wiki-blessed tool, use it.)
 - Pick the payload set from `wiki/payloads/` for the fingerprinted class (GATE 1: the wiki item is `[x]` before you hand-roll a PoC).
 - Stage the chosen exploit/PoC into `targets/<eng>/poc/scripts/` before firing, so the code and the run are captured together.
 
@@ -163,16 +163,16 @@ Box-specific chains now live in wiki (see the technique pages linked per class i
 
 ## Capture (engagement discipline)
 
-After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -> `loot.md`, chain -> `Killchain.md`, vulns -> `Vuln-index.md`, dead-ends -> `Deadends.md`, narrative -> `log.md`. Flags go in the writeup, never in `session/*` or `wiki/`.
+After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -> `loot.md`, chain -> `state.md`'s `## Chain` section, vulns -> `Vuln-index.md`, dead-ends -> `Deadends.md`, narrative -> `walkthrough.md` (at close-out). Flags go in the writeup, never in `session/*` or `wiki/`.
 
-**Board hygiene, live (GATE 3).** `Killchain.md`/`Deadends.md` rot under momentum while `state.md` absorbs prose instead; the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its `Killchain.md` status BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
+**Board hygiene, live (GATE 3).** `state.md`'s `## Chain` section and `Deadends.md` rot under momentum while other state.md prose absorbs the narrative instead; the instant a vector (a potato variant, a kernel CVE, a cred spray) is exhausted, append ONE `Deadends.md` line + set its status in `state.md`'s `## Chain` BEFORE trying the next. `status.py` shows board phase + deadend count to spot the drift.
 
 **Live-capture machinery; evidence is never backfilled at close-out:**
 - **Auto-card is a backstop, not primary.** The Stop hook (`scripts/autocard.sh`, capped `AUTOCARD_MAX=2`/run) renders any finished scan tmux tab into `recon/`; hand-carding as you go (Phase 1: `capture.sh recon <eng> <slug> <tab>`) stays PRIMARY. 0 cards while tabs finished = VM down / `timeout` missing; hand-card now.
-- **Hand-card exploit-state shots** (the flag, the RCE firing, an authed panel) the moment they land; persist to `state.md`/`loot.md`/`Killchain.md` immediately, never deferred.
-- **A PoC card is ONE human-authored command**, concrete values, full paths, NO `export`/`$VAR`, NO `;`/`&&`-chains, NO echo banners, NO base64/pty wrappers. Re-run the clean single command for the capture even if a messy pipeline was needed to work the box (that stays in `log.md`).
+- **Hand-card exploit-state shots** (the flag, the RCE firing, an authed panel) the moment they land; persist to `state.md`/`loot.md` immediately, never deferred.
+- **A PoC card is ONE human-authored command**, concrete values, full paths, NO `export`/`$VAR`, NO `;`/`&&`-chains, NO echo banners, NO base64/pty wrappers. Re-run the clean single command for the capture even if a messy pipeline was needed to work the box (that stays in `poc/scripts/`).
 
-**`log.md` gets every real command live, AS each step lands**, including the messy automation (base64 wrappers, pty helpers). **`walkthrough.md` is the clean human version** (concrete one-liners, no `$VAR`s); the automation stays in `log.md`/`poc/scripts/`.
+**`walkthrough.md` (assembled at close-out) is the narrative** and the clean human version (concrete one-liners, no `$VAR`s); the messy automation (base64 wrappers, pty helpers) stays in `poc/scripts/`.
 
 **Read UI/source hints literally before fuzzing.** A placeholder, button label, or leaked source usually states the intended input format directly; do not default to injection-fuzzing a field that already told you its format.
 

@@ -39,8 +39,9 @@ research ingest (external source -> wiki): the source here is the finished engag
 Use `Skill(learn)` at close-out, once the engagement is `SOLVED` and its walkthrough is
 assembled.
 
-1. **Inventory** what the engagement taught from `state/loot/Killchain/Approach/Deadends/
-   Vuln-index/walkthrough/hot/log`.
+1. **Inventory** what the engagement taught from `state/loot/Approach/Deadends/
+   Vuln-index/walkthrough/hot`; pentest/bugbounty add `Killchain/log`, while ctf keeps its
+   chain in `state.md`'s `## Chain` section instead.
 2. **Generalize** each lesson (product + technique/cred/endpoint + impact); strip every
    client host/IP/domain/cred value.
 3. **Dedup vs wiki** with `qmd_query`/`qmd_search` -- keep only what the home page does

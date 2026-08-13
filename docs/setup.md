@@ -38,7 +38,7 @@ bash setup/install-hooks.sh    # symlinks ~/.claude/vault-hooks + registers the 
 ```
 
 `install-hooks.sh` is self-locating (works on any user/path/spelling) and idempotent. It registers the canonical set (mirrored in `scripts/check-hooks.py` `EXPECTED_HOOKS`; `engagement-init` warns at SessionStart if any is unregistered) -- 12 hook commands across 6 events:
-- **SessionStart** -- `session-start.sh` (skill auto-register + hot.md cache), `engagement-init.py` (self-heals the `state/loot/Killchain/Approach/...` set, injects the state summary + plan board status + top next-moves + one compact `harness:` maintenance line).
+- **SessionStart** -- `session-start.sh` (skill auto-register + hot.md cache), `engagement-init.py` (self-heals the per-type core set: ctf gets `state/loot/Approach/...`, pentest/bugbounty add `Killchain`; injects the state summary + plan board status + top next-moves + one compact `harness:` maintenance line).
 - **UserPromptSubmit** -- `hunt-trigger.py` (fires hunt skills from `skills/hunt/triggers.json`).
 - **PreToolUse (Bash)** -- `scope-guard.py` (ENFORCES: denies out-of-scope host/IP (IPv4+IPv6, CIDR-aware; query-param/fragment values exempt) or RoE-forbidden tooling; fail-open + `skills/hooks/.enforce-off` escape hatch; also logs each block as a drift signal).
 - **PreToolUse (Write)** -- `session-guard.py` (client-marker leak guard: session/* AND git-tracked framework trees; targets/ + docs/superpowers/ exempt; logs a boundary-drift signal).
@@ -51,7 +51,7 @@ bash setup/install-hooks.sh    # symlinks ~/.claude/vault-hooks + registers the 
 
 **Hooks self-locate the vault** via `realpath(__file__)` through the `~/.claude/vault-hooks` symlink -- no hardcoded paths, so the same code runs unmodified on every device.
 
-**Active engagement pointer:** `targets/active.md` (one line: engagement dir name). It is markdown, so it syncs via Obsidian to both devices. Engagement files: `targets/<eng>/{state,loot,Killchain,log}.md` + `ingest/`, scaffolded from `setup/templates/<type>/` via `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>`.
+**Active engagement pointer:** `targets/active.md` (one line: engagement dir name). It is markdown, so it syncs via Obsidian to both devices. Engagement files: `targets/<eng>/{state,loot,Approach,scope,Deadends}.md` + `ingest/` for ctf; pentest/bugbounty add `Killchain,log,walkthrough,eval`. Scaffolded from `setup/templates/<type>/` via `bash setup/new-engagement.sh <name> <pentest|bugbounty|ctf>`.
 
 **`settings.json` and the symlink never sync** (machine-local by design). Always run `install-hooks.sh` once per device after the first git pull.
 

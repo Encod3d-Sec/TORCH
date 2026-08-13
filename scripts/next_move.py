@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """next_move.py - rank the next offensive moves from engagement state.
 
-Read-only analyzer. Reads the active engagement's state/loot/killchain tables and
-applies internal-pentest heuristics to produce a ranked, deduped list of
-actionable moves. Deterministic + cheap (no model tokens). The model elaborates
-on demand via the `next-move` skill; the SessionStart hook surfaces the top few.
+Read-only analyzer. Reads the active engagement's state/loot tables, plus the
+killchain table for pentest/bugbounty (fail-open when absent, e.g. ctf, which
+keeps its chain in state.md's `## Chain` section instead), and applies
+internal-pentest heuristics to produce a ranked, deduped list of actionable
+moves. Deterministic + cheap (no model tokens). The model elaborates on demand
+via the `next-move` skill; the SessionStart hook surfaces the top few.
 
 Also emits low-ranked [gap] floor moves, PER IN-SCOPE ASSET, for untested vuln classes
 (the per-type checklist in coverage-classes.json minus THAT asset's own tested classes,
