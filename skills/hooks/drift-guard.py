@@ -56,6 +56,9 @@ except Exception:
     def _handroll_classify(_cmd):
         return False, None, ""
 
+HEAVY_SCANNERS = {"ffuf", "feroxbuster", "gobuster", "wpscan", "nuclei", "dirb", "katana", "nikto"}
+_SCAN_WINDOW = 180          # seconds: a 2nd heavy scanner launched within this is "concurrent"
+
 _BIN_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, NET_BINS), key=len, reverse=True)) + r")\b")
 _DRIVER_RE = re.compile(r"campaign\.py\s+(?:next|board|done|pass-done|init)\b")
 # A HAND-WRITTEN exploit run as a script/interpreter, or an interactive reverse-shell driver:
@@ -108,6 +111,42 @@ def _bins_in(cmd):
     return set(_BIN_RE.findall(cmd or ""))
 
 
+def _scanner_cap(d, st, cmd_bins):
+    """Hard-deny a 2nd HEAVY scanner within _SCAN_WINDOW on a small box (ctf). The mistake that DoS'd
+    the box. Records each heavy-scanner launch to .scan-launches.jsonl; denies (and does not record)
+    if a prior launch is < _SCAN_WINDOW old. Returns a reason string to deny with, or None to allow."""
+    import time
+    heavy = cmd_bins & HEAVY_SCANNERS
+    if not heavy:
+        return None
+    if (st.get("type") or "").lower() != "ctf":       # small-box policy: ctf only (extend later)
+        return None
+    p = os.path.join(d, ".scan-launches.jsonl")
+    now = time.time()
+    prior = None
+    try:
+        for ln in open(p, encoding="utf-8"):
+            try:
+                e = json.loads(ln)
+            except Exception:
+                continue
+            if now - float(e.get("ts", 0)) < _SCAN_WINDOW:
+                prior = e
+    except Exception:
+        pass
+    if prior and _enforcing():
+        age = int(now - float(prior["ts"]))
+        return ("a scan is already running (`%s` launched %ds ago) - serialize on this small/tunnel "
+                "box (scope.md: curl-preferred), or drop threads to -t<=20. Wait for it or kill it "
+                "first. (False block? create skills/hooks/.enforce-off.)" % (prior.get("tool", "?"), age))
+    try:                                              # record this launch, then allow
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": now, "tool": sorted(heavy)[0]}) + "\n")
+    except Exception:
+        pass
+    return None
+
+
 def main():
     try:
         data = json.loads(sys.stdin.read())
@@ -150,6 +189,31 @@ def main():
     exploit_shaped = bool(cmd_bins) or _handroll_classify(cmd)[0] or bool(_INTERP_RE.search(cmd))
     if not exploit_shaped:
         return                                    # not an exploit/scan/interpreter call -> ignore
+
+    _deny = _scanner_cap(d, st, cmd_bins)
+    if _deny:
+        try:
+            import _telemetry; _telemetry.hook("drift-guard", action="deny-scanner")
+        except Exception:
+            pass
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+              "permissionDecision": "deny",
+              "permissionDecisionReason": "BLOCKED by harness enforcement (scanner-cap): " + _deny}}))
+        return
+
+    since = _engagement.seconds_since_direction(d)
+    if since is not None and since > 300:
+        _engagement.touch_direction(d)                 # fire once per 5-min window; RTL call re-resets
+        try:
+            import _telemetry; _telemetry.hook("drift-guard", action="auto-rtl")
+        except Exception:
+            pass
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+              "additionalContext": (
+                "DRIFT (%d min without a board advance or a finding): you are spinning. Load "
+                "`Skill(redteamlead)` NOW for ranked direction, or say in ONE line why you are on a "
+                "known-productive track. Do not keep hand-rolling the same vector." % int(since // 60))}}))
+        return
 
     # ON-BOARD escape 1: no OPEN ([ ]/[~]) rows -> empty board (generic tech) OR end-of-board.
     # Either way the driver has nothing to hold the agent to, so allow (fail-open). Checking OPEN
