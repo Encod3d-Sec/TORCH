@@ -810,12 +810,16 @@ def test_done_win_records_foothold_on_close(eng):
 # --------------------------------------------------------------------------- Task 5 code-exec ranking
 
 def test_code_exec_classes_rank_first():
+    # All 5 classes are in HIGH_VALUE_CLASSES (so they'd tie at v=2 without the +1000 boost) -
+    # only rce/sqli are ALSO in CODE_EXEC_CLASSES, so only the boost can separate them out front.
     import campaign as C
     rows = [
-        {"id": "4a:1", "asset": "h", "vuln class": "xss", "status": "[ ]", "tool": "dalfox"},
+        {"id": "4a:1", "asset": "h", "vuln class": "auth", "status": "[ ]", "tool": "hydra"},
         {"id": "4a:2", "asset": "h", "vuln class": "rce", "status": "[ ]", "tool": "nuclei"},
-        {"id": "4a:3", "asset": "h", "vuln class": "enum", "status": "[ ]", "tool": "wpscan"},
+        {"id": "4a:3", "asset": "h", "vuln class": "ssrf", "status": "[ ]", "tool": "interactsh"},
+        {"id": "4a:4", "asset": "h", "vuln class": "sqli", "status": "[ ]", "tool": "sqlmap"},
+        {"id": "4a:5", "asset": "h", "vuln class": "idor", "status": "[ ]", "tool": "burp"},
     ]
     ordered = sorted(rows, key=lambda r: -C._row_value(r))
-    assert ordered[0]["vuln class"] == "rce"      # code-exec leads
-    assert ordered[-1]["vuln class"] in ("enum", "xss")
+    assert {ordered[0]["vuln class"], ordered[1]["vuln class"]} == {"rce", "sqli"}
+    assert {r["vuln class"] for r in ordered[2:]} == {"auth", "ssrf", "idor"}
