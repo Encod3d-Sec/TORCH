@@ -790,6 +790,7 @@ def cmd_board(a):
     for asset, cls, skill, tool in derive_privesc_rows(d, st):
         _add(asset, cls, skill, tool)
     write_board(d, rows)
+    E.touch_direction(d)
     # Building the board IS the pass-4 deliverable and hands off to driving; advance to pass 5 so
     # `next` drives the board instead of repeating pre-board recon guidance.
     st["pass"] = max(st.get("pass", 0), 5)
@@ -930,6 +931,11 @@ def _active_row(rows, asset):
 HIGH_VALUE_CLASSES = {"rce", "sqli", "ssrf", "auth", "idor", "bola", "deserialization", "xxe",
                       "ssti", "cmdi", "file-upload", "business-logic", "default-creds", "lfi"}
 
+# Direct code-exec classes: rank these FIRST among open rows (impact-first over access/enum).
+# Additive only - reorders open rows, never gates or suppresses one (a required/objective row is
+# already kept by the driver regardless of this score).
+CODE_EXEC_CLASSES = {"rce", "cmdi", "ssti", "deserialization", "upload", "file-write", "sqli"}
+
 
 def _deadline_info(d, st):
     """(remaining_min, total_min, frac_left) from scope.md `deadline`, or None when unset/bad.
@@ -957,9 +963,12 @@ def _deadline_info(d, st):
 
 
 def _row_value(r):
-    """Rough worth of an OPEN row under clock crunch: high-impact class + progress already sunk.
-    ponytail: a 3-signal heuristic, not a persisted score - board rows never stored one."""
-    v = 2 if (r.get("vuln class") or "").strip().lower() in HIGH_VALUE_CLASSES else 1
+    """Rough worth of an OPEN row under clock crunch: code-exec impact + high-impact class +
+    progress already sunk. ponytail: a 4-signal heuristic, not a persisted score - board rows
+    never stored one."""
+    cls = (r.get("vuln class") or "").strip().lower()
+    v = 1000 if cls in CODE_EXEC_CLASSES else 0  # impact-first: an RCE-class vector outranks access/enum
+    v += 2 if cls in HIGH_VALUE_CLASSES else 1
     if _status_of(r) == "[~]":        # already in progress -> finishing it is cheapest
         v += 2
     if (r.get("arsenal") or "").strip():  # arsenal loaded -> one step from a close
@@ -1479,6 +1488,7 @@ def cmd_done(a):
     st["dry_streak"] = 0
     _save_state(d, st)
     write_board(d, rows)
+    E.touch_direction(d)
     print("campaign done: %s closed [x]" % a.row)
 
     if getattr(a, "win", None):

@@ -805,3 +805,17 @@ def test_done_win_records_foothold_on_close(eng):
     assert "foothold recorded" in r.stdout
     srow = next(x for x in E._parse_table(os.path.join(eng, "state.md")) if x["asset"] == "asset-1")
     assert srow["access"] == "foothold" and "tmux:shell" in srow["notes"]
+
+
+# --------------------------------------------------------------------------- Task 5 code-exec ranking
+
+def test_code_exec_classes_rank_first():
+    import campaign as C
+    rows = [
+        {"id": "4a:1", "asset": "h", "vuln class": "xss", "status": "[ ]", "tool": "dalfox"},
+        {"id": "4a:2", "asset": "h", "vuln class": "rce", "status": "[ ]", "tool": "nuclei"},
+        {"id": "4a:3", "asset": "h", "vuln class": "enum", "status": "[ ]", "tool": "wpscan"},
+    ]
+    ordered = sorted(rows, key=lambda r: -C._row_value(r))
+    assert ordered[0]["vuln class"] == "rce"      # code-exec leads
+    assert ordered[-1]["vuln class"] in ("enum", "xss")
