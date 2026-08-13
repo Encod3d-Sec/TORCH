@@ -100,3 +100,23 @@ CBC-MAC (`tag = last block of CBC-encrypt(key, msg, IV=0)`) is only secure for f
 
 <!-- auto-wired: context-reachable sub-technique pages -->
 - [[crypto]]
+
+## Home-rolled crypt()-per-block cookies are ECB (salt-exposed offline forge + reflected-header oracle)
+
+A token built as `foreach (str_split($plain,8) as $b) $out .= crypt($b,$SALT);` is ECB by another
+name: each 8-byte chunk is enciphered independently. Fingerprint from the wire, not the source: the
+cookie is a run of fixed 13-char blocks, each a 2-char DES salt + 11-char hash, the salt constant
+within one token but random per issue. The exposed salt removes the usual "need an oracle" caveat on
+the two ECB attacks:
+
+- **Forge with no key, offline.** Plaintext is `user:UA:SECRET`. If two roles are the same length
+  (`guest`/`admin`, both 5) only block 0 differs; every later block enciphers the identical
+  `UA:SECRET` tail. Fetch a normal cookie, keep blocks `1..N` verbatim, recompute ONLY block 0 as
+  `crypt("admin:"+UA[0:2], salt)` locally (salt = cookie's first 2 bytes, `crypt` is public) -> submit
+  as admin. No encrypt-oracle endpoint, no key.
+- **Recover the appended SECRET byte-at-a-time.** A reflected value in the plaintext (here the
+  `User-Agent`) is the controlled-prefix lever: pick a UA length `L` with `(L+i) % 8 == 0` so secret
+  byte `i` is the last byte of a block with 7 known bytes before it, then brute 95 printable chars
+  against that block using the salt from the same response. The cookie-issuing endpoint IS the oracle.
+
+<!-- promoted-slug: crypt-per-block-ecb-cookie -->
