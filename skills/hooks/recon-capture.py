@@ -587,6 +587,48 @@ def _is_serial_enum_loop(cmd):
     return bool(_LOOP_RE.search(cmd) and _FETCH_RE.search(cmd) and not _THREADED_RE.search(cmd))
 
 
+# read-whole-not-grep reflex: post-foothold, a grep/head/tail/awk/sed -n against a high-signal
+# config is the recurring miss -- the interesting line lives OUTSIDE the grepped pattern.
+_HIGH_SIGNAL_CFG = re.compile(
+    r"/etc/pam\.d/|sudoers|wp-config|\.conf(\s|$|'|\")|authorized_keys|\.env(\s|$|'|\")|"
+    r"settings\.php|web\.config|shadow", re.IGNORECASE)
+_GREP_RE = re.compile(r"\b(grep|egrep|zgrep|head|tail|awk|sed\s+-n)\b")
+
+
+def _readwhole_nudge(d, cmd, eng):
+    """Post-foothold, a grep/head against a high-signal config is the recurring miss (the box's root
+    was a pam_ssh_agent_auth line in /etc/pam.d/sudo we grepped past). Nudge to read it WHOLE, once
+    per file path per engagement."""
+    if not (_GREP_RE.search(cmd) and _HIGH_SIGNAL_CFG.search(cmd)):
+        return None
+    # post-foothold gate: only once a foothold exists (privesc phase)
+    footh = False
+    try:
+        for r in eng._parse_table(os.path.join(d, "state.md")):
+            if any(k in (r.get("access") or "").lower() for k in ("foothold", "shell", "user", "root")):
+                footh = True; break
+    except Exception:
+        pass
+    if not footh:
+        return None
+    m = re.search(r"(/etc/pam\.d/\S+|\S*sudoers\S*|\S*wp-config\S*|\S+\.conf|\S*authorized_keys\S*|\S+\.env)", cmd)
+    path = (m.group(1).strip("'\"") if m else "the config")
+    seen = os.path.join(d, ".readwhole-nudged")
+    try:
+        done = set(open(seen).read().split()) if os.path.exists(seen) else set()
+    except Exception:
+        done = set()
+    if path in done:
+        return None
+    try:
+        open(seen, "a").write(path + "\n")
+    except Exception:
+        pass
+    return ("READ %s WHOLE (`cat`) - the vector hides in a line a keyword grep skips (a real root "
+            "was a `pam_ssh_agent_auth` line in /etc/pam.d/sudo grepped past). See "
+            "[[linux-privesc#pam_ssh_agent_auth]]." % path)
+
+
 def main():
     raw = sys.stdin.read()
     try:
@@ -868,6 +910,18 @@ def main():
                     "state.md auto-populated from the scan: added %d asset row(s) (%s). "
                     "Run `python3 scripts/campaign.py board` to build the Approach board from these."
                     % (len(seeded), ", ".join(seeded[:8])))
+        except Exception:
+            pass
+
+    # READ-WHOLE-NOT-GREP reflex (fire-once per file path, advisory, fail-open): post-foothold,
+    # a grep/head/tail/awk/sed -n against a high-signal config (pam.d, sudoers, wp-config, .env,
+    # web.config, shadow) is the recurring privesc miss -- the vector hides in a line the keyword
+    # pattern skips. Nudge to cat the whole file instead.
+    if d and _engagement and not _is_framework_meta(cmd):
+        try:
+            _rw = _readwhole_nudge(d, cmd, _engagement)
+            if _rw:
+                blocks.append(_rw)
         except Exception:
             pass
 
