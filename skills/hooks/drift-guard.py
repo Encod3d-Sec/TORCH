@@ -199,7 +199,8 @@ def main():
         _deny = _scanner_cap(d, st, cmd)
         if _deny:
             try:
-                import _telemetry; _telemetry.hook("drift-guard", action="deny-scanner")
+                import _telemetry
+                _telemetry.hook("drift-guard", action=("deny-scanner" if _enforcing() else "advise-scanner"))
             except Exception:
                 pass
             if _enforcing():
