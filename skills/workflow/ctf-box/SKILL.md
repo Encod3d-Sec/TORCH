@@ -109,7 +109,12 @@ failure is following the FASTEST path instead of the INTENDED one, then going of
    that theme + the exact fingerprinted tech before acting.
 2. Enumerate the INTENDED escalation surface FIRST: `sudo -l`, writable configs/cron/timers/scripts
    you own, group memberships, service creds - the deliberate path is almost always one of these and
-   `pspy`/`linpeas` surface it in seconds.
+   `pspy`/`linpeas` surface it in seconds. **When a user is in `sudo`/`wheel` but the password is
+   nowhere findable AND cron/writable/SUID/group vectors dead-end, READ `/etc/pam.d/{sudo,su}` and
+   `/etc/sudoers.d/*` (not a grep) - a `pam_ssh_agent_auth` (hijack a forwarded agent socket in
+   `/tmp/ssh-*/agent.*` -> passwordless sudo), `pam_exec`, or bare `NOPASSWD` line IS the vector; a
+   user conspicuously in `lxd`/`docker` that's unreachable is often a DECOY (see [[linux-privesc]]).**
+   Read linpeas output WHOLE - the pam/sudoers tell is there but a keyword grep skips it.
 3. **Kernel-LPE arsenal (dirtyfrag/copyfail/PwnKit/...) is a LABELLED FALLBACK, not the opening move.**
    We DO carry instant-escalation payloads for old kernels ([[privesc-exploit-arsenal]], [[dirty-frag]]) -
    note the `uname -r` band as a fallback, but VERIFY the intended path is genuinely absent AND verify

