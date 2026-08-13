@@ -96,3 +96,28 @@ Burp ([[burp-suite]]) + Collaborator, `nuclei` reset/takeover templates. Driven 
 
 ## Sources
 - PayloadsAllTheThings - Account Takeover
+
+### IDOR / missing-auth password overwrite (reset endpoint trusts a client-supplied identity)
+
+Distinct from reset-poisoning and email-parameter-pollution (both *capture a token*): here the reset
+action itself has no ownership check. The endpoint takes an account identifier (`email`/`username`/
+`uname`/`id`) plus a new password and overwrites it directly, with no current-password, no token, and
+no session-to-identity binding. Register any low-priv account, open the "reset/change password" form,
+and change the identity field to the admin's.
+
+The tell is a reset form that pre-fills your own identifier in a field marked `readonly` or `hidden`
+(`<input ... name="uname" value="you@x.com" readonly>`). `readonly`/`hidden` are client-side only, so
+the server trusts whatever you POST:
+
+```http
+POST /reset HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+uname=admin@target&npass=NewPass!23&cpass=NewPass!23
+```
+
+Response "Password changed" -> log in as the victim. Probe adjacent fields for mass-assignment too
+(`role=admin`, `is_admin=1`). Fix: bind the reset to the authenticated session (or a token emailed to
+the account's own address), never to a request-supplied identifier.
+
+<!-- promoted-slug: ato-reset-idor-overwrite -->
