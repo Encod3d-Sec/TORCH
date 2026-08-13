@@ -45,6 +45,8 @@ def _a_files():
           os.path.isfile(os.path.join(VAULT, "skills", "hunt", "triggers.json")))
     check("drift-guard hook present",
           os.path.isfile(os.path.join(VAULT, "skills", "hooks", "drift-guard.py")))
+    check("vm-bg.sh present+exec",
+          os.access(os.path.join(HERE, "vm-bg.sh"), os.X_OK))
 
 
 def _a_json():
@@ -85,6 +87,17 @@ def _a_hook_edits():
         check("tool-telemetry logs binaries", "_binaries" in t and '"bins"' in t or "bins=" in t)
     except Exception as e:
         check("tool-telemetry readable", False, str(e)[:60])
+    dg = os.path.join(VAULT, "skills", "hooks", "drift-guard.py")
+    try:
+        d = open(dg, encoding="utf-8").read()
+        check("drift-guard has _scanner_cap + auto-RTL", "_scanner_cap" in d and "redteamlead" in d)
+    except Exception as e:
+        check("drift-guard readable", False, str(e)[:60])
+    try:
+        r = open(rc, encoding="utf-8").read()
+        check("recon-capture has _readwhole_nudge", "_readwhole_nudge" in r)
+    except Exception as e:
+        check("recon-capture readable (readwhole)", False, str(e)[:60])
 
 
 def _a_tool_index():
@@ -137,6 +150,8 @@ def _b_imports():
     try:
         import _engagement  # noqa
         check("import _engagement", True)
+        check("_engagement has touch_direction + seconds_since_direction",
+              hasattr(_engagement, "touch_direction") and hasattr(_engagement, "seconds_since_direction"))
     except Exception as e:
         check("import _engagement", False, str(e)[:80])
 

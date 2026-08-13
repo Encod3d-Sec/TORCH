@@ -823,3 +823,15 @@ def test_code_exec_classes_rank_first():
     ordered = sorted(rows, key=lambda r: -C._row_value(r))
     assert {ordered[0]["vuln class"], ordered[1]["vuln class"]} == {"rce", "sqli"}
     assert {r["vuln class"] for r in ordered[2:]} == {"auth", "ssrf", "idor"}
+
+
+# --------------------------------------------------------------------------- Task 8 enforce
+
+def test_enforce_subcommand(tmp_path, monkeypatch):
+    import campaign as C
+    hooks = tmp_path / "skills" / "hooks"; hooks.mkdir(parents=True)
+    monkeypatch.setattr(C, "HOOKS_DIR", str(hooks), raising=False)
+    C.cmd_enforce(type("A", (), {"state": "off"})())
+    assert (hooks / ".enforce-off").exists()
+    C.cmd_enforce(type("A", (), {"state": "on"})())
+    assert not (hooks / ".enforce-off").exists()
