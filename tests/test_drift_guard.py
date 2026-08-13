@@ -153,11 +153,11 @@ def test_confirmed_chain_never_denies(vault):
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
     (eng / "Approach.md").write_text(
         "### 4a\n| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n"
-        "| r1 | 10.0.0.5 | ssrf | curl | [ ] |\n")
+        "| r1 | 10.0.0.5 | ssrf | sqlmap | [ ] |\n")
     (eng / "state.md").write_text(
         "| asset | access |\n|--|--|\n| 10.0.0.5 | port-open |\n\n## CONFIRMED CHAIN\n1. LFI via redirect\n")
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     _run("bash /root/vm.sh 'python3 /tmp/lfi.py'", env)
     _run("bash /root/vm.sh 'python3 /tmp/lfi.py'", env)
-    o3 = _run("curl http://10.0.0.5/", env)     # 3rd off-board -> would DENY without the marker
+    o3 = _run("nmap 10.0.0.5", env)              # 3rd off-board -> would DENY without the marker
     assert o3.get("permissionDecision") != "deny"
