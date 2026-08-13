@@ -50,6 +50,17 @@ the lockout policy in `scope.md` (the envelope), never attempted blind. Destruct
 - One agent; the refuter is the only subagent (`done --find`).
 - Load-bearing requests through Burp when reachable; degrade to `capture.sh req` otherwise.
 - Scope, lockout policy and destructive-op limits come from `scope.md`.
+- **RCE-first:** when >1 vector is open, take the one that yields code-exec first - it is the attack
+  vector that carries impact; chase lower-impact classes only after code-exec is ruled out or the
+  objective needs them (the driver ranks code-exec rows first).
+- **Read whole, not grep:** when a sudoer has no findable password and cron/writable/SUID/group
+  vectors dead-end, READ `/etc/pam.d/{sudo,su}` + `/etc/sudoers.d/*` whole - a `pam_ssh_agent_auth`
+  (hijack a forwarded agent socket -> passwordless sudo), `pam_exec`, or bare `NOPASSWD` line IS the
+  vector; read linpeas output WHOLE, a keyword grep skips the tell. See [[linux-privesc]].
+- **Long tools:** run pspy/linpeas/tcpdump via `bash scripts/vm-bg.sh <eng> <win> '<tool>'`
+  (stages to `/dev/shm`, runs in the stabilized shell, `--read`/`--wait 120` the logfile); never
+  hand-roll a backgrounded watcher, and never retry a broken tool pattern >2x - switch method or
+  call `Skill(redteamlead)`.
 
 ## Close-out
 

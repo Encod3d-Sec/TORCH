@@ -94,6 +94,11 @@ Fingerprint the exact app + version. **`Skill(arsenal)` FIRST** on any fingerpri
 
 ## Phase 4 Exploit: finish the foothold, then privesc
 
+**RCE-first (impact-first).** When more than one vector is open, take the one that yields code-exec
+first - an RCE foothold is the attack vector that carries impact. Grind XSS/IDOR/enum only after
+code-exec is ruled out or the objective specifically needs them (the driver now ranks code-exec
+classes ahead of access/enum rows).
+
 **Web foothold = STAY in Burp (anti-drift).** If the foothold is an HTTP primitive (RCE/LFI/SSRF/authed
 API), the recurring failure is abandoning Burp the instant it lands and scripting the ENTIRE
 post-exploitation over raw `curl`/`vm.sh`/urllib - so the operator, who is watching Burp, loses all
@@ -127,7 +132,12 @@ Finish the foothold first (leftover Rule 2 techniques, if the shell landed mid-a
 - Web SQLi: in-band (UNION/error) before blind; test EVERY quote context (`'` `"` numeric) and second-order (a stored value used unsafely on another page). If the app hashes the password inside the query, read plaintext from `information_schema.PROCESSLIST`. Load `Skill(hunt-sqli)` / see [[sql-injection]].
 - Recovered unsalted MD5/SHA1: **online lookup first** (CrackStation/hashes.com) before hashcat/john. A hash that resists everything on a hard box may be a deliberate decoy; pivot, don't grind.
 
-Then privesc = pspy ALWAYS + linpeas/winpeas, then manual.
+Then privesc = pspy ALWAYS + linpeas/winpeas, then manual. **Run a long tool reliably with
+`bash scripts/vm-bg.sh <eng> <win> '<tool>'`** - it stages the tool to `/dev/shm`, runs it inside the
+stabilized tmux shell (line-buffered to a `/dev/shm/*.log`), and you `--read` / `--wait 120` the
+logfile. Never hand-roll a backgrounded watcher over the one-shot SSH bridge (it gets reaped / `tee`
+buffers), and never retry a broken tool-execution pattern >2x - switch method (vm-bg) or
+`Skill(redteamlead)`. See [[pspy]] / [[linpeas]].
 
 **Always run pspy first** to catch root-run background jobs/cron/timers that static checks miss:
 ```bash

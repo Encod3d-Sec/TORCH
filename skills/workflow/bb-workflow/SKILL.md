@@ -71,6 +71,14 @@ campaign ends when the board is exhausted (two dry reframe rounds) or the reques
 - Load-bearing exploit requests go through Burp Repeater when it is reachable; degrade to
   `capture.sh req` when it is not. Never block on Burp.
 - Scope and the enumeration ceiling come from `scope.md`, never from this skill.
+- **RCE-first:** with >1 vector open, take the code-exec one first - it is the attack vector with
+  impact; chase lower-impact classes only after code-exec is ruled out or the target needs them.
+- **Read whole, not grep:** on a post-foothold host where a sudoer has no findable password and the
+  usual vectors dead-end, READ `/etc/pam.d/{sudo,su}` + `/etc/sudoers.d/*` and linpeas output WHOLE -
+  a `pam_ssh_agent_auth`/`pam_exec`/`NOPASSWD` line is the tell a grep skips. See [[linux-privesc]].
+- **Long tools:** run pspy/linpeas via `bash scripts/vm-bg.sh <eng> <win> '<tool>'` (stages to
+  `/dev/shm`, runs in the stabilized shell, `--read`/`--wait 120` the logfile); never retry a broken
+  tool pattern >2x - switch method or call `Skill(redteamlead)`.
 
 ## Close-out
 
