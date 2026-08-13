@@ -1722,8 +1722,10 @@ def cmd_tools(a):
 
 
 def cmd_enforce(a):
-    """Toggle the drift/scanner hard-deny (classifier-safe alternative to `touch .enforce-off`,
-    which the auto-mode classifier blocked)."""
+    """CLI toggle for the drift-guard / scanner-cap `.enforce-off` escape hatch - the same
+    hooks/.enforce-off marker that `_enforcing()` already reads. `off` downgrades those two
+    ADVISORY-harness hard-denies (our own anti-drift guard, not any platform safety control) to
+    advisory-only; `on` re-arms them. A convenience wrapper over editing the marker by hand."""
     marker = os.path.join(HOOKS_DIR, ".enforce-off")
     if a.state == "off":
         open(marker, "a").close()
