@@ -58,6 +58,9 @@ except Exception:
 
 HEAVY_SCANNERS = {"ffuf", "feroxbuster", "gobuster", "wpscan", "nuclei", "dirb", "katana", "nikto"}
 _SCAN_WINDOW = 180          # seconds: a 2nd heavy scanner launched within this is "concurrent"
+# Own regex, independent of NET_BINS: dirb (and any future HEAVY_SCANNERS entry not in NET_BINS)
+# must still be caught even when it's the ONLY thing in the command (not otherwise exploit-shaped).
+_HEAVY_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, HEAVY_SCANNERS), key=len, reverse=True)) + r")\b")
 
 _BIN_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, NET_BINS), key=len, reverse=True)) + r")\b")
 _DRIVER_RE = re.compile(r"campaign\.py\s+(?:next|board|done|pass-done|init)\b")
@@ -111,12 +114,14 @@ def _bins_in(cmd):
     return set(_BIN_RE.findall(cmd or ""))
 
 
-def _scanner_cap(d, st, cmd_bins):
+def _scanner_cap(d, st, cmd):
     """Hard-deny a 2nd HEAVY scanner within _SCAN_WINDOW on a small box (ctf). The mistake that DoS'd
-    the box. Records each heavy-scanner launch to .scan-launches.jsonl; denies (and does not record)
-    if a prior launch is < _SCAN_WINDOW old. Returns a reason string to deny with, or None to allow."""
+    the box. Records each heavy-scanner launch to .scan-launches.jsonl; if a prior launch is <
+    _SCAN_WINDOW old, ALWAYS returns a reason string (the caller decides deny-vs-advisory via
+    _enforcing() - this function never goes silent on .enforce-off). Records this launch and returns
+    None (allow) only when there is no prior in-window launch."""
     import time
-    heavy = cmd_bins & HEAVY_SCANNERS
+    heavy = set(_HEAVY_RE.findall(cmd or ""))
     if not heavy:
         return None
     if (st.get("type") or "").lower() != "ctf":       # small-box policy: ctf only (extend later)
@@ -134,7 +139,7 @@ def _scanner_cap(d, st, cmd_bins):
                 prior = e
     except Exception:
         pass
-    if prior and _enforcing():
+    if prior:
         age = int(now - float(prior["ts"]))
         return ("a scan is already running (`%s` launched %ds ago) - serialize on this small/tunnel "
                 "box (scope.md: curl-preferred), or drop threads to -t<=20. Wait for it or kill it "
@@ -187,19 +192,27 @@ def main():
 
     cmd_bins = _bins_in(cmd)
     exploit_shaped = bool(cmd_bins) or _handroll_classify(cmd)[0] or bool(_INTERP_RE.search(cmd))
+
+    # Scanner-cap runs on ANY heavy-scanner mention, independent of exploit_shaped/NET_BINS, so a
+    # bare `dirb ...` (not in NET_BINS, and not otherwise exploit-shaped) still hits it.
+    if _HEAVY_RE.search(cmd):
+        _deny = _scanner_cap(d, st, cmd)
+        if _deny:
+            try:
+                import _telemetry; _telemetry.hook("drift-guard", action="deny-scanner")
+            except Exception:
+                pass
+            if _enforcing():
+                print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                      "permissionDecision": "deny",
+                      "permissionDecisionReason": "BLOCKED by harness enforcement (scanner-cap): " + _deny}}))
+            else:
+                print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                      "additionalContext": "SCANNER-CAP (enforcement OFF, advisory): " + _deny}}))
+            return
+
     if not exploit_shaped:
         return                                    # not an exploit/scan/interpreter call -> ignore
-
-    _deny = _scanner_cap(d, st, cmd_bins)
-    if _deny:
-        try:
-            import _telemetry; _telemetry.hook("drift-guard", action="deny-scanner")
-        except Exception:
-            pass
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-              "permissionDecision": "deny",
-              "permissionDecisionReason": "BLOCKED by harness enforcement (scanner-cap): " + _deny}}))
-        return
 
     since = _engagement.seconds_since_direction(d)
     if since is not None and since > 300:
