@@ -8,6 +8,7 @@ import ipaddress
 import json
 import os
 import re
+import time
 from datetime import date
 
 # Self-locate: realpath resolves the ~/.claude/vault-hooks symlink to the real
@@ -154,6 +155,31 @@ def active_dir():
     if not dirs:
         return None
     return max(dirs, key=os.path.getmtime)
+
+
+def touch_direction(d=None):
+    """Mark a 'direction event' (a board row -> [x], new loot/host/flag, or an RTL call). The file's
+    mtime IS the payload; drift-guard reads it for the auto-RTL clock. Fail-open (never raises)."""
+    d = d or active_dir()
+    if not d:
+        return
+    try:
+        p = os.path.join(d, ".last-direction")
+        open(p, "a").close()
+        os.utime(p, None)
+    except Exception:
+        pass
+
+
+def seconds_since_direction(d=None):
+    """Seconds since the last direction event; None if never marked (treated as 'just started')."""
+    d = d or active_dir()
+    if not d:
+        return None
+    try:
+        return time.time() - os.path.getmtime(os.path.join(d, ".last-direction"))
+    except Exception:
+        return None
 
 
 def _parse_table(path):
