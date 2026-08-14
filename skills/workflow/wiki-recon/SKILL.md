@@ -42,6 +42,8 @@ cat $RECON_DIR/subs.txt | dnsx -silent | \
   httpx -silent -status-code -title -tech-detect | tee $RECON_DIR/live.txt
 ```
 
+On any TLS host from Stage 2, dump the cert SANs early; a hidden vhost none of the above discovers can be listed only in the Subject Alternative Name, see [[cdn-waf-bypass]].
+
 ### Stage 3: URL Crawl + Historical
 ```bash
 cat $RECON_DIR/live.txt | awk '{print $1}' | \

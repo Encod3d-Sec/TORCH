@@ -29,6 +29,7 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
   (web, per http port:)
 - [ ] whatweb + httpx + screenshot       -> [[wiki/tools/whatweb]] [[wiki/tools/httpx]] + Skill(screenshot)
 - [ ] ffuf/feroxbuster dirs + vhosts     -> [[wiki/tools/ffuf]] [[feroxbuster]] [[gobuster]] [[wordlists]]
+- [ ] dump TLS cert SANs for hidden vhosts: `echo | openssl s_client -connect <ip>:443 -servername <host> 2>/dev/null | openssl x509 -noout -text | grep -A1 "Subject Alternative Name"`  -> [[cdn-waf-bypass]]
 - [ ] arjun param mining                 -> [[arjun]]
 - [ ] nuclei                             -> [[wiki/tools/nuclei]] [[nuclei-arsenal]]
 - [ ] nikto ; wpscan (if WordPress)      -> [[nikto]] [[wpscan]]

@@ -64,6 +64,8 @@ wpscan -u http://$T                              # if WordPress
 
 **Missing `-w` wordlist = ffuf prints help text and silently finds NOTHING** (a false "no hidden endpoints"). Preflight every fuzz (`ls "$W" || W=/usr/share/wordlists/dirb/big.txt`); seclists may be absent on the VM, push harness lists over via base64 first.
 
+**On any TLS host, dump the cert SANs early**; a hidden vhost that decoy services and ffuf/feroxbuster never surface can be listed only in the Subject Alternative Name, see [[cdn-waf-bypass]].
+
 **On any web surface, before moving to exploitation, all of this, in parallel where possible:**
 - **Capture it as-is first**: `capture.sh web <eng> <slug> http://T:PORT/` (browser shot) + `curl -s http://T:PORT/ > poc/<slug>-source.html` (raw source), for EVERY distinct surface (login, dashboards, OSINT/social apps) as you open it.
 - **Read full, not grep.** Fetch a file/response (source, config, HLS manifest, JS bundle) and read it END-TO-END; the vuln hides in the line a narrow `grep` skips. Never pipe an exploit/lead response through `head`/`grep` before reading it whole.

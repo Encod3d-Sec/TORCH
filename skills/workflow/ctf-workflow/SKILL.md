@@ -42,13 +42,20 @@ ctf-box method for that vuln class) - read it before acting.
    will not surface them until you do.
 7. **Web RCE -> a real shell, THEN stabilize -- do not ride one-liners (recurring drift).** The
    moment code-exec lands (a web-RCE primitive, an LFI->session-poison, a deser gadget), STOP
-   hand-poking one-shot payloads: (a) `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` +
-   fire the reverse shell, (b) **stabilize it immediately** with `bash scripts/vm-stabilize.sh
-   --win shell <eng>` (pty + job control + window size) or prefer `pwncat-cs` / an msf
-   multi-handler over a raw nc, (c) then record the foothold (step 6) and drive with `vm-rsh`. An
-   unstabilized nc shell (no job control, mid-line wrapping) is what makes post-ex drift back into
-   one-liners. Full discipline: `Skill(ctf-box)` Phase 3 (Deliver). The `recon-capture` hook fires
-   this reflex once on the first service-account `id`.
+   hand-poking one-shot payloads: (a) **catch it with a real handler by default** - `msfconsole`'s
+   `exploit/multi/handler` -> meterpreter, or `pwncat-cs` (record via `campaign.py foothold <target>
+   --win msf`, step 6). Reserve `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` for when
+   msf/pwncat are unavailable: a raw nc pane's `Ctrl-C` kills the LISTENER (dropping the shell back
+   to your own prompt, the false-root attacker-prompt trap) and it has no session management, while
+   meterpreter also carries `post/multi/recon`/`local_exploit_suggester` escalation modules and
+   built-in file transfer. (b) **Before picking the LPORT, test target egress on common ports
+   (80/443/53)** - high ports like 4444 are frequently filtered, so pick an egress-allowed LPORT.
+   (c) If you did fall back to raw nc, **stabilize it immediately** with `bash
+   scripts/vm-stabilize.sh --win shell <eng>` (pty + job control + window size). (d) Then record the
+   foothold (step 6) and drive with `vm-rsh`. An unstabilized nc shell (no job control, mid-line
+   wrapping) is what makes post-ex drift back into one-liners. Full discipline: `Skill(ctf-box)`
+   Phase 3 (Deliver). The `recon-capture` hook fires this reflex once on the first service-account
+   `id`.
 
 ## Box recipes
 
@@ -69,6 +76,11 @@ often the intended path). Rendered screenshots of the flag/exploited state are v
 G1 arsenal-first, G2 skill-first, G3 typed evidence (a flag on screen is a valid `web` PoC), G8
 tool-first. Privesc always includes pspy + linpeas/winpeas - the board seeds these as 4b rows once
 an asset is recorded as a foothold (re-run `board` after `foothold`/`done --win` to seed them).
+
+Once a foothold and a working escalation vector are identified, delegating the exploit compile +
+escalation run to a Haiku 4.5 sub-agent with a precise copy-paste checklist works well - keep the
+main agent driving the board. The checklist MUST include a false-root guardrail: verify `hostname`
+matches the target, not the attack box, before trusting a returned `uid=0`.
 
 ## Autonomy
 
