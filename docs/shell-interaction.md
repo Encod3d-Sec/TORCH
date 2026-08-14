@@ -50,3 +50,19 @@ Do not add instrumentation to diagnose the tooling. Send a single cheap command 
 
 Only re-run the original command if it was read-only. Never blindly repeat a command that creates,
 deletes, writes, or changes state - probe first, then decide.
+
+## Killing background procs over the bridge: never `pkill -f <pattern>` that matches your own command
+
+`bash /root/vm.sh '<cmd>'` runs `<cmd>` on the VM, and the bridge's own process carries the full
+command string in its argv. So `pkill -f 'http.server'` (or `pkill -f brute.sh`, `pkill -f Tokyo`)
+matches the bridge itself and SIGTERMs your own call -> the tool returns exit 143 and kills nothing
+you intended. This bit repeatedly on one engagement.
+
+Kill by PID, or bracket the pattern so it cannot match the literal in your command:
+```sh
+# safe: [h] makes the regex match "http" but the literal "[h]ttp" in argv does NOT self-match
+bash /root/vm.sh "ps -eo pid,args | awk '/[h]ttp\.server/{print \$1}' | xargs -r kill"
+```
+Never put an un-bracketed literal (a script name, a password like `Tokyo1010`) into the kill
+pattern in the same command - it will appear in your own argv and self-match. `tmux kill-session -t
+<name>` is always safe (matches by session name, not argv).

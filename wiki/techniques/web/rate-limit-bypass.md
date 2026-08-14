@@ -47,3 +47,17 @@ mutation { a: verify(code:"111111"){token} b: verify(code:"222222"){token} c: ve
 
 ## Sources
 - HackTricks (pentesting-web) (slug: hacktricks-web).
+
+## Two-layer limiter: app counter (XFF-keyed) vs fail2ban (real-IP)
+
+A target can run BOTH an app/WAF rate rule that keys on `X-Forwarded-For` AND a fail2ban jail that
+bans the real TCP source. A **unique XFF per request** defeats the app counter (each request looks
+like a new client) - but fail2ban never reads the header, so a burst still bans your real IP, and
+that ban drops even GETs to a connection reset (curl `%{http_code}` = `000`), not a clean 429/403.
+So the two layers need opposite tactics at once: rotate XFF to beat the app limit, AND keep
+concurrency low/sequential so the real-IP jail's per-window/per-connection threshold is not tripped.
+Probe both thresholds first (how many rotating-XFF requests before 403; how many concurrent before
+`000`) before committing to a brute. An app "restart"/status endpoint - or fail2ban `bantime` expiry
+- clears the ban; escalating `bantime` means aggressive retries get you banned LONGER, not faster.
+
+<!-- promoted-slug: xff-vs-fail2ban-two-layer -->

