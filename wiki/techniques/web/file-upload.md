@@ -734,3 +734,17 @@ Confirm by execution (per the confirmation gate), not by a 200 on the upload. If
 extension, this pairs with any allowed-but-executable extension or an [[path-traversal-lfi]] include.
 
 <!-- promoted-slug: upload-predictable-random-filename -->
+
+## First-dot allowlist + case-sensitive "php" block (double-extension bypass)
+
+A hardened image-upload filter sometimes combines two checks that look strict but compose into an easy bypass:
+- **Allowlist keyed on the extension after the FIRST dot**, not the last (e.g. `explode('.', name)[1]`). So `shell.jpg.pHp` is judged as `jpg` -> allowed.
+- **Blocks the literal lowercase `php`** anywhere in the name, but the check is case-SENSITIVE.
+
+Bypass: a double extension whose first-dot segment is an allowed image type and whose LAST segment is a mixed-case PHP handler, e.g. `shell.gif.pHp` / `shell.png.phTml`. It passes the first-dot allowlist and dodges the lowercase-`php` string match. Two more gotchas seen together:
+- The app often **lowercases the filename on save**, so `.pHp` lands on disk as `.php` and Apache's `mod_php` executes it (the mixed case is only needed to pass the FILTER, not to execute).
+- A `getimagesize()`/"is it an image" check is passed by prepending a real image magic header (`GIF89a;`) before the PHP; the header only needs to be valid enough for `getimagesize` to return dimensions.
+
+Tell-tale to look for: a plain `.gif`/`.jpg` uploads fine but every `.php` variant is rejected "not an image" -> the filter is extension-based (not content-based), so probe first-dot and case permutations, not just the trailing extension. (Seen in the wild on Monitorr 1.7.6m, CVE-2020-28871.)
+
+<!-- promoted-slug: upload-firstdot-allowlist-bypass -->

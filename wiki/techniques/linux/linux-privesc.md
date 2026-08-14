@@ -1862,3 +1862,23 @@ vectors dead-end, READ `/etc/pam.d/{sudo,su}` and `/etc/sudoers.d/*` EARLY — a
 `pam_exec`, or bare `NOPASSWD` line IS the vector. (linpeas prints the pam config; read it, don't grep.)
 
 <!-- promoted-slug: pam-ssh-agent-auth-sudo -->
+
+## Dirty Sock — snapd local socket privesc (CVE-2019-7304)
+
+Complements the `sudo snap install --devmode` abuse above; this one needs no sudo. `snapd` exposes a
+REST API on the UNIX socket `/run/snapd.socket`. On vulnerable versions (snapd < 2.37, e.g. Ubuntu
+18.04's 2.32.x) that socket is world-accessible (`srw-rw-rw-`) and an access-control flaw in the
+`/v2/snaps` sideload endpoint lets ANY local user install a snap whose `install` hook runs as root.
+
+Preconditions to check first (any local shell, incl. a web-RCE `www-data`):
+- `snap version` -> snapd 2.32.x-2.36 (patched in 2.37).
+- `ls -la /run/snapd.socket` -> world-writable, and snapd running (`pgrep snapd`).
+
+Impact: the stock public PoC (initstring's `dirty_sock`, v1 API-only and v2 that shells out to the
+`snap` CLI) sideloads a crafted empty snap whose hook adds a local user `dirty_sock:dirty_sock` to
+the `sudo` group. Then `su dirty_sock` (password `dirty_sock`) -> `sudo -i` -> root. v2 needs the
+`snap` CLI present; v1 talks straight to the socket via python3 (handy from a minimal web shell).
+This is the daemon-socket CVE the "not this one" note above refers to — reach for it when snapd is
+old AND the socket is world-writable, even when you have no sudo rights at all.
+
+<!-- promoted-slug: snapd-dirty-sock-cve-2019-7304 -->
