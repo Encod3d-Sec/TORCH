@@ -25,8 +25,11 @@ def test_evidence_counts_recursive(tmp_path):
     (tmp_path / "poc" / "a.png").write_bytes(b"x")
     (tmp_path / "poc" / "sub" / "b.png").write_bytes(b"x")   # nested counts
     (tmp_path / "recon" / "c.png").write_bytes(b"x")
-    (tmp_path / "poc" / "notes.txt").write_text("x")          # non-png ignored
-    assert st.evidence_counts(str(tmp_path)) == (2, 1)
+    (tmp_path / "poc" / "notes.txt").write_text("x")          # non-png/md ignored
+    (tmp_path / "poc" / "card.md").write_text("evidence")      # md card counts
+    (tmp_path / "poc" / "scripts").mkdir()
+    (tmp_path / "poc" / "scripts" / "exploit.md").write_text("preserved")  # scripts/ excluded
+    assert st.evidence_counts(str(tmp_path)) == (2, 1, 1)      # (png, cards, recon)
 
 
 def test_deadend_lines_skips_template_placeholder(tmp_path):
@@ -72,13 +75,22 @@ def test_render_composes_dashboard():
     st = _load()
     summ = {"hosts": 5, "owned": 1, "creds": 3, "open_paths": 0}
     out = st.render("acme", "ctf", True, summ, ("Phase 4 Exploit", 2, 1),
-                    2, 0, ["foo failed"], "Next moves (acme):\n 1. do x")
+                    2, 3, 0, ["foo failed"],
+                    "Next moves (acme):\n 1. do x\n 2. [gap] test upload on host")
     assert "acme (ctf)  STATUS: SOLVED" in out
     assert "hosts 5 (owned 1) | creds 3 | open paths 0" in out
     assert "board: Phase 4 Exploit | 2 open | 1 deadends" in out
-    assert "evidence: 2 poc shot(s), 0 recon card(s)" in out
+    assert "evidence: 2 poc shot(s), 3 card(s), 0 recon card(s)" in out
     assert "- foo failed" in out
     assert "Next moves (acme)" in out
+    assert "[gap]" not in out                    # gap moves suppressed once SOLVED
+
+
+def test_render_keeps_gap_when_not_solved():
+    st = _load()
+    out = st.render("acme", "ctf", False, None, None, 0, 0, 0, [],
+                    " 1. [gap] test upload on host")
+    assert "[gap]" in out
 
 
 def test_board_phase_none_when_no_board(tmp_path):

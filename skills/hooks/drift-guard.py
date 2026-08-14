@@ -152,6 +152,26 @@ def _scanner_cap(d, st, cmd):
     return None
 
 
+# T5.2 self-kill footgun: `pkill -f bash` / `killall nc` / `pkill python` matches the operator's OWN
+# reverse shell or session and kills it (a recurring shell-loss drift across several boxes). Advisory only
+# (never deny - the operator may genuinely want it), fires on a shell/reverse-shell process name in a
+# pkill/killall. The sibling footgun (Ctrl-C on an unstabilized shell) is a terminal signal no hook
+# sees, so it stays CLAUDE.md prose. Word-list kept to actual shell/relay binaries -> low false-fire.
+_SELFKILL_RE = re.compile(
+    r"\b(pkill|killall)\b[^|;&\n]*\b(ba?sh|nc|ncat|netcat|socat|python\d?|perl|php|rlwrap|/dev/tcp)\b",
+    re.IGNORECASE)
+
+
+def _selfkill_advisory(cmd):
+    """Advisory string when a pkill/killall could self-match the operator's own shell, else None."""
+    if not _SELFKILL_RE.search(cmd or ""):
+        return None
+    return ("SELF-KILL RISK: `pkill`/`killall` on a shell/relay name (bash/sh/nc/python/socat...) "
+            "will also match your OWN reverse shell or session and kill it (recurring footgun). Kill "
+            "by PID (`kill <PID>`, get it from `ps`) or bracket the pattern to exclude your shell. If "
+            "the next command hangs or drops to the attacker prompt, the shell died - re-pop it.")
+
+
 def main():
     try:
         data = json.loads(sys.stdin.read())
@@ -162,6 +182,15 @@ def main():
     cmd = (data.get("tool_input") or {}).get("command", "")
     if not cmd:
         return
+
+    # self-kill footgun advisory (any time, before the campaign gates) - skip framework-meta so a
+    # grep/test string mentioning `pkill bash` during harness dev never fires it.
+    if not _META_RE.search(cmd):
+        _sk = _selfkill_advisory(cmd)
+        if _sk:
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                  "additionalContext": _sk}}))
+            return
 
     import _engagement
     d = _engagement.active_dir()

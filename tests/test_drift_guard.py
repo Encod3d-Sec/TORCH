@@ -41,6 +41,27 @@ def test_off_board_escalates_then_denies(vault):
     assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 3
 
 
+def test_selfkill_advisory_on_pkill_shell(vault):
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    for cmd in ("bash /root/vm.sh 'pkill -f bash'", "killall nc", "pkill python3", "pkill -f socat"):
+        o = _run(cmd, env)
+        assert "SELF-KILL" in (o.get("additionalContext") or ""), cmd
+
+
+def test_selfkill_advisory_not_on_safe_kill(vault):
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    assert "SELF-KILL" not in (_run("kill 1234", env).get("additionalContext") or "")
+    assert "SELF-KILL" not in (_run("killall -9 chrome", env).get("additionalContext") or "")
+    assert "SELF-KILL" not in (_run("pkill -f myserviced", env).get("additionalContext") or "")
+
+
+def test_selfkill_advisory_skips_framework_meta(vault):
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    # grepping the hook's own source during harness dev must not fire it (framework-meta path)
+    o = _run("grep -n 'pkill bash' skills/hooks/drift-guard.py", env)
+    assert "SELF-KILL" not in (o.get("additionalContext") or "")
+
+
 def test_driver_call_resets_streak(vault):
     eng = vault / "targets" / "acme"
     _campaign(eng, emitted=[])

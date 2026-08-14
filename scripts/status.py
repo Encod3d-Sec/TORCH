@@ -25,10 +25,13 @@ sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
 
 
 def evidence_counts(d):
-    """(poc_shots, recon_cards): deliberate PoC images under poc/ (recursive) + auto recon cards."""
+    """(poc_shots, poc_cards, recon_cards): PoC images under poc/ (recursive) + poc/ .md evidence
+    cards (excluding poc/scripts/ preserved-exploit .md) + auto recon shots."""
     poc = len(glob.glob(os.path.join(d, "poc", "**", "*.png"), recursive=True))
+    cards = len([p for p in glob.glob(os.path.join(d, "poc", "**", "*.md"), recursive=True)
+                 if os.sep + "scripts" + os.sep not in p])
     recon = len(glob.glob(os.path.join(d, "recon", "*.png")))
-    return poc, recon
+    return poc, cards, recon
 
 
 def deadend_lines(d, limit=3):
@@ -114,7 +117,7 @@ def coverage_data(d, etype):
     return base, assets, tested_by_asset
 
 
-def render(name, etype, solved, summ, board, poc, recon, deads, moves_text):
+def render(name, etype, solved, summ, board, poc, cards, recon, deads, moves_text):
     """Pure formatter -> the dashboard string. All inputs are precomputed (testable)."""
     head = "=== %s (%s)%s ===" % (name, etype, "  STATUS: SOLVED" if solved else "")
     lines = [head]
@@ -124,12 +127,18 @@ def render(name, etype, solved, summ, board, poc, recon, deads, moves_text):
     if board:
         where, open_n, dead_n = board
         lines.append("board: %s | %d open | %d deadends" % (where, open_n, dead_n))
-    lines.append("evidence: %d poc shot(s), %d recon card(s)" % (poc, recon))
+    ev = "evidence: %d poc shot(s), " % poc
+    if cards:
+        ev += "%d card(s), " % cards
+    lines.append(ev + "%d recon card(s)" % recon)
     if deads:
         lines.append("recent deadends:")
         lines += ["  - " + x for x in deads]
-    if moves_text.strip():
-        lines.append(moves_text.strip())
+    mt = moves_text
+    if solved:                                   # a SOLVED box has nothing left to gap-fill
+        mt = "\n".join(ln for ln in mt.splitlines() if "[gap]" not in ln)
+    if mt.strip():
+        lines.append(mt.strip())
     return "\n".join(lines)
 
 
@@ -150,7 +159,7 @@ def main():
     solved = _engagement.is_solved(d)
     summ = _engagement.summary()
     board = board_phase(d)
-    poc, recon = evidence_counts(d)
+    poc, cards, recon = evidence_counts(d)
     deads = deadend_lines(d)
     moves_text = ""
     try:
@@ -159,7 +168,7 @@ def main():
         moves_text = r.stdout or ""
     except Exception:
         pass
-    print(render(name, etype, solved, summ, board, poc, recon, deads, moves_text))
+    print(render(name, etype, solved, summ, board, poc, cards, recon, deads, moves_text))
     return 0
 
 
