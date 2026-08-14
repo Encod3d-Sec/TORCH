@@ -96,6 +96,10 @@ def test_board_empty_state_exits_2(eng):
     p = os.path.join(eng, "state.md")
     lines = [ln for ln in open(p) if not ln.startswith("| asset-")]
     open(p, "w").write("".join(lines))
+    # board now auto-seeds assets from scope.md's In scope block, so empty the scope too - the
+    # exit-2 die path only fires when there is GENUINELY nothing to build a board from.
+    sp = os.path.join(eng, "scope.md")
+    open(sp, "w").write(re.sub(r"(## In scope\n)- \*\.example\.lt", r"\1-", open(sp).read()))
     r = run(eng, "board")
     assert r.returncode == 2
     assert "no assets" in r.stderr.lower() or "state.md" in r.stderr
@@ -120,6 +124,21 @@ def test_next_withholds_exploit_while_arsenal_empty(eng):
     assert "G1" in r.stdout
     # no tool/exploit action emitted yet
     assert "run:" not in r.stdout
+
+
+def test_next_closeout_on_solved_marker(eng):
+    # A box solved off-board never advances the pass cursor, so the exhaustion path never fires.
+    # An explicit `## STATUS: SOLVED` in state.md must short-circuit `next` to the close-out chain.
+    _init(eng)
+    p = os.path.join(eng, "state.md")
+    open(p, "a").write("\n## STATUS: SOLVED\n")
+    r = run(eng, "next", expect=0)
+    assert "CAMPAIGN COMPLETE" in r.stdout
+    assert "SOLVED" in r.stdout
+    # OWNED/ROOTED/COMPLETE are accepted synonyms
+    txt = open(p).read().replace("## STATUS: SOLVED", "## STATUS: ROOTED")
+    open(p, "w").write(txt)
+    assert "CAMPAIGN COMPLETE" in run(eng, "next", expect=0).stdout
 
 
 def test_next_never_asks_a_question(eng):

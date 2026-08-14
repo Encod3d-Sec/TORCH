@@ -382,3 +382,21 @@ Then verify each IOC across sources before including in hypothesis.
 
 - THM: GitHappens (`githappens`)
 - THM: Pyrat (`pyrat`)
+
+## `.git-credentials` / `.netrc` on the web root (cleartext creds, not the `.git/` dir)
+
+Beyond `/.git/`, always probe a web root for git's OWN credential-store files, written when a repo
+sets `credential.helper store`. They hold cleartext `https://user:pass@host` and are a one-GET
+credential leak - no `.git/` reconstruction needed:
+
+```
+curl -s http://TARGET/.git-credentials     # one https://user:pass@host per line
+curl -s http://TARGET/.netrc               # machine / login / password triples
+```
+
+The creds are URL-encoded in `.git-credentials` (`%40`=`@`, `%21`=`!`, `%23`=`#`); decode before
+reuse, then spray them against SSH, the app login, and any host the URL names (the leaked host is
+often a pivot, not the web box itself). Add both filenames to content-discovery wordlists - a plain
+`ffuf` for `.git` misses them.
+
+<!-- promoted-slug: git-credentials-web-exposure -->

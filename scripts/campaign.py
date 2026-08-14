@@ -113,6 +113,20 @@ def _scope_fm(d):
         return {}
 
 
+_SOLVED_RE = re.compile(r"^\s*##\s*STATUS:\s*(SOLVED|OWNED|ROOTED|COMPLETE)\b", re.I | re.M)
+
+
+def _is_solved(d):
+    """True when state.md carries an explicit close-out marker (## STATUS: SOLVED/OWNED/ROOTED/
+    COMPLETE). A fast box solved off-board (single-hop chain) never advances the pass cursor, so the
+    normal exhaustion path never fires - this marker is the only reliable close-out trigger then."""
+    try:
+        txt = open(os.path.join(d, "state.md"), encoding="utf-8", errors="ignore").read()
+    except Exception:
+        return False
+    return bool(_SOLVED_RE.search(txt))
+
+
 def _budget(d):
     """budget_requests as an int, tolerating commas / junk / absence (fail-open, never crash)."""
     v = str(_scope_fm(d).get("budget_requests") or "0").replace(",", "").strip()
@@ -1014,6 +1028,10 @@ def cmd_next(a):
              "(a silent misread of an old board is how a whole campaign ran the wrong checklist)")
     cfg = _load_cfg()
     tconf = cfg[st["type"]]
+    # A box solved off-board (fast obvious chain) never advances the pass cursor, so the exhaustion
+    # path never fires and close-out is never printed. Honor an explicit SOLVED marker in state.md.
+    if _is_solved(d):
+        return _closeout(d, st, tconf, "state.md marked SOLVED")
     rows = read_board(d)
     counts = _counts(rows)
     budget = _budget(d)
