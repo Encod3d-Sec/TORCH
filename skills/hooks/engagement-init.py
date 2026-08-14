@@ -77,6 +77,18 @@ def board_status():
         return None
 
 
+def _driver_behind(vault):
+    """Commits the framework repo's HEAD is behind its tracked upstream (0 on no-upstream / not-a-repo
+    / any error). No fetch - measured against the last fetch, so it fail-opens rather than dialing out."""
+    try:
+        import subprocess
+        r = subprocess.run(["git", "rev-list", "--count", "HEAD..@{u}"],
+                           cwd=vault, capture_output=True, text=True, timeout=5)
+        return int((r.stdout or "0").strip() or "0") if r.returncode == 0 else 0
+    except Exception:
+        return 0
+
+
 def harness_maintenance():
     """Compact list of pending harness-maintenance tags -- replaces the old stack of
     per-item SessionStart nags (wordlist / wiki-candidate / hook-drift / skill-drift).
@@ -109,6 +121,17 @@ def harness_maintenance():
             tags.append("stale-hook: " + ",".join(stale) + " (install-hooks.sh)")
         if _ch.missing_skills():
             tags.append("skill-drift (install-skills.sh)")
+    except Exception:
+        pass
+    # T4.1 driver-staleness: warn when the framework repo is meaningfully behind its upstream, so a
+    # stale campaign.py/hook set is surfaced like hook-drift (road ran a driver 26 commits behind main
+    # and it cascaded). No fetch (SessionStart time budget) - measured against the last fetch; fail-open.
+    try:
+        import _engagement
+        behind = _driver_behind(_engagement.VAULT)
+        if behind >= 5:
+            tags.append("driver-stale: %d commits behind upstream (git pull to refresh "
+                        "campaign.py/hooks)" % behind)
     except Exception:
         pass
     try:

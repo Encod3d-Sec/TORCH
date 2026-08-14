@@ -113,6 +113,47 @@ def _scope_fm(d):
         return {}
 
 
+# Permissive lab defaults for auto-healing a ctf scope envelope (T1.1). Mirrors setup/templates/
+# _scope.md. Safe to assume ONLY for a ctf box (a pure lab); pt/bb encode real-target RoE that the
+# operator MUST set explicitly, so those still hard-fail. This removes the #1 root-cause friction:
+# a missing/clobbered envelope killed `campaign.py init`, which made the agent skip the board.
+CTF_ENVELOPE_DEFAULTS = {
+    "autonomy": "full", "enum_cap": "50", "write_policy": "full", "oob_allowed": "true",
+    "scanners": "yes", "budget_requests": "100000", "rate_per_host": "50", "target_severity": "root",
+}
+
+
+def _heal_scope_envelope(d, keys, defaults):
+    """Fill missing/blank envelope keys in scope.md's frontmatter in place. Replaces a present-but-
+    empty key line; inserts an absent one before the closing '---'. Returns the list of keys healed,
+    or [] if scope.md has no frontmatter to edit (fail-open, never crash init)."""
+    p = os.path.join(d, "scope.md")
+    try:
+        lines = open(p, encoding="utf-8", errors="ignore").read().split("\n")
+    except Exception:
+        return []
+    if not lines or lines[0].strip() != "---":
+        return []
+    close = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if close is None:
+        return []
+    healed = []
+    for k in keys:
+        if k not in defaults:
+            continue
+        idx = next((i for i in range(1, close)
+                    if re.match(r"^%s\s*:" % re.escape(k), lines[i])), None)
+        if idx is not None:
+            lines[idx] = "%s: %s" % (k, defaults[k])
+        else:
+            lines.insert(close, "%s: %s" % (k, defaults[k]))
+            close += 1
+        healed.append(k)
+    if healed:
+        open(p, "w", encoding="utf-8").write("\n".join(lines))
+    return healed
+
+
 _SOLVED_RE = re.compile(r"^\s*##\s*STATUS:\s*(SOLVED|OWNED|ROOTED|COMPLETE)\b", re.I | re.M)
 
 
@@ -280,8 +321,27 @@ def _chains():
         return {}
 
 
+# T1.2: exact board class-token -> hunt skill. triggers.json is tuned for PROMPT matching (matching a
+# bare "session"/"auth" in a user sentence would over-fire), so several access/auth class tokens have
+# no trigger and _skill_for_class fell through to an UNRELATED playbook skills[0] (road: a `session`
+# ATO row mapped to hunt-xss/dalfox, so firing hunt-auth never satisfied gate G2 and the drift-guard
+# hard-blocked legit work). This map is board-only (exact class token, not free-text) so it is safe.
+CLASS_SKILL = {
+    "session": "hunt-auth", "session-mgmt": "hunt-auth", "session-management": "hunt-auth",
+    "cookie": "hunt-auth", "login": "hunt-auth", "logout": "hunt-auth", "auth": "hunt-auth",
+    "authentication": "hunt-auth", "account-takeover": "hunt-auth", "ato": "hunt-auth",
+    "password-reset": "hunt-auth", "mfa": "hunt-auth", "jwt": "hunt-auth",
+    "access-control": "hunt-idor", "authz": "hunt-idor", "bola": "hunt-idor", "idor": "hunt-idor",
+    "business-logic": "hunt-bizlogic", "bizlogic": "hunt-bizlogic", "race": "hunt-bizlogic",
+}
+
+
 def _skill_for_class(cls, triggers):
-    """triggers.json fallback: first vuln-type regex whose match hits the class token."""
+    """Board class token -> hunt skill: the exact CLASS_SKILL alias first (fixes access/auth tokens
+    that have no prompt-trigger), then the triggers.json regex fallback."""
+    exact = CLASS_SKILL.get((cls or "").strip().lower())
+    if exact:
+        return exact
     for pat, skill in triggers.items():
         try:
             if re.search(pat, cls, re.I):
@@ -291,9 +351,22 @@ def _skill_for_class(cls, triggers):
     return ""
 
 
+# Classes whose real tool is a hand-crafted HTTP request (curl / Burp Repeater) + two accounts, NOT a
+# scanner. Giving these rows tool=curl makes the operator's curl probes ON-BOARD (drift-guard adds
+# open-row tools to its whitelist), fixing the road false-block where an ATO/session vector run with
+# curl was hard-denied because the row's tool was a scanner. Complements CLASS_SKILL (T1.2/T1.3).
+_MANUAL_CLASSES = {
+    "auth", "authentication", "session", "session-mgmt", "session-management", "login", "logout",
+    "ato", "account-takeover", "csrf", "cookie", "password-reset", "mfa", "jwt", "access-control",
+    "authz", "bizlogic", "business-logic", "race",
+}
+
+
 def _tool_for_class(cls, cfg):
     """phase_default_tools fallback when the fingerprint names no tool."""
     pdt = cfg.get("phase_default_tools", {})
+    if (cls or "").strip().lower() in _MANUAL_CLASSES:
+        return "curl"
     if cls in ("sqli", "idor", "graphql", "nosql"):
         return (pdt.get("param-endpoint") or ["sqlmap"])[0]
     # Known-CVE / RCE exploitation: prefer a vetted Metasploit module (msfconsole -q -x 'search ...;
@@ -690,10 +763,23 @@ def cmd_init(a):
     # target_severity may legitimately be blank only if the programme has no tiers; still require key
     if "target_severity" in missing and "target_severity" in fm:
         missing.remove("target_severity")
-    if not _in_scope_nonempty(d):
-        missing.append("(## In scope block is empty)")
+    # T1.1: a ctf box is a lab - auto-heal a missing/clobbered envelope with permissive defaults
+    # instead of dying, so a fresh or overwritten scope.md never blocks the board. pt/bb encode real
+    # RoE that must be operator-set (assuming permissive autonomy/write on a client is unsafe), so
+    # those still hard-fail with the actionable message below.
+    if missing and t == "ctf":
+        healed = _heal_scope_envelope(d, missing, CTF_ENVELOPE_DEFAULTS)
+        if healed:
+            _warn("scope.md envelope auto-healed with permissive CTF lab defaults: %s (edit scope.md "
+                  "to tighten)." % ", ".join(healed))
+            missing = [k for k in missing if k not in healed]
     if missing:
-        _die("scope.md is missing required envelope keys: " + ", ".join(missing))
+        _die("scope.md is missing required envelope keys: " + ", ".join(missing)
+             + (". For a ctf run `campaign.py init --type ctf` to auto-heal them; for pt/bb set them "
+                "explicitly (see setup/templates/_scope.md - they encode RoE)." if t != "ctf" else ""))
+    if not _in_scope_nonempty(d):
+        _die("scope.md '## In scope' block is empty - add the target host/IP before init (the "
+             "envelope can auto-heal for ctf, but the target cannot be invented).")
     # RESUME, don't clobber: init is also the "validate + repair on re-open" entry point, so an
     # existing in-progress campaign keeps its pass/cursor/lenses/paused state. Only the type is
     # reconciled (it was just repaired above). A fresh engagement gets a fresh state.
@@ -1476,15 +1562,28 @@ def cmd_done(a):
         if a.kind == "web" and cls not in set(_load_cfg().get("visual_evidence_classes", [])):
             _die("a 'web' render is not evidence for class '%s' - it is indistinguishable from any "
                  "visitor's screenshot. Use capture.sh req [G3]" % cls)
-    # G2: the mapped skill must have fired
-    fired, oracle = _skill_fired_since(d, row.get("skill"),
-                                       st.get("row_created", {}).get(a.row, st.get("started_at")))
-    if row.get("skill") and not fired:
+    # G2: the mapped skill must have fired. T1.4: `--skill <name>` lets a CORRECTLY-fired hunt skill
+    # satisfy G2 when the board mapped the wrong class->skill (road: a `session` row mapped to hunt-xss
+    # but hunt-auth was the right, fired skill). The override must itself have actually fired - it is
+    # not a bypass, just a correction of the board's guess; the corrected skill is written back to the
+    # row so the board reflects what really happened.
+    since = st.get("row_created", {}).get(a.row, st.get("started_at"))
+    g2_skill = (a.skill or "").strip() or row.get("skill")
+    fired, oracle = _skill_fired_since(d, g2_skill, since)
+    if g2_skill and not fired:
         if oracle:
-            _die("cannot close %s: Skill(%s) never fired since the row was created "
-                 "[G2 skill-first]" % (a.row, row.get("skill")))
+            hint = (" [G2 skill-first]" if not a.skill else
+                    " - Skill(%s) has no event since the row opened either [G2 skill-first]" % g2_skill)
+            base = ("cannot close %s: Skill(%s) never fired since the row was created" %
+                    (a.row, g2_skill))
+            tail = ("" if a.skill else
+                    ". If you exploited it via a different (correctly-fired) skill, pass "
+                    "`--skill <that-skill>`.")
+            _die(base + hint + tail)
         _warn("G2: .events.jsonl absent, cannot verify Skill(%s) fired - allowing (fail-open)"
-              % row.get("skill"))
+              % g2_skill)
+    if a.skill and fired and a.skill.strip() != (row.get("skill") or ""):
+        row["skill"] = a.skill.strip()   # correct the board to the skill that actually landed
 
     # G8 (Task 15): the mapped tool SHOULD have run. Warn, never refuse - a tool can be
     # genuinely unavailable (not installed, missing wordlist, barred by scope/RoE). A refusal
@@ -1768,6 +1867,7 @@ def main(argv):
     p = sub.add_parser("done")
     p.add_argument("row"); p.add_argument("--poc"); p.add_argument("--kind", choices=["req", "burp", "web"])
     p.add_argument("--find"); p.add_argument("--dead"); p.add_argument("--park")
+    p.add_argument("--skill", help="the hunt skill that ACTUALLY landed this row - satisfies G2 when the board mapped the wrong class->skill (the override must itself have fired)")
     p.add_argument("--win", help="tmux window the foothold session landed in -> record it (post-ex routes through vm-rsh --win)")
     p.set_defaults(fn=cmd_done)
     p = sub.add_parser("foothold"); p.add_argument("asset", nargs="?"); p.add_argument("--win", required=True)

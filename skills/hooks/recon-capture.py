@@ -629,6 +629,52 @@ def _readwhole_nudge(d, cmd, eng):
             "[[linux-privesc#pam_ssh_agent_auth]]." % path)
 
 
+# T3.2 privesc-tool-first reflex: launching a MANUAL privesc-enum (find -perm SUID / cron / getcap)
+# post-foothold with no linpeas/pspy launched yet is a 4x-recurring drift (the operator had to
+# interrupt manually on a CentOS box). Advisory, once per engagement, and SUPPRESSED once the real
+# tools were seen - so it only fires on the actual "hand-rolling instead of the tool" case (low
+# false-fire, which is the whole reason it's safe to ship as a reflex).
+_PRIVESC_TOOL_RE = re.compile(
+    r"\b(linpeas|winpeas|pspy\d*|lse\.sh|linux-exploit-suggester|linenum|les\.sh)\b", re.I)
+_MANUAL_PRIVESC_RE = re.compile(
+    r"-perm\s*-?0*[24]?[0-7]{3}\b|find\s+/\S*\s+.*-perm|/etc/cron|\bcrontab\s+-l|\bgetcap\s+-r", re.I)
+
+
+def _privesc_toolfirst_nudge(d, cmd, eng):
+    """Post-foothold: a manual SUID/cron/getcap enum before linpeas+pspy have run -> nudge ONCE to run
+    the tools first and read them whole. Records a linpeas/pspy launch (suppresses the nudge). Fail-open."""
+    if _PRIVESC_TOOL_RE.search(cmd):
+        try:
+            open(os.path.join(d, ".privesc-tool-launched"), "a").close()
+        except Exception:
+            pass
+        return None
+    if not _MANUAL_PRIVESC_RE.search(cmd):
+        return None
+    footh = False
+    try:
+        for r in eng._parse_table(os.path.join(d, "state.md")):
+            if any(k in (r.get("access") or "").lower() for k in ("foothold", "shell", "user", "root")):
+                footh = True
+                break
+    except Exception:
+        pass
+    if not footh:
+        return None
+    if os.path.exists(os.path.join(d, ".privesc-tool-launched")):
+        return None                                   # tools already used - no nudge
+    seen = os.path.join(d, ".privesc-toolfirst-nudged")
+    if os.path.exists(seen):
+        return None                                   # once per engagement
+    try:
+        open(seen, "a").close()
+    except Exception:
+        pass
+    return ("PRIVESC TOOL-FIRST: manual SUID/cron/getcap enum, but linpeas+pspy have not run yet. "
+            "Launch BOTH first (a pspy window + linpeas) and READ them whole - they surface privesc "
+            "vectors a hand-rolled `find`/`cron` scan misses. See [[linux-privesc]], [[pspy]], [[linpeas]].")
+
+
 def main():
     raw = sys.stdin.read()
     try:
@@ -922,6 +968,13 @@ def main():
             _rw = _readwhole_nudge(d, cmd, _engagement)
             if _rw:
                 blocks.append(_rw)
+        except Exception:
+            pass
+        # T3.2 privesc-tool-first (post-foothold, advisory, once, tool-suppressed)
+        try:
+            _pt = _privesc_toolfirst_nudge(d, cmd, _engagement)
+            if _pt:
+                blocks.append(_pt)
         except Exception:
             pass
 

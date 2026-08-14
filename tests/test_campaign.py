@@ -64,6 +64,41 @@ def test_init_empty_inscope_exits_2(eng):
     assert "In scope" in r.stderr
 
 
+def _make_ctf(eng):
+    """Convert the bb fixture to a ctf engagement in place (state.md engagement_type)."""
+    sp = os.path.join(eng, "state.md")
+    txt = open(sp).read().replace("engagement_type: bugbounty", "engagement_type: ctf")
+    open(sp, "w").write(txt)
+
+
+def test_init_ctf_autoheals_missing_envelope(eng):
+    """T1.1: a ctf box auto-heals missing/blank envelope keys instead of dying (the friction that
+    made the agent skip the board). pt/bb keep hard-failing (test above)."""
+    _make_ctf(eng)
+    p = os.path.join(eng, "scope.md")
+    txt = (open(p).read().replace("enum_cap: 5\n", "").replace("write_policy: none\n", "")
+           .replace("rate_per_host: 2\n", ""))
+    open(p, "w").write(txt)
+    r = _init(eng, t="ctf")
+    assert r.returncode == 0, r.stderr
+    healed = open(p).read()
+    assert re.search(r"^enum_cap:\s*50\s*$", healed, re.M)
+    assert re.search(r"^write_policy:\s*full\s*$", healed, re.M)
+    assert re.search(r"^rate_per_host:\s*50\s*$", healed, re.M)
+    assert "auto-healed" in r.stderr
+
+
+def test_init_ctf_autoheal_no_dup_on_blank_key(eng):
+    """A present-but-blank envelope key is replaced in place, not duplicated."""
+    _make_ctf(eng)
+    p = os.path.join(eng, "scope.md")
+    blanked = open(p).read().replace("enum_cap: 5", "enum_cap:")
+    open(p, "w").write(blanked)
+    r = _init(eng, t="ctf")
+    assert r.returncode == 0, r.stderr
+    assert len(re.findall(r"^enum_cap:", open(p).read(), re.M)) == 1
+
+
 # --------------------------------------------------------------------------- Task 9 board
 
 def test_board_generates_rows_with_skill(eng):
@@ -164,6 +199,78 @@ def _write_arsenal(eng, slug):
     os.makedirs(os.path.join(eng, "arsenal"), exist_ok=True)
     open(os.path.join(eng, "arsenal", slug + ".md"), "w").write(
         "## Techniques\nt\n## Payloads\np\n## Tools\ntool\n## Cheatsheets\nc\n")
+
+
+def test_class_skill_map_auth_tokens():
+    """T1.2: access/auth class tokens map to the right hunt skill instead of falling through to an
+    unrelated playbook skills[0] (the road session->hunt-xss mis-map)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("campaign", CAMPAIGN)
+    c = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(c)
+    trig = {}
+    assert c._skill_for_class("session", trig) == "hunt-auth"
+    assert c._skill_for_class("account-takeover", trig) == "hunt-auth"
+    assert c._skill_for_class("access-control", trig) == "hunt-idor"
+    assert c._skill_for_class("business-logic", trig) == "hunt-bizlogic"
+    # a real vuln-type token still resolves via the triggers.json fallback
+    trig2 = {r"\bsqli\b|sql injection": "hunt-sqli"}
+    assert c._skill_for_class("sqli", trig2) == "hunt-sqli"
+
+
+def test_tool_for_class_manual_classes_get_curl():
+    """T1.3: manual request-crafting classes default to curl (on-board for the drift-guard), not a
+    scanner - so a curl ATO/session probe is not hard-blocked. sqli/rce keep their real tools."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("campaign", CAMPAIGN)
+    c = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(c)
+    cfg = {}
+    assert c._tool_for_class("session", cfg) == "curl"
+    assert c._tool_for_class("account-takeover", cfg) == "curl"
+    assert c._tool_for_class("business-logic", cfg) == "curl"
+    assert c._tool_for_class("sqli", cfg) == "sqlmap"          # unchanged
+    assert c._tool_for_class("rce", cfg) == "msfconsole"       # unchanged
+
+
+def test_done_skill_override_satisfies_g2(eng):
+    """T1.4: --skill lets a correctly-fired hunt skill close a row the board mapped to another skill,
+    and writes the corrected skill back to the board."""
+    _init(eng)
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    target = next(r for r in rows if r.get("skill") and r["skill"] != "hunt-auth")
+    # fire a DIFFERENT skill than the board mapped
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": "hunt-auth"}) + "\n")
+    _write_arsenal(eng, "ov")
+    run(eng, "note", target["id"], "--arsenal", "ov", expect=0)
+    run(eng, "done", target["id"], "--skill", "hunt-auth", "--poc", "poc/x.png", "--kind", "req",
+        expect=0)
+    rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
+    closed = next(r for r in rows2 if r["id"] == target["id"])
+    assert closed["status"] == "[x]"
+    assert closed["skill"] == "hunt-auth"   # board corrected to the skill that landed
+
+
+def test_done_g2_message_points_at_skill_override(eng):
+    """When the mapped skill never fired, the G2 refusal advertises the --skill escape hatch."""
+    _init(eng)
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    target = next(r for r in rows if r.get("skill"))
+    open(os.path.join(eng, ".events.jsonl"), "a").write(
+        json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool", "tool": "Bash"}) + "\n")
+    _write_arsenal(eng, "ov2")
+    run(eng, "note", target["id"], "--arsenal", "ov2", expect=0)
+    r = run(eng, "done", target["id"], "--poc", "poc/x.png", "--kind", "req")
+    assert r.returncode == 2
+    assert "--skill" in r.stderr and "G2" in r.stderr
 
 
 def test_done_without_evidence_refused(eng):
