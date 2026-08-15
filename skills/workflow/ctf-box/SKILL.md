@@ -40,6 +40,8 @@ Tooling-first: rustscan/nmap/feroxbuster/ffuf/nuclei/nxc, never a hand-rolled `/
 
 **`vm.sh` drops long foreground commands (exit 255, no output) past ~2 min.** Run scans/cracks/sprays DETACHED (a tmux tab via `vm-scan.sh`, or `nohup <cmd> >/tmp/out 2>&1 &` + poll for a DONE marker), never blocking one `vm.sh` call. Stdin is not forwarded through `vm.sh`; push files via base64 (`echo <b64> | base64 -d > ~/file`), write+run in one call.
 
+**Never `pkill -f <pattern>` with a pattern that also matches your OWN driver/ssh command** - it kills your own tooling (a pattern on the target IP can match the ssh session carrying it).
+
 ```bash
 T=<ip>
 rustscan -a $T --ulimit 5000 -g                        # fast full-port sweep -> open-port CSV
@@ -63,6 +65,8 @@ wpscan -u http://$T                              # if WordPress
 ```
 
 **Missing `-w` wordlist = ffuf prints help text and silently finds NOTHING** (a false "no hidden endpoints"). Preflight every fuzz (`ls "$W" || W=/usr/share/wordlists/dirb/big.txt`); seclists may be absent on the VM, push harness lists over via base64 first.
+
+**Slow vs worker-starved, don't conflate them.** Fast HTTP 000 under concurrency (ffuf/sqlmap/parallel scans) = the box is WORKER-STARVED: back off to serial, one request per call, drop fuzzers, let it drain. A request that just never returns = the box is SLOW, not dead: raise the timeout to 120s+ and be patient (a heavy CMS/backend page can take 60-90s). Tell: nmap shows "filtered" but a single `nc`/`curl` connection succeeds = it drops fast-scan probes, switch to gentle serial mode rather than declaring it dead.
 
 **On any TLS host, dump the cert SANs early**; a hidden vhost that decoy services and ffuf/feroxbuster never surface can be listed only in the Subject Alternative Name, see [[cdn-waf-bypass]].
 
@@ -177,6 +181,8 @@ Then walk the manual checklist (do not skip any; the box's intended path is usua
 | Kernel/pkg CVE | `uname -r`; pkg versions (pkexec/polkit, sudo, dbus) | **LAST resort** - check the patch level first ([[linux-privesc]]) |
 
 Box-specific chains now live in wiki (see the technique pages linked per class in `approach-notes.json` REFS).
+
+**Don't assume the flag path** (e.g. `/root/root.txt`); once you have exec, `find` it - the root flag can live at a non-standard path.
 
 ## Capture (engagement discipline)
 

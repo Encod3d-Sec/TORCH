@@ -78,9 +78,18 @@ tool-first. Privesc always includes pspy + linpeas/winpeas - the board seeds the
 an asset is recorded as a foothold (re-run `board` after `foothold`/`done --win` to seed them).
 
 Once a foothold and a working escalation vector are identified, delegating the exploit compile +
-escalation run to a Haiku 4.5 sub-agent with a precise copy-paste checklist works well - keep the
-main agent driving the board. The checklist MUST include a false-root guardrail: verify `hostname`
-matches the target, not the attack box, before trusting a returned `uid=0`.
+escalation run to a sub-agent with a precise copy-paste checklist works well - keep the
+main agent driving the board. A delegation is only as good as its checklist; REQUIRED elements:
+(a) the confirmed access/primitive spelled out, (b) exact copy-paste commands, (c) a
+false-root/false-RCE guardrail - verify `hostname` matches the target AND the expected uid before
+trusting a returned `uid=0`/shell, since the Kali VM runs as root and `$(...)`/backticks substitute
+LOCALLY, (d) the slow/fragile-target request discipline (serial, long timeouts) if the box needs it.
+Model heuristic: Sonnet for judgement-heavy multi-step exploitation, Haiku 4.5 for mechanical,
+fully-specified steps (decrypt a credential store, compile-and-run a known exploit).
+
+Prefer a clean post-ex command channel over driving `msf sessions -c` (delayed output, quoting
+pain): a webshell writing enum output to a web-served file then `curl` it, or a single-tool
+read/decrypt done locally on already-exfiltrated data.
 
 ## Autonomy
 

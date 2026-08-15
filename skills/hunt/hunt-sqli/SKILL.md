@@ -66,7 +66,9 @@ test the SQLi on a different page that does.
    data. This class is rare and under-tested, so it is easy to walk past - always try it before
    concluding a parameterized login is safe. See the PROCESSLIST section below.
 7. NoSQL (MongoDB): replace value with `{"$gt": ""}` or `param[$ne]=invalid`.
-8. Automate with sqlmap on a confirmed candidate (won't find second-order or PROCESSLIST timing):
+8. **Tool-first for the dump, always.** Confirm manually in 1-2 requests only (e.g. an arithmetic
+   tell: `id=2-1` evaluates to row 1 = injection proven) - the NEXT step is sqlmap, never a
+   hand-rolled `group_concat`/`LIMIT` paging loop to extract the data yourself:
 ```bash
 # ONE confirming curl (baseline vs injected); then hand off to sqlmap, don't hand-loop probes
 curl -o /dev/null -s -w "%{time_total}\n" "https://target.com/search?q=test' AND SLEEP(5)-- -"
@@ -75,6 +77,11 @@ curl -o /dev/null -s -w "%{time_total}\n" "https://target.com/search?q=test' AND
 sqlmap -u "https://target.com/search?q=test" --level=3 --risk=2 --batch --dbs
 ```
 Keep exactly ONE manual curl in the writeup as the confirming PoC; sqlmap owns enumeration.
+
+**Rate-sensitive / fragile / worker-starving target -> sqlmap's detection burst trips HTTP 000.**
+Run it gentle: `--delay 2 --timeout 40`. Since injection was already manually confirmed, let sqlmap
+**resume from its own session** (same output dir/target) instead of restarting - it skips
+re-detection and goes straight to a fast UNION dump rather than re-probing the whole boundary.
 **Scope sqlmap to PROVING the vuln, not mass-exfiltrating records.** An automated table dump is
 data extraction and falls under the hunt-core enumeration limits: confirm + fingerprint + a
 bounded sample (`--dump` with `--start 1 --stop 5`), never `--dump-all`. Sample of 5, ceiling 20
@@ -123,6 +130,9 @@ Once you have a working injection, escalate along these edges (keep extraction s
   Hand off to `hunt-rce` once you have command execution.
 - **Credential reuse** - hashes/plaintext pulled from the DB (see PROCESSLIST below) are frequently
   reused for SSH, not the web login. Crack, then pivot; hand off to `hunt-auth` for the ATO.
+- **Dumped table -> targeted crack wordlist.** A dumped user/credential table (even a different
+  app's plaintext passwords) is a high-value CUSTOM wordlist for cracking a related hash elsewhere
+  (e.g. a CMS admin hash) - beats rockyou. See [[password-attacks]].
 
 ## Evasion
 
