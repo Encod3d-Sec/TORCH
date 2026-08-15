@@ -1907,3 +1907,33 @@ expected and harmless).
   (ownership preserved), or use the `-engine` route above to avoid touching system files.
 
 <!-- promoted-slug: openssl-caps-engine-root -->
+
+### Attaching to a root-owned screen/tmux session
+
+Distinct from the GTFOBins `screen`/`tmux` SUID-shell trick: here a **detached multiplexer session
+already runs as root**, and you are allowed to attach to it. Common when a service is launched inside
+`screen -DmS <name> <daemon>` from a root init/cron, and `sudo -l` grants exactly that reattach:
+
+```
+sudo -l
+#   (root) /usr/bin/screen -r <name>      # or the session is world-attachable
+```
+
+Attach it, then open a NEW window inside the multiplexer - that shell inherits the multiplexer's uid
+(root), even though the visible window is the daemon's console:
+
+```
+sudo /usr/bin/screen -r <name>     # attaches to the root session (shows the daemon console)
+# then, inside screen:  Ctrl-A  then  c   -> new window = root shell
+id      # uid=0
+```
+
+- tmux equivalent: attach the root socket (`tmux -S <sock> attach`) then `Ctrl-B c`.
+- Escape-key gotcha: screen's default command key is `Ctrl-A`; if you are driving the session THROUGH
+  another multiplexer (tmux over ssh over tmux), the outer prefix can swallow it - send the raw `0x01`
+  byte, or attach from a plain terminal. Confirm you are in command mode with `Ctrl-A ?` (help overlay).
+- Confirm `hostname` is the TARGET before trusting the `uid=0` (a dropped shell returns you to the
+  attack box's own root prompt - the false-root trap).
+- Find candidate sessions: `ls -la /run/screen/S-root` (or `/var/run/screen/`), `ps -eo user,cmd | grep -i screen`.
+
+<!-- promoted-slug: screen-root-session-attach -->

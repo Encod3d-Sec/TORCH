@@ -459,3 +459,21 @@ password is frequently reused as the user's OS/account password -> a lateral/pri
   (a common NSS/lib mismatch). No master password -> decrypts directly; if set, feed it a wordlist.
 
 <!-- promoted-slug: firefox-saved-creds-firepwd -->
+
+### Triage before you grind: read app logs/config for the plaintext
+
+A hash that resists rockyou + best64 + dive + jumbo is a signal to STOP cracking and look nearby, not
+to escalate to bigger rule sets. An app that stores *hashed* credentials in one file (`passwords.yml`,
+a DB `users` table) very often logs the **plaintext** elsewhere - its own debug/login `log.txt`, a
+verbose service log, a config with a `password:` field, shell history, or a backup. Enumerate the
+app's whole data dir (every `*.yml`/`*.conf`/`*.log`/`log.txt`) before committing to a long crack:
+
+```
+grep -rniE 'pass|pwd|secret|logged in|registered' <app_dir> 2>/dev/null
+```
+
+Recovered app plaintext is frequently **reused for the OS user** (su/ssh), not just the app login.
+If the plaintext genuinely is not on-box, only then crack - and feed a target-themed `cewl`/mask
+first, since a resistant hash is usually a non-dictionary phrase.
+
+<!-- promoted-slug: read-app-logs-before-cracking -->

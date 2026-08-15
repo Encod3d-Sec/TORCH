@@ -897,13 +897,15 @@ def main():
                     open(seenr, "a").close()
                     blocks.append(
                         "RCE / code-exec confirmed (`id` shows a service account). If this came "
-                        "from a web RCE or an unstabilized `nc` shell, STOP hand-poking one-liners: "
-                        "(1) pop a reverse shell into tmux -- bash scripts/vm-scan.sh --win shell "
-                        "<eng> <target> 'nc -lvnp <port>', then fire the shell via the RCE; "
-                        "(2) STABILIZE it at once -- bash scripts/vm-stabilize.sh --win shell <eng> "
-                        "(pty + job control + window size), or prefer pwncat-cs / an msf "
-                        "multi-handler over a raw nc; (3) drive it with bash scripts/vm-rsh.sh "
-                        "--win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3 (Deliver).")
+                        "from a web RCE or an unstabilized `nc` shell, STOP hand-poking one-liners. "
+                        "(1) PREFER msfconsole `exploit/multi/handler` -> meterpreter (or pwncat-cs) "
+                        "FIRST -- it carries session management + `local_exploit_suggester`; egress-test "
+                        "the LPORT (80/443/53) and deliver a tiny ELF inline via base64 if HTTP download "
+                        "is filtered. Raw `nc -lvnp <port>` (bash scripts/vm-scan.sh --win shell <eng> "
+                        "<target> ...) is the FALLBACK only when msf/pwncat are unavailable -- a raw nc "
+                        "shell freezes on Ctrl-C and has no job control. (2) If you did fall back to nc, "
+                        "STABILIZE at once -- bash scripts/vm-stabilize.sh --win shell <eng>. (3) drive it "
+                        "with bash scripts/vm-rsh.sh --win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3.")
         except Exception:
             pass
 
