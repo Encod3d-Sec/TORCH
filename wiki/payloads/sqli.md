@@ -94,3 +94,26 @@ recon1' AND 1=2-- -                       # -> 200 fail    = FALSE
 sqlmap FAILS here (hex-encodes data as `0x` -> blocked; follows the 302). Hand-roll a boolean
 extractor with `ASCII(SUBSTRING((subq),i,1))>N` and **clear the session cookie each probe** (a
 login oracle otherwise stays authenticated -> always true). Full extractor: [[sql-injection]].
+
+## Anti-automation (request-rate) WAF vs the keyword filter
+
+Distinct from the keyword blacklist above: some apps add a REQUEST-FREQUENCY limiter (e.g. ban
+after ~10 requests in a short window for 60s, often with a "Try SqlMap.. I dare you" taunt). This
+defeats sqlmap by BURST RATE, not by payload content: sqlmap's detection phase trips the ban, and
+every response after that measures the ban, not the app (easily misread as "server load / worker
+starvation"). Injection is provable by hand, so on this signal do NOT run sqlmap or any parallel
+scanner: extract ONE serial request at a time.
+
+- **Test the NUMERIC boolean context first:** `id=1 AND 1=1` (row shows) vs `id=1 AND 1=2` (row
+  gone) settles the query shape before you burn turns theorizing quote / `LIKE '%..%'` breakouts.
+  A lone `'` that only errors can be the WAF/troll page, not the real query structure.
+- **Blocked column NAME** (e.g. `username` on the blacklist -> you cannot `SELECT username`):
+  reference blocked table/column names via hex literals for schema
+  (`... WHERE table_name=0x7573657273`), and for data just dump the columns that AREN'T blocked
+  (the password column alone is usually enough to log in).
+- **Reflect through a rendered column:** find which column the page prints with
+  `UNION SELECT 1,2,3,4,5` (watch which number appears), then place the payload there and use
+  `group_concat(col,0x3a,col2 SEPARATOR 0x7c)` for multi-row/col dumps. Bypass a `'`/`#`/`-` char
+  blacklist with functions + hex only (no quotes, no comments).
+
+<!-- promoted-slug: sqli-request-rate-limiter -->

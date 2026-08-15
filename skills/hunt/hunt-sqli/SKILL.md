@@ -54,7 +54,10 @@ test the SQLi on a different page that does.
 2. Baseline the response (length, status, time).
 3. Error probes in **every quote context** - `'` `"` `` ` `` `')` `"))` and numeric/no-quote.
    A `'` doing nothing does NOT mean safe: the sink may be double-quoted (`WHERE x="$v"`). Watch
-   for a reflected DB error or any length change.
+   for a reflected DB error or any length change. **On a numeric-looking id param, test the
+   NUMERIC context FIRST** with a boolean pair - `id=1 AND 1=1` (row shows) vs `id=1 AND 1=2` (row
+   gone). That one request pair settles the context before you burn turns theorizing quote/`LIKE`
+   breakouts; a `'` that only errors can be a WAF/troll page, not the real query shape.
 4. In-band first: error-based (`extractvalue`/`updatexml`) and UNION (`ORDER BY` for col count,
    then `UNION SELECT`). Mind display truncation when sizing extracted chunks.
 5. Only then blind: boolean (`AND 1=1` vs `AND 1=2`) then time (`SLEEP(5)`/`pg_sleep(5)`/`WAITFOR`).
@@ -77,6 +80,15 @@ curl -o /dev/null -s -w "%{time_total}\n" "https://target.com/search?q=test' AND
 sqlmap -u "https://target.com/search?q=test" --level=3 --risk=2 --batch --dbs
 ```
 Keep exactly ONE manual curl in the writeup as the confirming PoC; sqlmap owns enumeration.
+
+**Anti-automation signal -> do NOT run sqlmap at all (stay manual + serial).** A taunt string
+("try sqlmap", "I dare you"), a request-rate-limiter / lockout, a char-blacklist WAF, or
+intermittent empty/ban responses after a burst = the box is BUILT to defeat sqlmap. Its detection
+burst just trips the limiter, and every response after that measures the ban, not the app (easily
+misread as "server load / worker starvation"). Injection is already manually confirmed, so sqlmap
+adds nothing here: extract by hand, ONE serial request at a time. Bypass the char blacklist with
+functions + hex literals (`database()`, `0x7573657273` for a blocked table/column name) instead of
+quotes/comments, and put the data in a column that reflects.
 
 **Rate-sensitive / fragile / worker-starving target -> sqlmap's detection burst trips HTTP 000.**
 Run it gentle: `--delay 2 --timeout 40`. Since injection was already manually confirmed, let sqlmap
