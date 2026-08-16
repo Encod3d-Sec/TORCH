@@ -19,6 +19,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -202,11 +203,34 @@ def _active_name():
     return None
 
 
+def judgement_filled(eval_text):
+    """True when eval.md's human JUDGEMENT half is filled, not just the auto block + template stubs.
+    The auto block (`--write`) is machine-written; the judgement half (Drift moments / What went
+    right / Score) is the part only the agent can write, and `Skill(learn)` has self-cleared with it
+    left blank. The tell: the 'one thing to change next box:' line carries real content after its
+    colon (the required takeaway), OR a non-stub Drift-moments bullet exists."""
+    if not eval_text:
+        return False
+    post = eval_text.split(AUTO_END, 1)[-1] if AUTO_END in eval_text else eval_text
+    if re.search(r"one thing to change next box:\s*\S", post):
+        return True
+    # fallback: a real Drift-moments bullet (a "- " line with >10 chars of content, not the "-" stub)
+    m = re.search(r"##\s*Drift moments.*?\n(.*?)(?:\n##\s|\Z)", post, re.S | re.I)
+    if m:
+        for line in m.group(1).splitlines():
+            s = line.strip()
+            if s.startswith("-") and len(s.lstrip("- ").strip()) > 10 and not s.startswith("<!--"):
+                return True
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("engagement", nargs="?")
     ap.add_argument("--write", action="store_true", help="inject a Metrics (auto) block into eval.md")
     ap.add_argument("--transcript", help="add a transcript path not yet in .metrics.json")
+    ap.add_argument("--check-judgement", action="store_true",
+                    help="exit 1 if eval.md's judgement half (Drift moments / Score) is unfilled")
     a = ap.parse_args()
     name = a.engagement or _active_name()
     if not name:
@@ -216,6 +240,16 @@ def main():
     if not os.path.isdir(d):
         print("eval_metrics: no such engagement dir: %s" % d)
         return 2
+    if a.check_judgement:
+        ep = os.path.join(d, "eval.md")
+        txt = open(ep, encoding="utf-8").read() if os.path.isfile(ep) else ""
+        if judgement_filled(txt):
+            print("eval judgement half: filled")
+            return 0
+        print("eval_metrics: eval.md JUDGEMENT half is unfilled (Drift moments / What went right / "
+              "Score / 'one thing to change next box'). Fill it before `touch .learn-done` "
+              "(Skill(learn) Phase 0d/7) -- learn must not self-clear with it blank.")
+        return 1
     c = collect(d, a.transcript)
     block = render(name, c)
     if a.write:

@@ -209,6 +209,10 @@ already saturated for this box).
 python3 scripts/lint-wiki.py -q        # must be clean (broken links, stale index)
 # only if a NEW page was created:
 python3 scripts/gen_index.py && python3 scripts/build_moc.py && qmd update
+# GATE: do NOT self-clear with eval.md's judgement half blank (Phase 0d). This exits 1 and
+# refuses the marker until Drift moments / What went right / Score are filled -- learn self-cleared
+# with the human half empty on a real box, so this is enforced, not advisory.
+python3 scripts/eval_metrics.py $ENG --check-judgement || { echo "fill eval.md judgement half first"; exit 1; }
 touch targets/$ENG/.learn-done         # marks this engagement's learn pass done
 ```
 Log one GENERIC line to `session/log.md` (e.g. "learn: promoted 3 -> jwt-attacks,
