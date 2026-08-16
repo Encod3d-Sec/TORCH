@@ -1050,7 +1050,8 @@ def main():
                         "(2) vhost by redirect-LOCATION -- ffuf -mc all then diff the redirectlocations "
                         "(a real vhost 302s ELSEWHERE; -fc 302 / -ac hides it); (3) another port or "
                         "the second vhost's OWN app; (4) source-read (LFI/.git/backup) before brute. "
-                        "Or run `python3 scripts/campaign.py board` and work it depth-first." % n)
+                        "Or run `python3 scripts/campaign.py board` and work it depth-first, or call "
+                        "`Skill(redteamlead)` for wiki-grounded ranked directions when you are stuck." % n)
         except Exception:
             pass
 
@@ -1073,7 +1074,10 @@ def main():
                         "vector that DoSes a lab box is almost never the intended one. Reconsider the "
                         "VECTOR, do not tune the tooling: source-read (LFI / alias-traversal / .git / "
                         "backup), a second service or vhost's own app, or OOB creds. "
-                        "`python3 scripts/campaign.py board` and work an untested class depth-first.")
+                        "`python3 scripts/campaign.py board` and work an untested class depth-first -- "
+                        "and when the next door is not obvious, call `Skill(redteamlead)` for "
+                        "wiki-grounded ranked directions with an explicit STOP (that is what it is FOR: "
+                        "stuck / which vector / should I keep hammering this).")
             # (b) >=2 cracking misses in one engagement -> passwords are out-of-band
             if _output_uncracked(blob_out):
                 cf = os.path.join(d, ".crack-miss-count")
@@ -1093,7 +1097,8 @@ def main():
                         "live out-of-band (an email/note/KeePass, a config, a second service). Stop "
                         "cracking and re-enumerate: read the app's other surfaces (LFI/source, mail, "
                         "another vhost) for where the real creds are handed out. See Skill(hunt-core) "
-                        "Stop conditions." % (n, n))
+                        "Stop conditions -- or call `Skill(redteamlead)` for ranked directions if the "
+                        "next move is not obvious." % (n, n))
         except Exception:
             pass
 

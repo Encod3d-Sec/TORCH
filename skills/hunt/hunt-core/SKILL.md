@@ -132,6 +132,11 @@ current vector is the wrong door, not that your tooling needs another pass:
   around a hostile channel - per-char verify-fix, min-of-2 sampling, gentler pacing - is the tell you
   are on the wrong vector, not a reason to keep going.)
 
+When a wrong-vector tell fires and the next door is not obvious, **call `Skill(redteamlead)`** before
+grinding further - it reads the engagement state + evidence + wiki and returns ranked directions with
+an explicit STOP. That is exactly what it is for ("I'm stuck / which vector / should I keep hammering
+this"); one RTL call at the first sign a vector is fighting back beats hours of sunk-cost grind.
+
 ## Marker discipline
 
 Any class where you inject a value and look for it later (xss, ssti, sqli error strings, crlf, log
