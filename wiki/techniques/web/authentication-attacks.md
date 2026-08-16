@@ -514,3 +514,27 @@ length cut to smuggle a trusted domain suffix; this abuses the same truncation t
 duplicate of a *privileged username*.
 
 <!-- promoted-slug: sql-truncation-dup-account -->
+
+## <Heading>
+
+<generic technique steps; no client host/IP/domain>
+
+## Webmail backed by dovecot PAM = system-account login
+
+Roundcube/SOGo/Horde authenticate against the mail backend, so valid logins depend on the mail
+server's passdb. If `/etc/dovecot/conf.d/10-auth.conf` includes only `auth-system.conf.ext`
+(`passdb { driver = pam }`), the webmail authenticates **system accounts**:
+
+- Virtual defaults like `admin/admin` **cannot** work unless that user exists in `/etc/passwd`.
+  Stop guessing webmail-only defaults; enumerate real usernames from `/etc/passwd` (mail users = login users).
+- Any mail credential you find **is** the user's system/SSH password (reuse in both directions).
+  Conversely a webmail login often also gets you SSH.
+- Confirm the backend before spraying: read `/etc/dovecot/conf.d/10-auth.conf` (an LFI/file-read is
+  enough) — `driver = pam` = system users; `driver = passwd-file` (e.g. `/etc/dovecot/users`) or
+  `driver = sql` = virtual users where webmail-only defaults are plausible.
+
+Read a Roundcube inbox with just `curl` (no browser): GET `/` to grab the `_token` + `roundcube_sessid`
+cookie, POST `/?_task=login` with `_token,_user,_pass,_action=login`, then
+`/?_task=mail&_action=viewsource&_uid=<n>&_mbox=INBOX` (and `_mbox=Sent`) dumps raw message source.
+
+<!-- promoted-slug: webmail-dovecot-pam-login -->
