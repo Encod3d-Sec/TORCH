@@ -118,6 +118,20 @@ Stop and report rather than continuing when:
 
 Stopping is not failure. "Confirmed and did not exploit" is worth more than a forfeited payout.
 
+**Wrong-vector tells (switch the vector, do not tune the tooling).** A vector is exhausted the
+moment it starts fighting you; grinding harder is the sunk-cost trap. Two mechanical signals mean the
+current vector is the wrong door, not that your tooling needs another pass:
+
+- **The target starves under your own exploit loop** (repeated `000` / connection-timeout /
+  empty-reply while you hammer one endpoint). A vector that DoSes a lab box is almost never the
+  intended one. Stop, let it drain, and enumerate a DIFFERENT class (source-read: LFI /
+  alias-traversal / `.git` / backup; a second service or vhost's own app; OOB creds) before returning.
+- **Two verified hashes in a row fail the primary wordlist.** The passwords are not wordlist
+  material - they are delivered out-of-band (an email/note/KeePass, a config, a second service). Stop
+  cracking and re-enumerate for where the creds are HANDED OUT; do not extract a third hash. (Engineering
+  around a hostile channel - per-char verify-fix, min-of-2 sampling, gentler pacing - is the tell you
+  are on the wrong vector, not a reason to keep going.)
+
 ## Marker discipline
 
 Any class where you inject a value and look for it later (xss, ssti, sqli error strings, crlf, log

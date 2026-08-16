@@ -75,7 +75,9 @@ def _is_rce_landing(text):
 # web content/vhost discovery + fetch tools; grinding these on one host with no foothold = the
 # "widen the surface" drift (re-probing a dead surface instead of enumerating a new surface class).
 _WEB_PROBE_RE = re.compile(r"\b(feroxbuster|ffuf|gobuster|dirb|dirsearch|wfuzz|nuclei|nikto|whatweb|wpscan|curl|wget)\b", re.I)
-WIDEN_AT = 20   # web probes with no foothold before the widen-the-surface nudge fires (once)
+WIDEN_AT = 20   # web probes with no foothold before the widen-the-surface nudge fires
+_WIDEN_CAP = 3  # ... and it RE-ARMS every WIDEN_AT probes up to this many fires (was fire-once;
+                # a real box did hundreds of probes and never got re-nudged after the first).
 
 
 def _is_web_probe(cmd):
@@ -90,6 +92,47 @@ def _state_has_foothold(d):
         return "foothold" in t or "## status:" in t or "access=foothold" in t
     except Exception:
         return False
+
+
+# --- vector-doubt reflex: two MECHANICAL tells that the CURRENT exploit VECTOR is wrong, so the
+#     operator reconsiders the vector instead of tuning the tooling. Advisory, fire-once-per-tell,
+#     fail-open (recurring drift: a fragile-box SQLi hash-dump-and-crack grind that DoS'd the box
+#     twice and never cracked, while the real foothold was an unenumerated file-read/LFI class). ---
+VECTOR_DOUBT_CRACK_AT = 2   # N uncrackable-hash results in one engagement before the doubt nudge
+# an exploit-shaped attempt: a cracking run, an injection tool, or a shell loop hammering a web
+# endpoint -- the CONTEXT in which a starved target or a crack miss means "wrong vector", not a scan.
+_EXPLOIT_LOOP_RE = re.compile(
+    r"\b(sqlmap|hydra|medusa|patator|john|hashcat)\b"
+    r"|\bfor\b[^\n]*\bcurl\b"                                    # a shell for-loop hammering curl
+    r"|/tmp/\S*(?:ext|exploit|extract|sqli|dump|crack)\S*\.sh"   # a hand-rolled exploit/extract script
+    r"|admin-ajax\.php|/xmlrpc\.php",                            # common WP exploit endpoints
+    re.I)
+# target starved: the box is dropping our connections under load (DoS by our own vector). A SINGLE
+# drop is transient; >=2 markers in one output = the box is worker-starved.
+_STARVE_RE = re.compile(r"code=000\b|Connection timed out|Empty reply from server|\(28\)\s|Couldn't connect", re.I)
+# a wordlist RUN that produced a MISS verdict (john/hashcat "0 cracked"), not a run in progress.
+_UNCRACKED_RE = re.compile(r"\b0 password hashes cracked\b|No password hashes left to crack", re.I)
+
+
+def _output_starved(text):
+    """True when tool output shows >=2 connection-drop markers (000 / timeout / empty reply): the
+    box is worker-starved by our own load. A single drop is transient, not a signal. Fail-open."""
+    if not text or not isinstance(text, str):
+        return False
+    return len(_STARVE_RE.findall(text)) >= 2
+
+
+def _output_uncracked(text):
+    """True when a john/hashcat run reported a MISS (0 cracked) -- not a run-in-progress line."""
+    if not text or not isinstance(text, str):
+        return False
+    return bool(_UNCRACKED_RE.search(text))
+
+
+def _is_exploit_loop(cmd):
+    """A cracking run or an exploit-shaped request loop -- the context where a starved target or a
+    crack miss means 'this vector may be wrong', not a bare scan/read. Fail-open."""
+    return bool(cmd) and isinstance(cmd, str) and bool(_EXPLOIT_LOOP_RE.search(cmd))
 
 
 # nmap/rustscan asset extraction -> auto-populate state.md so `campaign.py board` works from recon.
@@ -575,6 +618,29 @@ def _board_never_built(d):
     return True
 
 
+# anti-automation / WAF reflex: target output showing a request-limiter/ban/taunt (defeats sqlmap
+# by burst rate) OR a WAF/CDN block page. Route the operator to manual+serial / filter-bypass.
+_ANTIAUTO_RE = re.compile(
+    r"try\s*sqlmap|i dare you|temporarily banned|you have been (?:temporarily )?banned|"
+    r"\b429\b|too many requests|please wait\s+\d+\s+second|slow down|rate.?limit", re.IGNORECASE)
+_WAF_RE = re.compile(
+    r"cloudflare|cf-ray|attention required|just a moment|checking your browser|"
+    r"please enable cookies|access denied|request blocked|akamaighost|\bsucuri\b|"
+    r"incapsula|mod_?security", re.IGNORECASE)
+_ANTIAUTO_MSG = (
+    "ANTI-AUTOMATION SIGNAL: target output shows a request-limiter/ban/taunt (e.g. 'try sqlmap', "
+    "429, 'temporarily banned'). A confirmed injection extracts BY HAND -- stay MANUAL + SERIAL, "
+    "do NOT run sqlmap or any parallel scanner; its detection burst just trips the limiter and "
+    "every later response measures the ban (easily misread as 'server load'). Bypass a char "
+    "blacklist with functions + hex, put data in a reflected column. See [[sql-injection]], "
+    "wiki/payloads/sqli.md.")
+_WAF_MSG = (
+    "WAF / ANTI-BOT DETECTED: the response shows a WAF/CDN block (Cloudflare/Akamai/Sucuri/"
+    "ModSecurity etc.). Stop hammering with scanners -- map and bypass the filter (vary payload "
+    "encoding/case/comments), and for a real target consider origin-IP discovery to bypass the "
+    "CDN. See [[cdn-waf-bypass]], [[sql-injection]].")
+
+
 _LOOP_RE = re.compile(r"\bfor\b[^\n]*\bin\b|\bwhile\b[^\n]*\bdo\b|\bseq\b\s+\d", re.I)
 _FETCH_RE = re.compile(r"\b(?:curl|wget)\b", re.I)
 _THREADED_RE = re.compile(r"xargs\s+-\S*[pP]|\bparallel\b|\bffuf\b|\bferoxbuster\b", re.I)
@@ -673,6 +739,33 @@ def _privesc_toolfirst_nudge(d, cmd, eng):
     return ("PRIVESC TOOL-FIRST: manual SUID/cron/getcap enum, but linpeas+pspy have not run yet. "
             "Launch BOTH first (a pspy window + linpeas) and READ them whole - they surface privesc "
             "vectors a hand-rolled `find`/`cron` scan misses. See [[linux-privesc]], [[pspy]], [[linpeas]].")
+
+
+def _antiautomation_nudge(d, blob, eng):
+    """Target OUTPUT shows an anti-automation limiter/ban/taunt or a WAF/CDN block -> nudge to stay
+    manual+serial (no sqlmap/parallel scanners) or to map+bypass the WAF. Once per CLASS per
+    engagement. Fail-open. `blob` is the command's output text."""
+    if not blob:
+        return None
+    if _ANTIAUTO_RE.search(blob):
+        cls, msg = "antiauto", _ANTIAUTO_MSG
+    elif _WAF_RE.search(blob):
+        cls, msg = "waf", _WAF_MSG
+    else:
+        return None
+    seen_f = os.path.join(d, ".antiauto-nudged")
+    try:
+        fired = set(open(seen_f, encoding="utf-8", errors="ignore").read().split()) \
+            if os.path.exists(seen_f) else set()
+    except Exception:
+        fired = set()
+    if cls in fired:
+        return None
+    try:
+        open(seen_f, "a", encoding="utf-8").write(cls + "\n")
+    except Exception:
+        pass
+    return msg
 
 
 def main():
@@ -857,6 +950,18 @@ def main():
         except Exception:
             pass
 
+    # anti-automation / WAF reflex (advisory): probe output shows a request-limiter/ban/taunt or a
+    # WAF/CDN block -> route to manual+serial (no sqlmap/parallel scanners) or filter-bypass. Once
+    # per class per engagement. Framework-meta guarded, suppressed post-solve, fail-open.
+    if d and _engagement and not _is_framework_meta(cmd) and _invokes_any(cmd, _WEB_ACTIVITY):
+        try:
+            if not _engagement.is_solved(d):
+                msg = _antiautomation_nudge(d, _response_text(data), _engagement)
+                if msg:
+                    blocks.append(msg)
+        except Exception:
+            pass
+
     # screenshot-on-finding reflex (capture, not methodology): when a finding lands in the OUTPUT
     # -- a flag read or a shell/privesc `id` -- nudge Skill(screenshot) of the deliberate state.
     # Fires PER DISTINCT finding (dedup by the full matched value), NOT once-per-engagement:
@@ -909,17 +1014,22 @@ def main():
         except Exception:
             pass
 
-    # WIDEN-THE-SURFACE reflex (fire-once, advisory, fail-open). Grinding web recon/fetches on one
+    # WIDEN-THE-SURFACE reflex (RE-ARMING, advisory, fail-open). Grinding web recon/fetches on one
     # host with NO foothold is the recurring 40-min drift: re-probing a dead surface (a parameterized
-    # login, an image-only upload) instead of enumerating a NEW surface class. After WIDEN_AT web
-    # probes with no foothold, nudge ONCE to widen (userdir /~, vhost-by-redirect-location, another
-    # port/vhost, source-read) or work the board. The two surface classes named are the exact ones
-    # that cost a real box ~40 min (an Apache userdir + a vhost that 302s to a non-default Location).
+    # login, an image-only upload) instead of enumerating a NEW surface class. Every WIDEN_AT web
+    # probes with no foothold, nudge to widen (userdir /~, vhost-by-redirect-location, another
+    # port/vhost, source-read) or work the board -- up to _WIDEN_CAP times (a real box did HUNDREDS
+    # of probes and the old fire-once nudge went silent after the first, so a sustained grind was
+    # never re-flagged). The surface classes named are the exact ones that cost real boxes time.
     if d and _engagement and _is_web_probe(cmd):
         try:
-            seenw = os.path.join(d, ".widen-nudged")
+            firesf = os.path.join(d, ".widen-fires")
             footholded = os.path.exists(os.path.join(d, ".rce-shell-nudged")) or _state_has_foothold(d)
-            if not os.path.exists(seenw) and not footholded:
+            try:
+                fires = int(open(firesf, encoding="utf-8").read().strip() or "0")
+            except Exception:
+                fires = 0
+            if fires < _WIDEN_CAP and not footholded:
                 cf = os.path.join(d, ".web-probe-count")
                 try:
                     n = int(open(cf, encoding="utf-8").read().strip() or "0")
@@ -928,8 +1038,9 @@ def main():
                 n += 1
                 with open(cf, "w", encoding="utf-8") as fh:
                     fh.write(str(n))
-                if n >= WIDEN_AT:
-                    open(seenw, "a").close()
+                if n % WIDEN_AT == 0:
+                    with open(firesf, "w", encoding="utf-8") as fh:
+                        fh.write(str(fires + 1))
                     blocks.append(
                         "WIDEN THE SURFACE: %d web probes on this engagement with no foothold. A "
                         "dead OBVIOUS surface (a parameterized login, an image-only upload) is the "
@@ -940,6 +1051,49 @@ def main():
                         "(a real vhost 302s ELSEWHERE; -fc 302 / -ac hides it); (3) another port or "
                         "the second vhost's OWN app; (4) source-read (LFI/.git/backup) before brute. "
                         "Or run `python3 scripts/campaign.py board` and work it depth-first." % n)
+        except Exception:
+            pass
+
+    # VECTOR-DOUBT reflex (advisory, fire-once-per-tell, fail-open). Two mechanical tells that the
+    # CURRENT exploit vector is the wrong door -- so reconsider the VECTOR, don't tune the tooling:
+    #   (a) the target is worker-starved by our own exploit loop (a vector that DoSes a lab box is
+    #       almost never the intended one); (b) >=2 hash-cracking MISSES in one engagement (the
+    #       passwords are delivered out-of-band -- email/notes/KeePass -- not wordlist material).
+    if d and _engagement and not _state_has_foothold(d):
+        try:
+            blob_out = _response_text(data)
+            # (a) target starved under an exploit-shaped loop -> fire once
+            if _is_exploit_loop(cmd) and _output_starved(blob_out):
+                seen = os.path.join(d, ".vector-doubt-starve")
+                if not os.path.exists(seen):
+                    open(seen, "a").close()
+                    blocks.append(
+                        "VECTOR DOUBT (target starved): your exploit loop is drawing repeated "
+                        "000/timeout/empty-reply -- the box is worker-starved by your OWN load. A "
+                        "vector that DoSes a lab box is almost never the intended one. Reconsider the "
+                        "VECTOR, do not tune the tooling: source-read (LFI / alias-traversal / .git / "
+                        "backup), a second service or vhost's own app, or OOB creds. "
+                        "`python3 scripts/campaign.py board` and work an untested class depth-first.")
+            # (b) >=2 cracking misses in one engagement -> passwords are out-of-band
+            if _output_uncracked(blob_out):
+                cf = os.path.join(d, ".crack-miss-count")
+                try:
+                    n = int(open(cf, encoding="utf-8").read().strip() or "0")
+                except Exception:
+                    n = 0
+                n += 1
+                with open(cf, "w", encoding="utf-8") as fh:
+                    fh.write(str(n))
+                seen = os.path.join(d, ".vector-doubt-crack")
+                if n >= VECTOR_DOUBT_CRACK_AT and not os.path.exists(seen):
+                    open(seen, "a").close()
+                    blocks.append(
+                        "VECTOR DOUBT (%d hashes uncrackable): %d verified hashes have now failed the "
+                        "wordlist. Two in a row means the passwords are NOT wordlist material -- they "
+                        "live out-of-band (an email/note/KeePass, a config, a second service). Stop "
+                        "cracking and re-enumerate: read the app's other surfaces (LFI/source, mail, "
+                        "another vhost) for where the real creds are handed out. See Skill(hunt-core) "
+                        "Stop conditions." % (n, n))
         except Exception:
             pass
 

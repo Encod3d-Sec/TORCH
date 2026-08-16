@@ -101,6 +101,10 @@ set `## STATUS: SOLVED` in state.md, then the driver prints the close-out chain.
 - Do NOT invoke `superpowers:brainstorming`/`writing-plans` mid-box; keep no parallel task list.
 - One agent. Read service output whole - the foothold hides in the handler a grep skips.
 - Reuse captured creds across hosts before researching new ones.
+- Long/observed tools (sqlmap, big scans) go in a NAMED tmux window (`scripts/vm-scan.sh`), never a
+  blind background pipe -- you must WATCH a scanner that can trip a target's rate-limiter/ban.
+- Capture the flag/root state to `poc/` AS IT LANDS (`scripts/capture.sh`), even on a curl/ssh-only
+  box -- a transient exploited state cannot be re-shot after the turn.
 
 ## Close-out
 
