@@ -49,7 +49,9 @@
     "grab a (shot|screenshot)|take a (screen-?shot|screenshot)|screen-?shot (of|the)\\b|capture (the )?(poc|evidence|page|dashboard|screen)|poc (screenshot|image|capture)|evidence (shot|screenshot|capture)|visual (poc|evidence)": "screenshot",
     "write (the )?walkthrough|assemble (the )?walkthrough|close out (the )?(box|engagement|machine|target)": "walkthrough",
     "tcc bypass|gatekeeper bypass|\\bsip bypass\\b|macos privesc|mac os x privesc|xpc (abuse|injection)|dylib injection|keychain dump|macos persistence|launchd (agent|daemon) persist|codesign bypass|dirty nib|amfi bypass|mach-o injection": "hunt-macos",
-    "windows (local )?priv(esc| ?escalation)|\\bseimpersonate\\b|print ?spoofer|god ?potato|juicy ?potato|rogue ?potato|potato attack|unquoted service path|alwaysinstallelevated|weak service (permission|dacl)|writable service (binary|path)|autologon (password|cred)|\\bwinpeas\\b|token impersonation|\\buac bypass\\b|dll hijack(ing)?|sebackup(privilege)?|\\bsedebug\\b": "hunt-windows"
+    "windows (local )?priv(esc| ?escalation)|\\bseimpersonate\\b|print ?spoofer|god ?potato|juicy ?potato|rogue ?potato|potato attack|unquoted service path|alwaysinstallelevated|weak service (permission|dacl)|writable service (binary|path)|autologon (password|cred)|\\bwinpeas\\b|token impersonation|\\buac bypass\\b|dll hijack(ing)?|sebackup(privilege)?|\\bsedebug\\b": "hunt-windows",
+    "metasploit|msfconsole|msfvenom|meterpreter|multi/handler": "metasploit",
+    "\\bdelegate\\b|\\boffload\\b|hand (this|it) (off|to a sub)|spin (a|up a) (haiku|sub-?agent)": "delegate"
   },
   "_surface_comment": "Heuristic attack-surface terms. Lower confidence than 'triggers' -> softer 'consider' suggestion, escapable when not about testing. Keep anchored (e.g. 'api endpoint', not bare 'endpoint') to avoid over-firing. Add/trim from trigger-stats.py data.",
   "surface_triggers": {

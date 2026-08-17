@@ -1,5 +1,6 @@
 # tests/test_new_skills.py
 import os, re
+import json
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(HERE)
 
@@ -45,3 +46,25 @@ def test_delegate_and_metasploit_interlock_resolves():
     # now that both exist, the whole set resolves
     assert _refs_resolve(_skill("delegate")) == []
     assert _refs_resolve(_skill("metasploit")) == []
+
+def test_triggers_route_new_skills():
+    d = json.load(open(os.path.join(VAULT, "skills", "hunt", "triggers.json")))
+    t = d["triggers"]
+    # both regexes compile and map to the new skills
+    for k in t:
+        re.compile(k)
+    # a value may be a str or a list (multi-skill trigger, e.g. broken access control ->
+    # [hunt-idor, hunt-api]); flatten before building the set so that legitimate
+    # list-valued entries don't blow up set(t.values()) with an unhashable type.
+    vals = set()
+    for v in t.values():
+        vals.update(v) if isinstance(v, list) else vals.add(v)
+    assert "metasploit" in vals and "delegate" in vals
+
+def test_playbook_wires_metasploit_and_parses():
+    d = json.load(open(os.path.join(VAULT, "scripts", "playbook.json")))
+    fps = d["fingerprints"]
+    hits = [k for k, v in fps.items() if "metasploit" in (v.get("skills") or [])]
+    assert hits, "no fingerprint routes to metasploit"
+    # not blanket-applied
+    assert len(hits) < len(fps), "metasploit added to every fingerprint (should be msf-strong only)"
