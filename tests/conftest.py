@@ -59,8 +59,12 @@ def vault(tmp_path, monkeypatch):
            "---\ntype: engagement-log\n---\n\n# Log - acme\n\nintro\n\n---\n\n"
            "## [2026-06-04] entry one\n- did a thing\n")
 
-    monkeypatch.setenv("CLAUDEBRAIN_VAULT", str(root))
+    # Import _engagement BEFORE setting the tmp CLAUDEBRAIN_VAULT env. A sibling test may have
+    # purged _engagement from sys.modules; if the env were tmp at import time, the fresh module's
+    # VAULT would be the tmp path and monkeypatch would "revert" to tmp (not the real vault),
+    # leaking a bad _engagement.VAULT to every later test. Importing first captures the real VAULT.
     import _engagement
+    monkeypatch.setenv("CLAUDEBRAIN_VAULT", str(root))
     monkeypatch.setattr(_engagement, "VAULT", str(root))
     monkeypatch.setattr(_engagement, "TARGETS", str(root / "targets"))
     monkeypatch.setattr(_engagement, "TEMPLATES", str(root / "setup" / "templates"))
