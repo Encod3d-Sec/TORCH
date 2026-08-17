@@ -719,7 +719,7 @@ def _rtl_since(d, marker):
     if not os.path.isfile(p):
         return None
     try:
-        return datetime.datetime.fromtimestamp(os.path.getmtime(p)).isoformat()
+        return datetime.datetime.fromtimestamp(os.path.getmtime(p), tz=datetime.timezone.utc).isoformat()
     except Exception:
         return None
 
