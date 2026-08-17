@@ -1,5 +1,6 @@
-"""drift-guard.py: OFF-BOARD exploit calls escalate warn->warn->deny; driver calls reset;
-on-board / empty-board / pass<5 / no-campaign all fail open (allow)."""
+"""drift-guard.py: OFF-BOARD exploit calls escalate an advisory streak counter (never deny -
+declawed, advisory-only); driver calls reset; on-board / empty-board / pass<5 / no-campaign
+all fail open (allow)."""
 import json
 import os
 import subprocess
@@ -28,16 +29,20 @@ def _campaign(eng, pass_=5, emitted=None, board=True):
     (eng / "Approach.md").write_text(kc)
 
 
-def test_off_board_escalates_then_denies(vault):
+def test_off_board_escalates_but_never_denies(vault):
     eng = vault / "targets" / "acme"
     _campaign(eng, emitted=["ffuf"])           # board wants ffuf; agent free-hands nmap
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     o1 = _run("bash /root/vm.sh 'nmap -sV 10.0.0.5'", env)
-    assert "additionalContext" in o1 and "off-board, 1/3" in o1["additionalContext"]
+    assert "additionalContext" in o1 and "off-board, streak 1" in o1["additionalContext"]
+    assert "permissionDecision" not in o1
     o2 = _run("nmap -p- 10.0.0.5", env)
-    assert "additionalContext" in o2 and "2/3" in o2["additionalContext"]
-    o3 = _run("curl http://10.0.0.5/", env)     # 3rd off-board -> DENY
-    assert o3.get("permissionDecision") == "deny"
+    assert "additionalContext" in o2 and "streak 2" in o2["additionalContext"]
+    assert "permissionDecision" not in o2
+    o3 = _run("curl http://10.0.0.5/", env)     # 3rd off-board -> still advisory, never deny
+    assert "additionalContext" in o3 and "streak 3" in o3["additionalContext"]
+    assert "permissionDecision" not in o3
+    # the streak counter itself is kept (only the escalation-to-deny is removed)
     assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 3
 
 
@@ -74,8 +79,9 @@ def test_driver_call_resets_streak(vault):
 
 
 def test_post_foothold_never_denies(vault):
-    """Post-foothold, privesc enum is legit and varied -> the guard ADVISES but must never hard-deny
-    (blocking privesc enum is the over-fire the review warned about). Deny stays for pre-foothold."""
+    """Post-foothold, privesc enum is legit and varied -> the guard ADVISES but never hard-denies
+    (blocking privesc enum is the over-fire the review warned about). Now true unconditionally
+    (the hook is advisory-only everywhere), but kept as a regression guard on this specific case."""
     eng = vault / "targets" / "acme"
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
     (eng / "Approach.md").write_text(
@@ -85,7 +91,7 @@ def test_post_foothold_never_denies(vault):
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     o1 = _run("bash /root/vm.sh 'python3 /tmp/x.py'", env)
     o2 = _run("nmap 10.0.0.5", env)
-    o3 = _run("curl http://10.0.0.5/", env)         # 3rd - would DENY pre-foothold; here only advises
+    o3 = _run("curl http://10.0.0.5/", env)         # 3rd - advisory only, never deny
     assert o3.get("permissionDecision") != "deny"
     assert "additionalContext" in o3
 
@@ -110,10 +116,10 @@ def test_scripted_exploit_over_vmsh_fires(vault):
     _campaign(eng, emitted=["sqlmap"])
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     o = _run("bash /root/vm.sh 'python3 /tmp/typo3_rce.py --target 10.0.0.5'", env)
-    assert "additionalContext" in o and "off-board, 1/3" in o["additionalContext"]
+    assert "additionalContext" in o and "off-board, streak 1" in o["additionalContext"]
     # a reverse-shell driver is the interactive free-hand zone -> also fires
     o2 = _run("bash scripts/vm-rsh.sh 'id'", env)
-    assert "2/3" in o2.get("additionalContext", "")
+    assert "streak 2" in o2.get("additionalContext", "")
 
 
 def test_vmsh_transport_not_falsely_matched(vault):
@@ -169,7 +175,8 @@ def test_on_board_and_failopen_allow(vault):
 
 def test_confirmed_chain_never_denies(vault):
     """A confirmed primitive (## CONFIRMED CHAIN in state.md) is on-board even before a shell -
-    the redeploy case that hard-blocked re-establishing a confirmed LFI."""
+    the redeploy case that used to hard-block re-establishing a confirmed LFI. Now true
+    unconditionally (the hook is advisory-only everywhere), kept as a regression guard."""
     eng = vault / "targets" / "acme"
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
     (eng / "Approach.md").write_text(
@@ -180,5 +187,5 @@ def test_confirmed_chain_never_denies(vault):
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     _run("bash /root/vm.sh 'python3 /tmp/lfi.py'", env)
     _run("bash /root/vm.sh 'python3 /tmp/lfi.py'", env)
-    o3 = _run("nmap 10.0.0.5", env)              # 3rd off-board -> would DENY without the marker
+    o3 = _run("nmap 10.0.0.5", env)              # 3rd off-board -> advisory only, never deny
     assert o3.get("permissionDecision") != "deny"

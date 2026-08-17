@@ -90,7 +90,11 @@ def _a_hook_edits():
     dg = os.path.join(VAULT, "skills", "hooks", "drift-guard.py")
     try:
         d = open(dg, encoding="utf-8").read()
-        check("drift-guard has _scanner_cap + auto-RTL", "_scanner_cap" in d and "redteamlead" in d)
+        # advisory-only (declawed): _scanner_cap stays, but drift-guard never denies and no longer
+        # carries the time-based auto-RTL nudge (RTL reflex now lives in campaign.py _tells_stop +
+        # recon-capture's vector-doubt nudges).
+        check("drift-guard has _scanner_cap, advisory-only (no deny)",
+              "_scanner_cap" in d and "permissionDecision" not in d)
     except Exception as e:
         check("drift-guard readable", False, str(e)[:60])
     try:

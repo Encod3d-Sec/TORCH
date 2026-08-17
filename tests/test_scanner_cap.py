@@ -16,12 +16,13 @@ def _ctf(eng):
         "### 4a\n| id | asset | vuln class | tool | status |\n|--|--|--|--|--|\n"
         "| r1 | 10.0.0.5 | content-discovery | ffuf | [ ] |\n")
 
-def test_second_scanner_denied_on_ctf(vault):
+def test_second_scanner_advised_on_ctf(vault):
     eng = vault / "targets" / "acme"; _ctf(eng)
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     assert _run("bash scripts/vm-scan.sh --win a thm t 'ffuf -w x -u http://10.0.0.5/FUZZ'", env).get("permissionDecision") != "deny"
     o2 = _run("bash scripts/vm-scan.sh --win b thm t 'feroxbuster -u http://10.0.0.5/'", env)
-    assert o2.get("permissionDecision") == "deny" and "already running" in o2["permissionDecisionReason"]
+    assert o2.get("permissionDecision") != "deny"
+    assert "already running" in o2.get("additionalContext", "")
 
 def test_second_scanner_allowed_after_window(vault):
     eng = vault / "targets" / "acme"; _ctf(eng)
@@ -42,17 +43,19 @@ def test_scanner_cap_not_on_non_ctf(vault):
     _run("bash /root/vm.sh 'ffuf -u http://10.0.0.5/FUZZ'", env)
     assert _run("bash /root/vm.sh 'feroxbuster -u http://10.0.0.5/'", env).get("permissionDecision") != "deny"
 
-def test_dirb_second_denied_on_ctf(vault):
+def test_dirb_second_advised_on_ctf(vault):
     """dirb is a HEAVY_SCANNERS member NOT in NET_BINS - must still be reachable/capped even as a
     bare command that is not otherwise exploit-shaped."""
     eng = vault / "targets" / "acme"; _ctf(eng)
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     assert _run("bash /root/vm.sh 'dirb http://10.0.0.5/'", env).get("permissionDecision") != "deny"
     o2 = _run("dirb http://10.0.0.5/", env)
-    assert o2.get("permissionDecision") == "deny" and "already running" in o2["permissionDecisionReason"]
+    assert o2.get("permissionDecision") != "deny"
+    assert "already running" in o2.get("additionalContext", "")
 
-def test_enforce_off_downgrades_to_advisory(vault):
-    """.enforce-off must downgrade the 2nd-scanner deny to an advisory, never go silent."""
+def test_scanner_cap_always_advisory_regardless_of_enforce_off(vault):
+    """The scanner-cap never denies now (declawed), so the .enforce-off marker (still read by
+    scope-guard.py) has no effect here either way - it must never go silent."""
     eng = vault / "targets" / "acme"; _ctf(eng)
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     marker = os.path.join(REPO, "skills", "hooks", ".enforce-off")

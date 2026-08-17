@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) hook: make the campaign driver NON-OPTIONAL (anti-drift).
+"""PreToolUse(Bash) hook: nudge the campaign driver back into view (anti-drift, advisory-only).
 
 The proven failure: the deterministic driver (scripts/campaign.py) is advisory BY
 INVOCATION - it only enforces its gates on turns the agent chooses to run it, so under
@@ -7,11 +7,14 @@ momentum the agent walked away from `campaign.py next` in 90 seconds and free-ha
 box via 85 raw `bash /root/vm.sh` exploit calls. This hook pulls the agent back: on an
 exploit-shaped Bash command during an active campaign, if the agent is OFF-BOARD (running an
 exploit/scan binary the driver never emitted, and the board is NOT empty), it ESCALATES a
-counter and eventually DENIES until the agent consults the driver.
+counter and ADVISES the agent back to the driver. It never denies a command - the standing
+operator complaint was that a hard deny throttles legit engagements, so this hook is advisory
+only (the RTL reflex now lives in campaign.py's `_tells_stop` + recon-capture's vector-doubt
+nudges).
 
-Policy (matches the harness rule that a hard Bash deny is risky, so escalate, don't snap-deny):
-  - off_board_streak 1-2  -> INJECT an advisory warning ("run campaign.py next; N calls since")
-  - off_board_streak >= 3 -> DENY (permissionDecision deny), telling them to run next/board/done
+Policy:
+  - off_board_streak N -> INJECT an advisory warning ("run campaign.py next; N calls since"),
+    for every N (the counter is kept and reported, but never escalates to a deny)
   - `campaign.py next|board|done|pass-done|init` seen in the command -> reset the streak to 0
 
 ON-BOARD (allowed, never counted) when EITHER:
@@ -25,11 +28,9 @@ command mentions a network/scan/exploit binary (NET_BINS). NET_BINS is word-sear
 WHOLE command string, not just the leading token, so `bash /root/vm.sh 'nmap ...'` - the exact
 wrapper the reference failure used - is caught by the inner binary.
 
-SAFETY (this hook can block, so it must never trap the operator):
+SAFETY (this hook only advises, but stays fail-open anyway - never let a hook bug break a turn):
   - Fail-OPEN everywhere: no engagement / no .campaign.json / pass < 5 / unparseable / any
     exception -> exit 0, allow. A hook bug never blocks a command.
-  - Escape hatch: create skills/hooks/.enforce-off (shared with scope-guard) to downgrade every
-    deny to an advisory warning.
   - pass >= 5 gate: only fires once the board is actually driving (passes 0-4 are pre-board recon
     where free exploration is expected).
 """
@@ -83,31 +84,6 @@ _META_RE = re.compile(
     r"tests/|skills/hooks|setup/", re.IGNORECASE)
 
 
-def _enforcing():
-    return not os.path.exists(os.path.join(HERE, ".enforce-off"))
-
-
-def _post_foothold(d, _eng):
-    """Deny-suppression: True once the target is a confirmed-primitive/foothold asset, where varied
-    deepening is legitimate. Covers access>=foothold AND a `## CONFIRMED CHAIN`/breakthrough marker
-    (a confirmed primitive pre-shell - the redeploy case that hard-blocked confirmed re-establishment)."""
-    p = os.path.join(d, "state.md")
-    try:
-        for r in _eng._parse_table(p):
-            acc = (r.get("access") or r.get("foothold") or "").strip().lower()
-            if any(k in acc for k in ("foothold", "shell", "user", "root", "admin", "owned", "vuln")):
-                return True
-    except Exception:
-        pass
-    try:
-        txt = open(p, encoding="utf-8").read()
-        if re.search(r"^#{1,6}\s*(CONFIRMED CHAIN|BREAKTHROUGH|STATUS:\s*SOLVED)", txt, re.M | re.I):
-            return True
-    except Exception:
-        pass
-    return False
-
-
 def _bins_in(cmd):
     """Exploit/scan binaries mentioned anywhere in the command string (whole-string search, so a
     binary inside a `bash vm.sh '<inner>'` wrapper is still seen)."""
@@ -115,11 +91,10 @@ def _bins_in(cmd):
 
 
 def _scanner_cap(d, st, cmd):
-    """Hard-deny a 2nd HEAVY scanner within _SCAN_WINDOW on a small box (ctf). The mistake that DoS'd
+    """Advise on a 2nd HEAVY scanner within _SCAN_WINDOW on a small box (ctf) - the mistake that DoS'd
     the box. Records each heavy-scanner launch to .scan-launches.jsonl; if a prior launch is <
-    _SCAN_WINDOW old, ALWAYS returns a reason string (the caller decides deny-vs-advisory via
-    _enforcing() - this function never goes silent on .enforce-off). Records this launch and returns
-    None (allow) only when there is no prior in-window launch."""
+    _SCAN_WINDOW old, returns a reason string (the caller always advises, never denies, on it).
+    Records this launch and returns None (allow) only when there is no prior in-window launch."""
     import time
     heavy = set(_HEAVY_RE.findall(cmd or ""))
     if not heavy:
@@ -143,7 +118,7 @@ def _scanner_cap(d, st, cmd):
         age = int(now - float(prior["ts"]))
         return ("a scan is already running (`%s` launched %ds ago) - serialize on this small/tunnel "
                 "box (scope.md: curl-preferred), or drop threads to -t<=20. Wait for it or kill it "
-                "first. (False block? create skills/hooks/.enforce-off.)" % (prior.get("tool", "?"), age))
+                "first." % (prior.get("tool", "?"), age))
     try:                                              # record this launch, then allow
         with open(p, "a", encoding="utf-8") as f:
             f.write(json.dumps({"ts": now, "tool": sorted(heavy)[0]}) + "\n")
@@ -229,34 +204,15 @@ def main():
         if _deny:
             try:
                 import _telemetry
-                _telemetry.hook("drift-guard", action=("deny-scanner" if _enforcing() else "advise-scanner"))
+                _telemetry.hook("drift-guard", action="advise-scanner")
             except Exception:
                 pass
-            if _enforcing():
-                print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                      "permissionDecision": "deny",
-                      "permissionDecisionReason": "BLOCKED by harness enforcement (scanner-cap): " + _deny}}))
-            else:
-                print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                      "additionalContext": "SCANNER-CAP (enforcement OFF, advisory): " + _deny}}))
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                  "additionalContext": "SCANNER-CAP (advisory): " + _deny}}))
             return
 
     if not exploit_shaped:
         return                                    # not an exploit/scan/interpreter call -> ignore
-
-    since = _engagement.seconds_since_direction(d)
-    if since is not None and since > 300:
-        _engagement.touch_direction(d)                 # fire once per 5-min window; RTL call re-resets
-        try:
-            import _telemetry; _telemetry.hook("drift-guard", action="auto-rtl")
-        except Exception:
-            pass
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
-              "additionalContext": (
-                "DRIFT (%d min without a board advance or a finding): you are spinning. Load "
-                "`Skill(redteamlead)` NOW for ranked direction, or say in ONE line why you are on a "
-                "known-productive track. Do not keep hand-rolling the same vector." % int(since // 60))}}))
-        return
 
     # ON-BOARD escape 1: no OPEN ([ ]/[~]) rows -> empty board (generic tech) OR end-of-board.
     # Either way the driver has nothing to hold the agent to, so allow (fail-open). Checking OPEN
@@ -288,32 +244,18 @@ def main():
     try:
         import _telemetry
         _telemetry.drift("drift-guard", "off-board streak %d (%s)" % (streak, off))
-        _telemetry.hook("drift-guard", action=("deny" if streak >= 3 and _enforcing()
-                        and not _post_foothold(d, _engagement) else "advise"))
+        _telemetry.hook("drift-guard", action="advise")
     except Exception:
         pass
 
-    if streak >= 3 and _enforcing() and not _post_foothold(d, _engagement):
-        print(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": (
-                "BLOCKED by harness enforcement (drift-guard): %d consecutive OFF-BOARD "
-                "exploit calls without consulting the driver (last: %s, not in the board's "
-                "emitted tools).\n\nThe campaign driver owns the plan - stop free-handing. Run "
-                "`python3 scripts/campaign.py next` (or `board`), follow the action/tool it "
-                "prints, and `campaign.py done <row>` when it lands.\n(False block? create "
-                "skills/hooks/.enforce-off to downgrade to advisory.)" % (streak, off)),
-        }}))
-    else:
-        print(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "additionalContext": (
-                "DRIFT (off-board, %d/3): %d exploit-shaped call(s) since the last driver step "
-                "(%s not emitted by the board). The campaign driver is authoritative - run "
-                "`python3 scripts/campaign.py next` to get the required row + tool before "
-                "continuing, and `done` each row as it lands." % (streak, streak, off)),
-        }}))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "additionalContext": (
+            "DRIFT (off-board, streak %d): %d exploit-shaped call(s) since the last driver step "
+            "(%s not emitted by the board). The campaign driver is authoritative - run "
+            "`python3 scripts/campaign.py next` to get the required row + tool before "
+            "continuing, and `done` each row as it lands." % (streak, streak, off)),
+    }}))
 
 
 if __name__ == "__main__":
