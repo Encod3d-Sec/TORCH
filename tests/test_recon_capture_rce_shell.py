@@ -117,6 +117,10 @@ def _run_hook(cmd, output, engagement_dir, vault_path):
             os.environ["CLAUDEBRAIN_VAULT"] = old_vault
         elif "CLAUDEBRAIN_VAULT" in os.environ:
             del os.environ["CLAUDEBRAIN_VAULT"]
+        # Re-purge sys.modules so the next test recomputes _engagement.VAULT from restored env
+        for mod in list(sys.modules.keys()):
+            if "recon-capture" in mod or "_engagement" in mod:
+                del sys.modules[mod]
 
 
 def test_raw_web_rce_fires_stabilize_nudge():
