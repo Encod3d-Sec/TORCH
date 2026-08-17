@@ -6,9 +6,11 @@ and no shell stabilization until the operator asks). It must fire on a service-a
 and NOT on a reflected attacker-root `id` (the false-RCE trap).
 
 The stabilize nudge should NOT fire when the command is an existing interactive session
-(SSH/sshpass/evil-winrm) -- only for raw web-RCE/unstabilized nc shells.
+(SSH/sshpass/evil-winrm) -- only for raw web-RCE/unstabilized nc shells. Regression test:
+ssh paths like /etc/ssh/sshd_config should NOT suppress the nudge.
 """
 import importlib.util
+import io
 import json
 import os
 import sys
@@ -52,6 +54,15 @@ def test_no_id_or_attacker_root_does_not_fire():
         assert not rc._is_rce_landing(txt), f"should NOT fire: {txt!r}"
 
 
+def _make_engagement(tmpdir, name="eng"):
+    """Create an engagement dir structure with state.md."""
+    d = os.path.join(tmpdir, "targets", name)
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "state.md"), "w") as f:
+        f.write("# Test engagement\n")
+    return d
+
+
 def _run_hook(cmd, output, engagement_dir, vault_path):
     """Run the hook with a PostToolUse payload and return the blocks output."""
     payload = {
@@ -69,10 +80,14 @@ def _run_hook(cmd, output, engagement_dir, vault_path):
         # Ensure the engagement dir is "active" (most recent)
         os.utime(engagement_dir, None)
         os.chdir(os.path.dirname(engagement_dir))
-        sys.stdin = _MockStdin(json.dumps(payload))
+        sys.stdin = io.StringIO(json.dumps(payload))
+
+        # Clear module cache to force fresh load with new env var
+        for mod in list(sys.modules.keys()):
+            if "recon-capture" in mod or "_engagement" in mod:
+                del sys.modules[mod]
 
         # Load the hook with the correct vault
-        import importlib.util
         spec = importlib.util.spec_from_file_location(
             "rc_hook", os.path.join(ROOT, "skills", "hooks", "recon-capture.py"))
         rc = importlib.util.module_from_spec(spec)
@@ -80,7 +95,7 @@ def _run_hook(cmd, output, engagement_dir, vault_path):
 
         # Capture stdout
         old_stdout = sys.stdout
-        sys.stdout = _MockStdout()
+        sys.stdout = io.StringIO()
         try:
             rc.main()
             output_text = sys.stdout.getvalue()
@@ -104,53 +119,10 @@ def _run_hook(cmd, output, engagement_dir, vault_path):
             del os.environ["CLAUDEBRAIN_VAULT"]
 
 
-class _MockStdin:
-    def __init__(self, data):
-        self.data = data
-        self.pos = 0
-
-    def read(self):
-        return self.data
-
-    def readline(self):
-        lines = self.data.split('\n')
-        if self.pos < len(lines):
-            line = lines[self.pos]
-            self.pos += 1
-            return line + '\n'
-        return ''
-
-
-class _MockStdout:
-    def __init__(self):
-        self.buf = []
-
-    def write(self, s):
-        self.buf.append(s)
-
-    def getvalue(self):
-        return ''.join(self.buf)
-
-
 def test_raw_web_rce_fires_stabilize_nudge():
     """A curl/webshell command with id output SHOULD fire the stabilize nudge."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        eng_dir = os.path.join(tmpdir, "test_eng")
-        os.makedirs(eng_dir)
-
-        # Create minimal state.md so the engagement is recognized
-        state_file = os.path.join(eng_dir, "state.md")
-        with open(state_file, "w") as f:
-            f.write("# Test engagement\n")
-
-        # Create targets dir structure
-        targets_dir = os.path.join(tmpdir, "targets")
-        os.makedirs(targets_dir)
-
-        # Move engagement under targets
-        os.rename(eng_dir, os.path.join(targets_dir, "test_eng"))
-        eng_dir = os.path.join(targets_dir, "test_eng")
-
+        eng_dir = _make_engagement(tmpdir, "test_eng")
         cmd = "curl -s http://target/shell.php?cmd=id"
         output = "uid=33(www-data) gid=33(www-data) groups=33(www-data)"
 
@@ -163,22 +135,7 @@ def test_raw_web_rce_fires_stabilize_nudge():
 def test_ssh_command_does_not_fire_stabilize_nudge():
     """An SSH command with id output should NOT fire the stabilize nudge (false-fire fix)."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        eng_dir = os.path.join(tmpdir, "test_eng2")
-        os.makedirs(eng_dir)
-
-        # Create minimal state.md
-        state_file = os.path.join(eng_dir, "state.md")
-        with open(state_file, "w") as f:
-            f.write("# Test engagement\n")
-
-        # Create targets dir structure
-        targets_dir = os.path.join(tmpdir, "targets")
-        os.makedirs(targets_dir)
-
-        # Move engagement under targets
-        os.rename(eng_dir, os.path.join(targets_dir, "test_eng2"))
-        eng_dir = os.path.join(targets_dir, "test_eng2")
-
+        eng_dir = _make_engagement(tmpdir, "test_eng2")
         cmd = "ssh user@target id"
         output = "uid=1000(ubuntu) gid=1000(ubuntu) groups=1000(ubuntu),27(sudo)"
 
@@ -190,19 +147,7 @@ def test_ssh_command_does_not_fire_stabilize_nudge():
 def test_sshpass_command_does_not_fire_stabilize_nudge():
     """A sshpass command with id output should NOT fire the stabilize nudge."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        eng_dir = os.path.join(tmpdir, "test_eng3")
-        os.makedirs(eng_dir)
-
-        state_file = os.path.join(eng_dir, "state.md")
-        with open(state_file, "w") as f:
-            f.write("# Test engagement\n")
-
-        targets_dir = os.path.join(tmpdir, "targets")
-        os.makedirs(targets_dir)
-
-        os.rename(eng_dir, os.path.join(targets_dir, "test_eng3"))
-        eng_dir = os.path.join(targets_dir, "test_eng3")
-
+        eng_dir = _make_engagement(tmpdir, "test_eng3")
         cmd = "sshpass -p password ssh user@target id"
         output = "uid=33(www-data) gid=33(www-data) groups=33(www-data)"
 
@@ -214,22 +159,28 @@ def test_sshpass_command_does_not_fire_stabilize_nudge():
 def test_stabilize_nudge_contains_no_pwncat():
     """The stabilize nudge should not mention pwncat."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        eng_dir = os.path.join(tmpdir, "test_eng4")
-        os.makedirs(eng_dir)
-
-        state_file = os.path.join(eng_dir, "state.md")
-        with open(state_file, "w") as f:
-            f.write("# Test engagement\n")
-
-        targets_dir = os.path.join(tmpdir, "targets")
-        os.makedirs(targets_dir)
-
-        os.rename(eng_dir, os.path.join(targets_dir, "test_eng4"))
-        eng_dir = os.path.join(targets_dir, "test_eng4")
-
+        eng_dir = _make_engagement(tmpdir, "test_eng4")
         cmd = "curl -s http://target/shell.php?cmd=id"
         output = "uid=33(www-data) gid=33(www-data) groups=33(www-data)"
 
         result = _run_hook(cmd, output, eng_dir, tmpdir)
 
         assert "pwncat" not in result.lower(), f"Nudge should NOT contain pwncat, got: {result!r}"
+
+
+def test_ssh_path_does_not_suppress_nudge():
+    r"""A command with ssh PATH (not invocation) should still fire the stabilize nudge.
+
+    Regression test for over-broad regex: bare `\bssh\b` matched ssh in paths like
+    /etc/ssh/sshd_config, wrongly suppressing the nudge. The tightened regex
+    `\bssh\s+-?\w` requires ssh INVOCATION (followed by space + arg), not a path."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        eng_dir = _make_engagement(tmpdir, "test_eng5")
+        # Web RCE with ssh path reference in commands -- no ssh invocation
+        cmd = "id; cat /etc/ssh/sshd_config; cat ~/.ssh/id_rsa"
+        output = "uid=33(www-data) gid=33(www-data) groups=33(www-data)"
+
+        result = _run_hook(cmd, output, eng_dir, tmpdir)
+
+        assert "RCE / code-exec confirmed" in result, \
+            f"Stabilize nudge should fire even with ssh paths, got: {result!r}"

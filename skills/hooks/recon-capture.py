@@ -81,7 +81,8 @@ _WIDEN_CAP = 3  # ... and it RE-ARMS every WIDEN_AT probes up to this many fires
 
 # An already-interactive authenticated session (SSH/evil-winrm) is NOT a raw web-RCE/nc shell that
 # needs stabilizing - suppress the stabilize nudge for it (fixes the false-fire on `ssh user@host id`).
-_EXISTING_SESSION_RE = re.compile(r"\b(ssh|sshpass|evil-winrm)\b", re.I)
+# Match ssh/sshpass INVOCATION (ssh followed by space + arg), not ssh in a PATH (/etc/ssh/sshd_config).
+_EXISTING_SESSION_RE = re.compile(r"\b(sshpass|evil-winrm)\b|\bssh\s+-?\w", re.I)
 
 
 def _is_web_probe(cmd):
@@ -1009,13 +1010,14 @@ def main():
                         "from a web RCE or an unstabilized `nc` shell, STOP hand-poking one-liners. "
                         "(1) PREFER msfconsole `exploit/multi/handler` FIRST -- meterpreter payload first; "
                         "a plain shell_reverse_tcp/listener is the backup when meterpreter is blocked "
-                        "(routine on Windows/EDR). It carries session management + `local_exploit_suggester`; "
-                        "egress-test the LPORT (80/443/53) and deliver a tiny ELF inline via base64 if HTTP "
-                        "download is filtered. Raw `nc -lvnp <port>` (bash scripts/vm-scan.sh --win shell <eng> "
-                        "<target> ...) is the FALLBACK only when msf/meterpreter are unavailable -- a raw nc "
-                        "shell freezes on Ctrl-C and has no job control. (2) If you did fall back to nc, "
-                        "STABILIZE at once -- bash scripts/vm-stabilize.sh --win shell <eng>. (3) drive it "
-                        "with bash scripts/vm-rsh.sh --win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3.")
+                        "(routine on Windows/EDR). Meterpreter carries session management + "
+                        "`local_exploit_suggester`; egress-test the LPORT (80/443/53) and deliver a tiny ELF "
+                        "inline via base64 if HTTP download is filtered. Raw `nc -lvnp <port>` (bash "
+                        "scripts/vm-scan.sh --win shell <eng> <target> ...) is the FALLBACK only when "
+                        "msf/meterpreter are unavailable -- a raw nc shell freezes on Ctrl-C and has no job "
+                        "control. (2) If you did fall back to nc, STABILIZE at once -- bash "
+                        "scripts/vm-stabilize.sh --win shell <eng>. (3) drive it with bash "
+                        "scripts/vm-rsh.sh --win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3.")
         except Exception:
             pass
 
