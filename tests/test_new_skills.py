@@ -34,3 +34,14 @@ def test_delegate_frontmatter():
 
 def test_delegate_refs_resolve():
     assert _refs_resolve(_skill("delegate")) == []
+
+def test_metasploit_frontmatter():
+    assert _frontmatter_ok(_skill("metasploit"))
+
+def test_metasploit_refs_resolve():
+    assert _refs_resolve(_skill("metasploit")) == []
+
+def test_delegate_and_metasploit_interlock_resolves():
+    # now that both exist, the whole set resolves
+    assert _refs_resolve(_skill("delegate")) == []
+    assert _refs_resolve(_skill("metasploit")) == []
