@@ -61,3 +61,15 @@ def test_redteamlead_before_tell_keeps_stop(tmp_path):
                             "ts": before}) + "\n")
     out = _next(d)
     assert "STOP" in out and "redteamlead" in out and "wordlist" in out
+
+def test_foothold_clears_stale_stop_markers(tmp_path):
+    d = _mk(tmp_path)
+    (d / ".crack-miss-count").write_text("2")
+    out = _next(d)
+    assert "STOP" in out and "wordlist" in out
+    r = subprocess.run([sys.executable, CAMPAIGN, "--eng", str(d), "foothold", "10.10.1.1",
+                        "--win", "0"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert not (d / ".crack-miss-count").exists()
+    out = _next(d)
+    assert "STOP:" not in out

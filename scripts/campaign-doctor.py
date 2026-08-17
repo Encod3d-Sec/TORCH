@@ -102,6 +102,11 @@ def _a_hook_edits():
         check("recon-capture has _readwhole_nudge", "_readwhole_nudge" in r)
     except Exception as e:
         check("recon-capture readable (readwhole)", False, str(e)[:60])
+    try:
+        cp = open(os.path.join(HERE, "campaign.py"), encoding="utf-8").read()
+        check("campaign.py has deterministic RTL reflex (_tells_stop)", "def _tells_stop" in cp)
+    except Exception as e:
+        check("campaign.py readable (RTL reflex)", False, str(e)[:60])
 
 
 def _a_tool_index():

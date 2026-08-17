@@ -1551,6 +1551,15 @@ def _record_foothold(d, st, asset, win):
     if not asset or not win:
         return False
     st.setdefault("footholds", {})[asset] = win
+    # pre-foothold tell markers are stale once a foothold lands - recon-capture only ever WRITES
+    # them (gated on `not _state_has_foothold`), nothing else ever clears them, so a pre-foothold
+    # crack/starve tell would otherwise wedge `_tells_stop` into STOP forever, past the point it
+    # still applies.
+    for _m in (".crack-miss-count", ".vector-doubt-starve", ".vector-doubt-crack"):
+        try:
+            os.remove(os.path.join(d, _m))
+        except OSError:
+            pass
     return _set_state_access(d, asset, win)
 
 
