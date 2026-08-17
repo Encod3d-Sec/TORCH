@@ -750,6 +750,17 @@ def _tells_stop(d):
     return None
 
 
+def _msf_shell_posture(rowcls_lower, has_foothold):
+    """The msf reverse-shell rule, but only when about to pop a shell on a code-exec row with no live
+    session yet. Returns the POSTURE string or None."""
+    if rowcls_lower in CODE_EXEC_CLASSES and not has_foothold:
+        return ("POSTURE   catch the pop through `msfconsole multi/handler`: meterpreter payload "
+                "first; plain shell_reverse_tcp/listener backup when meterpreter is blocked "
+                "(routine on Windows/EDR). No raw-nc default. SSH/evil-winrm/cred footholds stay "
+                "as-is.")
+    return None
+
+
 # --------------------------------------------------------------------------- status helpers
 
 _ST = {"todo": "[ ]", "doing": "[~]", "done": "[x]", "na": "[-]", "dead": "[!]", "park": "[?]"}
@@ -1246,6 +1257,9 @@ def cmd_next(a):
         refs = notes.get("refs") or []
         if refs:
             print("REFS      %s" % " ".join("[[%s]]" % r for r in refs))
+    _mp = _msf_shell_posture((row.get("vuln class") or "").strip().lower(), bool(win))
+    if _mp:
+        print(_mp)
     print("")
     print("REQUIRED, in order:")
 
@@ -1298,7 +1312,8 @@ def cmd_next(a):
             print("  %d. run: bash scripts/vm-rsh.sh --win %s %s '%s'   [post-foothold: persistent "
                   "session; G8]" % (n, win, eng, inv))
         else:
-            print("  %d. run: %s          [G8: tool-first]" % (n, inv))
+            print("  %d. run: %s          [G8: tool-first; no hand-rolled /dev/tcp/curl/urllib "
+                  "loops - if no tool fits, say why in one line]" % (n, inv))
         st.setdefault("emitted_bins", [])
         if tool not in st["emitted_bins"]:
             st["emitted_bins"].append(tool)
@@ -1344,6 +1359,9 @@ def _pre_board_next(d, st, tconf, rows):
     print("PRE-BOARD pass %d/4 (%s)" % (p, PASS_LABELS[min(p, 9)]))
     print("REQUIRED:")
     print("  - " + guidance.get(p, "advance: campaign.py pass-done"))
+    if p in (2, 3):
+        print("POSTURE   version fingerprinted -> `searchsploit <app> <ver>` + "
+              "`msfconsole -qx 'search <app>'` BEFORE hand-rolling or deep-diving a CVE.")
     if p < 4:
         print("  then: campaign.py pass-done")
     assets = [r for r in E._parse_table(os.path.join(d, "state.md"))
