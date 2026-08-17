@@ -713,6 +713,43 @@ def _drift(d, st):
     return n
 
 
+def _rtl_since(d, marker):
+    """ISO timestamp (mtime) of a tell-marker file, or None if absent."""
+    p = os.path.join(d, marker)
+    if not os.path.isfile(p):
+        return None
+    try:
+        return datetime.datetime.fromtimestamp(os.path.getmtime(p)).isoformat()
+    except Exception:
+        return None
+
+
+def _tells_stop(d):
+    """Deterministic STOP -> Skill(redteamlead) when recon-capture's vector-doubt counters cross
+    threshold, unless redteamlead already fired since the tell was recorded. Fail-open -> None."""
+    try:
+        since = _rtl_since(d, ".crack-miss-count")
+        if since:
+            try:
+                n = int(open(os.path.join(d, ".crack-miss-count"),
+                             encoding="utf-8").read().strip() or "0")
+            except Exception:
+                n = 0
+            if n >= _CRACK_STOP_AT and not _skill_fired_since(d, "redteamlead", since)[0]:
+                return ("STOP: %d verified hashes have failed the wordlist -> the creds are "
+                        "out-of-band (email/note/KeePass/config). Call Skill(redteamlead) before "
+                        "another crack, or read the app's OTHER surfaces (LFI/source, a second "
+                        "vhost, mail)." % n)
+        since = _rtl_since(d, ".vector-doubt-starve")
+        if since and not _skill_fired_since(d, "redteamlead", since)[0]:
+            return ("STOP: the box is starving under your own exploit loop (repeated 000/timeout). "
+                    "A vector that DoSes a lab box is almost never intended - serialize requests, "
+                    "or call Skill(redteamlead) to re-pick the vector.")
+    except Exception:
+        return None
+    return None
+
+
 # --------------------------------------------------------------------------- status helpers
 
 _ST = {"todo": "[ ]", "doing": "[~]", "done": "[x]", "na": "[-]", "dead": "[!]", "park": "[?]"}
@@ -1037,6 +1074,8 @@ HIGH_VALUE_CLASSES = {"rce", "sqli", "ssrf", "auth", "idor", "bola", "deserializ
 # already kept by the driver regardless of this score).
 CODE_EXEC_CLASSES = {"rce", "cmdi", "ssti", "deserialization", "upload", "file-write", "sqli"}
 
+_CRACK_STOP_AT = 2   # matches recon-capture VECTOR_DOUBT_CRACK_AT
+
 
 def _deadline_info(d, st):
     """(remaining_min, total_min, frac_left) from scope.md `deadline`, or None when unset/bad.
@@ -1118,6 +1157,11 @@ def cmd_next(a):
     # path never fires and close-out is never printed. Honor an explicit SOLVED marker in state.md.
     if _is_solved(d):
         return _closeout(d, st, tconf, "state.md marked SOLVED")
+    _stop = _tells_stop(d)
+    if _stop:
+        print(_stop)
+        print("  (this STOP clears once Skill(redteamlead) fires; then run `next` again.)")
+        return 0
     rows = read_board(d)
     counts = _counts(rows)
     budget = _budget(d)
