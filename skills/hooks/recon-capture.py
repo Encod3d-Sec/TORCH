@@ -79,6 +79,10 @@ WIDEN_AT = 20   # web probes with no foothold before the widen-the-surface nudge
 _WIDEN_CAP = 3  # ... and it RE-ARMS every WIDEN_AT probes up to this many fires (was fire-once;
                 # a real box did hundreds of probes and never got re-nudged after the first).
 
+# An already-interactive authenticated session (SSH/evil-winrm) is NOT a raw web-RCE/nc shell that
+# needs stabilizing - suppress the stabilize nudge for it (fixes the false-fire on `ssh user@host id`).
+_EXISTING_SESSION_RE = re.compile(r"\b(ssh|sshpass|evil-winrm)\b", re.I)
+
 
 def _is_web_probe(cmd):
     """A web content/vhost-discovery or fetch command against an http(s) target."""
@@ -996,18 +1000,19 @@ def main():
     # not load it, so the hook is the safety net that fires regardless of which skill is active.
     if d and _engagement:
         try:
-            if _is_rce_landing(_response_text(data)):
+            if _is_rce_landing(_response_text(data)) and not _EXISTING_SESSION_RE.search(cmd or ""):
                 seenr = os.path.join(d, ".rce-shell-nudged")
                 if not os.path.exists(seenr):
                     open(seenr, "a").close()
                     blocks.append(
                         "RCE / code-exec confirmed (`id` shows a service account). If this came "
                         "from a web RCE or an unstabilized `nc` shell, STOP hand-poking one-liners. "
-                        "(1) PREFER msfconsole `exploit/multi/handler` -> meterpreter (or pwncat-cs) "
-                        "FIRST -- it carries session management + `local_exploit_suggester`; egress-test "
-                        "the LPORT (80/443/53) and deliver a tiny ELF inline via base64 if HTTP download "
-                        "is filtered. Raw `nc -lvnp <port>` (bash scripts/vm-scan.sh --win shell <eng> "
-                        "<target> ...) is the FALLBACK only when msf/pwncat are unavailable -- a raw nc "
+                        "(1) PREFER msfconsole `exploit/multi/handler` FIRST -- meterpreter payload first; "
+                        "a plain shell_reverse_tcp/listener is the backup when meterpreter is blocked "
+                        "(routine on Windows/EDR). It carries session management + `local_exploit_suggester`; "
+                        "egress-test the LPORT (80/443/53) and deliver a tiny ELF inline via base64 if HTTP "
+                        "download is filtered. Raw `nc -lvnp <port>` (bash scripts/vm-scan.sh --win shell <eng> "
+                        "<target> ...) is the FALLBACK only when msf/meterpreter are unavailable -- a raw nc "
                         "shell freezes on Ctrl-C and has no job control. (2) If you did fall back to nc, "
                         "STABILIZE at once -- bash scripts/vm-stabilize.sh --win shell <eng>. (3) drive it "
                         "with bash scripts/vm-rsh.sh --win shell <eng> '<cmd>'. See Skill(ctf-box) Phase 3.")
