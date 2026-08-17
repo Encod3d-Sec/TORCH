@@ -43,10 +43,11 @@ ctf-box method for that vuln class) - read it before acting.
 7. **Web RCE -> a real shell, THEN stabilize -- do not ride one-liners (recurring drift).** The
    moment code-exec lands (a web-RCE primitive, an LFI->session-poison, a deser gadget), STOP
    hand-poking one-shot payloads: (a) **catch it with a real handler by default** - `msfconsole`'s
-   `exploit/multi/handler` -> meterpreter, or `pwncat-cs` (record via `campaign.py foothold <target>
-   --win msf`, step 6). Reserve `vm-scan.sh --win shell <eng> <target> 'nc -lvnp <port>'` for when
-   msf/pwncat are unavailable: a raw nc pane's `Ctrl-C` kills the LISTENER (dropping the shell back
-   to your own prompt, the false-root attacker-prompt trap) and it has no session management, while
+   `exploit/multi/handler` (meterpreter first; a plain `shell_reverse_tcp` is the backup when
+   meterpreter is blocked, e.g. Windows/EDR) (record via `campaign.py foothold <target> --win msf`,
+   step 6). Reserve a raw `nc -lvnp` listener for when msf is unavailable: a raw nc pane's `Ctrl-C`
+   kills the LISTENER (dropping the shell back to your own prompt, the false-root attacker-prompt
+   trap) and it has no session management, while
    meterpreter also carries `post/multi/recon`/`local_exploit_suggester` escalation modules and
    built-in file transfer. (b) **Before picking the LPORT, test target egress on common ports
    (80/443/53)** - high ports like 4444 are frequently filtered, so pick an egress-allowed LPORT.
