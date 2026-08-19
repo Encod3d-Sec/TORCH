@@ -40,21 +40,27 @@ Artifact paths that should never be reachable in production: VCS internals, fram
 endpoints, config and backup files, dev leftovers. Fuzzing target for exposed-artifact
 sweeps; not a general directory list.
 
-Built from four sources, assembled with `sort -u` (1247 entries):
+Built from three reproducible sources, assembled with `sort -u` (1125 entries, regenerated
+2026-08-19):
 1. `harness-paths.txt` (this directory)
 2. A seclists slice filtered to artifact-shaped names (`raft-large-files.txt`,
-   `UnixDotfiles.fuzz.txt`, `Common-DB-Backups.txt`), kept only where the entry ends in a
-   backup/config/archive extension, ends in `~`, or starts with a dot
-3. An authored stack-specific core: CMSMS, WordPress, Symfony/Laravel, ABP/.NET, GWT,
-   Directus, Node/Next, CI and editor leftovers
-4. Non-English (Lithuanian) artifact and app names, permuted against artifact extensions
+   `Common-DB-Backups.txt`), kept only where the entry ends in a backup/config/archive
+   extension, ends in `~`, or is a dotfile with a path/multipart name (bare archive-extension
+   tokens like `.zip`/`.bak` are dropped as noise; `UnixDotfiles.fuzz.txt` was dropped as a
+   source because the authored core below already carries the real dotfiles with less noise)
+3. An authored stack-specific + high-value core: VCS internals (`.git/config`, `.svn/`), env
+   and config files (`.env*`, `wp-config.php`, `appsettings.json`, `web.config`), framework
+   debug endpoints (Spring `actuator/*`, `server-status`, `_profiler`, `telescope`), API docs
+   (`swagger.json`, `openapi.json`, `v3/api-docs`), DB/site backups, and CI/editor leftovers
+   (`.gitlab-ci.yml`, `Dockerfile`, `.DS_Store`)
 
 Deliberately not a `raft-large` dump: at an RoE-safe rate across a large estate that is days
 of scanning with poor signal for this bug class, and WAFs wholesale-block sustained fuzzing.
 
-The non-English set is evidence-backed: on a non-English-language app an English-only
-wordlist returned nothing while a targeted native-language sweep found the real endpoints.
-Keep it when regenerating.
+NOT in this regeneration: the original non-English (Lithuanian) permuted set, which is
+evidence-backed (on a non-English-language app an English-only wordlist returned nothing while
+a native-language sweep found the real endpoints). Re-add it from the original engagement data
+if you still have it, then bump the count here.
 
 Entries carry no leading slash (they are appended to a URL already ending in `/`), and the
 list is filtered of domain-shaped and IP-shaped tokens so it stays publishable.
