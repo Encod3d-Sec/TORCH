@@ -914,8 +914,9 @@ def main():
                     blocks.append(
                         "RECON COMPLETENESS: web activity but discovery is incomplete (missing: "
                         + ", ".join(missing) + "). A hidden route/param/CVE is often the intended "
-                        "path -- launch ffuf/feroxbuster (content) + nuclei (CVE) in parallel tmux "
-                        "tabs (scripts/vm-scan.sh) and READ their output before concluding no web "
+                        "path -- run Skill(fuzz) for adaptive content discovery (it picks the right "
+                        "wordlist per surface and calibrates) + nuclei (CVE) in parallel tmux tabs "
+                        "(scripts/vm-scan.sh) and READ their output before concluding no web "
                         "vuln." + sharper)
         except Exception:
             pass
@@ -1057,8 +1058,9 @@ def main():
                         "(2) vhost by redirect-LOCATION -- ffuf -mc all then diff the redirectlocations "
                         "(a real vhost 302s ELSEWHERE; -fc 302 / -ac hides it); (3) another port or "
                         "the second vhost's OWN app; (4) source-read (LFI/.git/backup) before brute. "
-                        "Or run `python3 scripts/campaign.py board` and work it depth-first, or call "
-                        "`Skill(redteamlead)` for wiki-grounded ranked directions when you are stuck." % n)
+                        "Run Skill(fuzz) to enumerate a NEW surface class adaptively (vhost/userdir/"
+                        "api/params, right wordlist per surface), or `python3 scripts/campaign.py "
+                        "board` to work it depth-first, or `Skill(redteamlead)` when stuck." % n)
         except Exception:
             pass
 
