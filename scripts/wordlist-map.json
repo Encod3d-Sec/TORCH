@@ -1,0 +1,68 @@
+{
+  "_comment": "surface|fingerprint -> ordered seclists-relative paths (size-corrected). Consumed by wl-pick.sh. Client-data-free: generic paths + product names only.",
+  "seclists_bases": ["/usr/share/seclists", "/usr/share/wordlists/seclists", "/opt/SecLists"],
+  "surfaces": {
+    "content": [
+      "Discovery/Web-Content/common.txt",
+      "Discovery/Web-Content/quickhits.txt",
+      "Discovery/Web-Content/raft-small-directories.txt",
+      "Discovery/Web-Content/raft-medium-directories.txt",
+      "Discovery/Web-Content/raft-large-directories.txt",
+      "Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt"
+    ],
+    "files": [
+      "Discovery/Web-Content/raft-small-files.txt",
+      "Discovery/Web-Content/raft-medium-files.txt"
+    ],
+    "vhost": [
+      "Discovery/DNS/subdomains-top1million-5000.txt",
+      "Discovery/DNS/subdomains-top1million-20000.txt",
+      "Discovery/DNS/subdomains-top1million-110000.txt",
+      "Discovery/DNS/namelist.txt"
+    ],
+    "api": [
+      "Discovery/Web-Content/api/api-endpoints.txt",
+      "Discovery/Web-Content/api/api-seen-in-wild.txt",
+      "Discovery/Web-Content/common-api-endpoints-mazen160.txt",
+      "Discovery/Web-Content/api/objects.txt"
+    ],
+    "params": [
+      "Discovery/Web-Content/burp-parameter-names.txt",
+      "Discovery/Web-Content/url-params_from-top-55-most-popular-apps.txt"
+    ],
+    "artifacts": [
+      "Discovery/Web-Content/versioning_metafiles.txt",
+      "Discovery/Web-Content/Common-DB-Backups.txt",
+      "Discovery/Web-Content/UnixDotfiles.fuzz.txt"
+    ]
+  },
+  "fingerprints": {
+    "wordpress": ["Discovery/Web-Content/CMS/wordpress.fuzz.txt", "Discovery/Web-Content/URLs/urls-wordpress-3.3.1.txt"],
+    "drupal": ["Discovery/Web-Content/CMS/Drupal.txt", "Discovery/Web-Content/URLs/urls-Drupal-7.20.txt"],
+    "joomla": ["Discovery/Web-Content/URLs/urls-joomla-3.0.3.txt"],
+    "sharepoint": ["Discovery/Web-Content/CMS/Sharepoint.txt"],
+    "tomcat": ["Discovery/Web-Content/Web-Servers/Apache-Tomcat.txt"],
+    "iis": ["Discovery/Web-Content/Web-Servers/IIS.txt"],
+    "nginx": ["Discovery/Web-Content/Web-Servers/nginx.txt"],
+    "jboss": ["Discovery/Web-Content/Web-Servers/JBoss.txt"],
+    "jenkins": ["Discovery/Web-Content/Service-Specific/Jenkins-Hudson.txt"],
+    "weblogic": ["Discovery/Web-Content/Service-Specific/Oracle-WebLogic.txt"],
+    "confluence": ["Discovery/Web-Content/Service-Specific/confluence-administration.txt"],
+    "keycloak": ["Discovery/Web-Content/Service-Specific/Keycloak-Identity-Access-Management.txt"],
+    "swagger": ["Discovery/Web-Content/Service-Specific/Swagger.txt"],
+    "graphql": ["Discovery/Web-Content/graphql.txt"],
+    "php": ["Discovery/Web-Content/Programming-Language-Specific/PHP.fuzz.txt"],
+    "spring": ["Discovery/Web-Content/Programming-Language-Specific/Java-Spring-Boot.txt"],
+    "coldfusion": ["Discovery/Web-Content/coldfusion.txt"]
+  },
+  "harness_first": {
+    "content": "wordlists/harness-paths.txt",
+    "params": "wordlists/harness-params.txt",
+    "artifacts": "wordlists/sensitive-artifacts.txt"
+  },
+  "profiles": {
+    "ctf": {"threads": 60, "rate": 0,  "recursion": 2, "jitter": "off"},
+    "pt":  {"threads": 30, "rate": 30, "recursion": 1, "jitter": "off"},
+    "bb":  {"threads": 15, "rate": 10, "recursion": 1, "jitter": "on"}
+  }
+}
