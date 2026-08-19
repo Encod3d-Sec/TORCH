@@ -1349,7 +1349,9 @@ def _pre_board_next(d, st, tconf, rows):
         1: ("Crawl every in-scope host (%s). Inventory every JS bundle / .js.map / handler / inline "
             "script into source-ledger.md, then READ each WHOLE (source-map -> drop vendor -> "
             "beautify -> read) and flip its `read` cell to yes; never grep-as-read. Write one "
-            "state.md row per discovered asset (url/endpoint/param/tech). %d artifact(s) unread."
+            "state.md row per discovered asset (url/endpoint/param/tech). Run Skill(fuzz) for "
+            "content/vhost/api discovery (right wordlist per surface, calibrated). "
+            "%d artifact(s) unread."
             % (recon, len(_unread_artifacts(d)))),
         2: "Fingerprint exact versions into each state.md row's tech column; pull vendor advisories.",
         3: "CVE / n-day sweep: searchsploit per exact version; record confirmed CVEs as findings.",
