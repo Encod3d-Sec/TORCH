@@ -79,12 +79,44 @@ open("out","wb").write(bytes(b^0x41 for b in base64.b64decode(d)))'   # gaps bec
 
 ## Bypasses and variants
 - Corrupted headers: repair PNG/ZIP/PDF magic + CRC (`pngcheck`, `zip -FF`).
-- Encrypted volumes: VeraCrypt/BitLocker key in memory dump (`vol ... bitlocker`); ZIP/Office hash -> [[hashcat]].
+- Encrypted volumes: VeraCrypt/BitLocker key in memory dump (`vol ... bitlocker`); ZIP/Office hash -> [[wiki/tools/hashcat]].
 
 ## Detection and defence
 Full-disk encryption, log integrity (append-only/remote), memory-acquisition resistance, secure deletion.
 
 ## Tools
-`volatility3`, [[binwalk]], Wireshark / [[tshark]], `foremost`, `exiftool`, Autopsy / sleuthkit, `bulk_extractor`, `regripper`, plaso. See [[steganography]], [[encoding-transformations]].
+`volatility3`, [[binwalk]], Wireshark / [[wiki/tools/tshark]], `foremost`, `exiftool`, Autopsy / sleuthkit, `bulk_extractor`, `regripper`, plaso. See [[steganography]], [[encoding-transformations]].
 
 ## Sources
+
+### WMI CIM repository (fileless persistence extraction)
+
+Files `OBJECTS.DATA` + `INDEX.BTR` + `MAPPING{1,2,3}.MAP` = the **WMI CIM repository**
+(`%SystemRoot%\System32\wbem\Repository\`). WMI **event-subscription** persistence lives here, not in
+Run keys / Startup / Scheduled Tasks - which is exactly why autoruns-style tools miss it. Triage:
+```sh
+strings -n 6 OBJECTS.DATA | grep -aiE "__EventFilter|EventConsumer|FilterToConsumerBinding|ActiveScript|CommandLine"
+```
+Proper parsers: `python-cim` (flare-wmi), `PyWMIPersistenceFinder.py`, Mandiant `WMIParser`.
+
+- **Payload hidden in a custom class property.** A `CommandLineEventConsumer` running `powershell.exe
+  -enc <b64>` is the tell. Decode the `-enc` (base64 -> UTF-16LE: `base64 -d | iconv -f UTF-16LE -t
+  UTF-8`); it reads `([WmiClass]'ROOT\cimv2:<FakeClass>').Properties['<Prop>'].Value` and side-loads a
+  .NET assembly with `[Reflection.Assembly]::Load(...).EntryPoint.Invoke()`. The class name
+  masquerades as legitimate (e.g. `Win32_HardwareTelemetry` - no such real class); the property (e.g.
+  `ConfigData`) holds the payload. This is the "hidden custom configuration data / malicious class".
+- **Extract the payload:** the property value is usually `base64(raw-DEFLATE(PE))`. The one gotcha is
+  it's **raw DEFLATE** (PowerShell `DeflateStream`), so zlib needs `wbits=-15`, not the default:
+  ```py
+  import base64, zlib
+  asm = zlib.decompress(base64.b64decode(blob), -15)   # -15 = raw deflate; MZ/PE .NET assembly
+  ```
+  (`blob` = the one very long base64 run in OBJECTS.DATA: `strings -n 200 OBJECTS.DATA`.)
+- **Read the .NET payload statically - do NOT run it.** Such droppers are often environment-keyed
+  (fire only when `Environment.MachineName == "<victim>"`). Pull the flag/secret from metadata instead:
+  `#US` user-string heap via `dnfile`, or `strings -el` / `monodis` / ILSpy. Secrets frequently sit in
+  a `net user <name> <base64pass> /add` backdoor command - base64-decode the password.
+
+See offensive/creation side: [[windows-persistence]] (WMI Event Subscription).
+
+<!-- promoted-slug: wmi-cim-repository-forensics -->
