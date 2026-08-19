@@ -70,6 +70,9 @@
     "administrator flag|\\bwinrm\\b|\\bkerberos\\b|\\bkdc\\b|smb signing|null session|\\bsam(r| database)|\\bldap\\b (bind|anonymous)|[a-z0-9-]+\\.local\\b|domain (user|account|machine account)|\\bgpo\\b|\\bsysvol\\b|\\bnetlogon\\b": "hunt-ad",
     "passkey|webauthn|fido2": "hunt-auth",
     "xpath injection|xpath query": "hunt-injection",
-    "payload (arsenal|list|examples?)|exploit (arsenal|cheatsheet)|cheatsheet for|attack chain(s)?|cve arsenal|privesc arsenal|(full|deep) arsenal|arsenal for|what (do|should) i use|fast wiki (lookup|search)|parallel wiki (lookup|search)": "wiki-arsenal"
+    "payload (arsenal|list|examples?)|exploit (arsenal|cheatsheet)|cheatsheet for|attack chain(s)?|cve arsenal|privesc arsenal|(full|deep) arsenal|arsenal for|what (do|should) i use|fast wiki (lookup|search)|parallel wiki (lookup|search)": "wiki-arsenal",
+    "\\bfuzz(ing)?\\b|content discovery|directory brute|brute[- ]?force|dir(b|search|busting)|force[- ]?browse": "fuzz",
+    "\\bv-?host(s)?\\b|virtual host(s)?|subdomain (brute|fuzz)": "fuzz",
+    "hidden param(eter)?s?|param(eter)? (fuzz|mining|discovery)|find params|which wordlist": "fuzz"
   }
 }
