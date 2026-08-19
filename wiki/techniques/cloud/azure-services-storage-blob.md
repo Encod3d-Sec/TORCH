@@ -122,3 +122,31 @@ Tool references are inline in **Methodology**; see the `tools/` pages for CLI us
 ## Sources
 
 - Swisskyrepo [InternalAllTheThings](https://github.com/swisskyrepo/InternalAllTheThings) (ingest slug `InternalAllTheThings`).
+
+## Over-scoped account SAS -> enumerate every container (service-level list)
+
+A container-level anonymous list (`/<container>?restype=container&comp=list`) only works when a
+container's ACL is public. An **account SAS** leaked in client-side JS or a config file is stronger:
+its `srt` field controls which resource types it may touch, and `srt` containing `s` (service)
+authorizes the **account-level** container list that reveals EVERY container, including private ones
+the app never links.
+
+Decode the SAS before using it (the grant is in the query string, not the app's intent):
+- `ss` = services (`b`=blob, `f`=file, `q`=queue, `t`=table)
+- `srt` = resource types: `s`=service, `c`=container, `o`=object (the `s` is the account-list key)
+- `sp` = permissions (`r`=read, `l`=list, `w`=write, `d`=delete, ...)
+
+```bash
+# list ALL containers in the account (needs srt containing 's' and sp containing 'l')
+curl -s "https://<account>.blob.core.windows.net/?comp=list&<sas-query-string>"
+# then list + read blobs in a container the site never referenced
+curl -s "https://<account>.blob.core.windows.net/<hidden-container>?restype=container&comp=list&<sas>"
+curl -s "https://<account>.blob.core.windows.net/<hidden-container>/<blob>?<sas>"
+```
+
+A read+list account SAS with `srt=sco` embedded in a static site's JS is therefore a full-account
+read primitive, not the single-container "backup" token it appears to be. Static-website storage
+accounts commonly hold a private container (service creds, backups) beside the public `$web`.
+See [[azure-services-keyvault]].
+
+<!-- promoted-slug: azure-sas-account-container-enum -->
