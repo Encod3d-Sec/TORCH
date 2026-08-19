@@ -626,6 +626,7 @@ def test_done_bb_still_appends_killchain(eng):
     with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
         fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
                              "tool": "Skill", "skill": row["skill"]}) + "\n")
+    _write_verdict(eng, "FIND-001-HIGH-ssrf", refuted=False, evidence=["poc/01.png"])
     r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf",
             "--poc", "poc/01.png", "--kind", "req", expect=0)
     assert "Killchain.md" in r.stdout
@@ -961,3 +962,87 @@ def test_enforce_subcommand(tmp_path, monkeypatch):
     assert (hooks / ".enforce-off").exists()
     C.cmd_enforce(type("A", (), {"state": "on"})())
     assert not (hooks / ".enforce-off").exists()
+
+
+# --------------------------------------------------------------------------- verifier gate (2026-08-19)
+
+def _bb_ssrf(eng):
+    """Init bb, board, return (E, ssrf-row) with its hunt skill fired (G2 satisfied)."""
+    _init(eng, t="bb")
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    row = next(r for r in rows if r.get("vuln class") == "ssrf")
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": row["skill"]}) + "\n")
+    return E, row
+
+
+def _write_verdict(eng, fid, refuted, evidence):
+    os.makedirs(os.path.join(eng, "verdicts"), exist_ok=True)
+    json.dump({"refuted": refuted, "confidence": "high", "evidence_checked": evidence,
+               "reasons": ["disproven" if refuted else "confirmed differential"], "missing": []},
+              open(os.path.join(eng, "verdicts", fid + ".json"), "w"))
+
+
+def test_verify_prints_opus_prompt(eng):
+    _init(eng, t="bb")
+    r = run(eng, "verify", "FIND-001-HIGH-ssrf", expect=0)
+    out = r.stdout.lower()
+    assert "opus" in out                      # model pinned
+    assert "verdicts" in out                   # where the verdict goes
+    assert "refuted" in out and "evidence_checked" in out   # schema surfaced
+
+
+def test_find_refused_without_verdict(eng):
+    E, row = _bb_ssrf(eng)
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf", "--poc", "poc/01.png", "--kind", "req")
+    assert r.returncode == 2, r.stdout
+    assert "VERIFIER GATE" in r.stderr
+    # gate fires BEFORE the row closes / CONFIRMED is recorded
+    rows2 = E._parse_table(os.path.join(eng, "Approach.md"))
+    assert next(x for x in rows2 if x["id"] == row["id"])["status"] != "[x]"
+    assert "CONFIRMED" not in open(os.path.join(eng, "Vuln-index.md")).read()
+
+
+def test_find_refused_when_refuted(eng):
+    E, row = _bb_ssrf(eng)
+    _write_verdict(eng, "FIND-001-HIGH-ssrf", refuted=True, evidence=["poc/01.png"])
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf", "--poc", "poc/01.png", "--kind", "req")
+    assert r.returncode == 2
+    assert "REFUTED" in r.stderr.upper()
+    assert "CONFIRMED" not in open(os.path.join(eng, "Vuln-index.md")).read()
+
+
+def test_find_refused_on_rubber_stamp(eng):
+    E, row = _bb_ssrf(eng)
+    # verdict says not-refuted but never cites the finding's real PoC -> rubber-stamp
+    _write_verdict(eng, "FIND-001-HIGH-ssrf", refuted=False, evidence=["something-else.png"])
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf", "--poc", "poc/01.png", "--kind", "req")
+    assert r.returncode == 2
+    assert "CONFIRMED" not in open(os.path.join(eng, "Vuln-index.md")).read()
+
+
+def test_find_allowed_with_valid_verdict(eng):
+    E, row = _bb_ssrf(eng)
+    _write_verdict(eng, "FIND-001-HIGH-ssrf", refuted=False, evidence=["poc/01.png"])
+    r = run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf", "--poc", "poc/01.png", "--kind", "req",
+            expect=0)
+    assert "CONFIRMED" in open(os.path.join(eng, "Vuln-index.md")).read()
+
+
+def test_ctf_find_skips_verifier_gate(eng):
+    """ctf flags self-verify -> the gate must not require a verdict for ctf."""
+    _init(eng, t="ctf")
+    run(eng, "board", expect=0)
+    sys.path.insert(0, os.path.join(VAULT, "skills", "hooks"))
+    import _engagement as E
+    rows = E._parse_table(os.path.join(eng, "Approach.md"))
+    row = next(r for r in rows if r.get("vuln class") == "ssrf")
+    with open(os.path.join(eng, ".events.jsonl"), "a") as fh:
+        fh.write(json.dumps({"ts": "2026-12-01T00:00:00Z", "kind": "tool",
+                             "tool": "Skill", "skill": row["skill"]}) + "\n")
+    run(eng, "done", row["id"], "--find", "FIND-001-HIGH-ssrf", "--poc", "poc/01.png", "--kind", "req",
+        expect=0)

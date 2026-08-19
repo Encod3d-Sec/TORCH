@@ -1584,6 +1584,55 @@ def cmd_foothold(a):
     return 0
 
 
+def _verdict_check(d, find_id, poc):
+    """VERIFIER GATE (bb/pt): refuse to record a CONFIRMED finding unless an independent verifier
+    wrote a passing verdict that actually cites the finding's PoC. Fails CLOSED - the one driver
+    gate that does (a wrong bank submission is costly). See docs .../verifier-gate-design.md."""
+    vpath = os.path.join(d, "verdicts", find_id + ".json")
+    if not os.path.exists(vpath):
+        _die("VERIFIER GATE: no verdict for %s. Run `campaign.py verify %s`, spawn the Opus "
+             "verifier it prints, then retry `done --find`." % (find_id, find_id))
+    try:
+        v = json.load(open(vpath, encoding="utf-8"))
+    except Exception as e:
+        _die("VERIFIER GATE: %s is unreadable (%s) - re-run the Opus verifier." % (vpath, e))
+    if v.get("refuted", True):   # missing/true field -> treat as refuted (fail closed)
+        why = "; ".join(v.get("reasons") or []) or "(no reasons given)"
+        _die("VERIFIER GATE: %s was REFUTED -> keep it in Research, do NOT submit. reasons: %s"
+             % (find_id, why))
+    checked = {os.path.basename(str(x)) for x in (v.get("evidence_checked") or [])}
+    pb = os.path.basename((poc or "").strip())
+    if pb and pb not in checked:
+        _die("VERIFIER GATE: verdict for %s does not cite the finding's PoC (%s) - the verifier "
+             "must read the real evidence, not rubber-stamp. evidence_checked=%s"
+             % (find_id, pb, sorted(checked)))
+
+
+def cmd_verify(a):
+    d = _resolve(a.eng)
+    st = _load_state(d) if d else None
+    if not d or not st:
+        _die("no initialised campaign")
+    cfg = _load_cfg()
+    model = cfg.get("verifier_model", "opus")
+    prompt = cfg.get("refuter_prompt", "")
+    vdir = os.path.join(d, "verdicts")
+    os.makedirs(vdir, exist_ok=True)
+    vpath = os.path.join(vdir, a.find + ".json")
+    print("VERIFIER (mandatory gate before CONFIRMED) - model: %s, FRESH independent context" % model)
+    print()
+    print(prompt)
+    print()
+    print("READ the finding and its raw evidence under targets/<eng>/poc/ (the exact req/burp/web PoC).")
+    print("Then WRITE the verdict to: %s" % vpath)
+    print('  schema: {"refuted": bool, "confidence": "low|med|high", '
+          '"evidence_checked": [<paths actually read>], "reasons": [..], "missing": [..]}')
+    print("evidence_checked MUST cite the finding's PoC file, else the gate rejects it as a rubber-stamp.")
+    print("Dispatch: Agent tool, subagent_type general-purpose, model: %s. "
+          "Then re-run `campaign.py done <row> --find %s --poc <img> --kind <k>`." % (model, a.find))
+    return 0
+
+
 def cmd_done(a):
     d = _resolve(a.eng)
     st = _load_state(d) if d else None
@@ -1603,6 +1652,11 @@ def cmd_done(a):
     if a.find and not a.poc:
         _die("--find records a CONFIRMED finding and requires --poc P --kind K [G3]")
     cls = (row.get("vuln class") or "").strip().lower()
+
+    # VERIFIER GATE (bb/pt only; ctf flags self-verify): a CONFIRMED finding must pass an
+    # independent Opus refutation BEFORE the row closes / CONFIRMED is recorded.
+    if a.find and st.get("approach") != "ctf":
+        _verdict_check(d, a.find, a.poc)
 
     if a.park:
         row["status"] = "[?]"
@@ -1943,6 +1997,7 @@ def main(argv):
     p.add_argument("--skill", help="the hunt skill that ACTUALLY landed this row - satisfies G2 when the board mapped the wrong class->skill (the override must itself have fired)")
     p.add_argument("--win", help="tmux window the foothold session landed in -> record it (post-ex routes through vm-rsh --win)")
     p.set_defaults(fn=cmd_done)
+    p = sub.add_parser("verify"); p.add_argument("find"); p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("foothold"); p.add_argument("asset", nargs="?"); p.add_argument("--win", required=True)
     p.set_defaults(fn=cmd_foothold)
     sub.add_parser("pass-done").set_defaults(fn=cmd_pass_done)

@@ -31,6 +31,10 @@ ls targets/$ENG/ingest/        # raw files to process (ignore _processed/)
 6. **Archive**: move processed files to `targets/$ENG/ingest/_processed/`.
 7. **Re-rank**: `python3 scripts/next_move.py` and surface the new top moves.
 
+## Haiku offload (short-task lane)
+
+Steps 2-3 (read every raw file, extract rows per schema) are a bounded, fully-specified parse - hand them to ONE `model: haiku` agent (Agent tool, `subagent_type` general-purpose) to spare the main Opus loop's tokens. Give it the exact `$TYPE` schema and have it RETURN structured rows (JSON/table); the main agent does steps 4-7 (merge, the access/owned/notes judgment, log, archive, re-rank). One agent, not a fan-out. The main agent still reads end-to-end any handler/JS/source it will actually exploit - the Haiku parse is a first-pass accelerator, not the sole read. See `Skill(delegate)` for the dispatch pattern.
+
 ## Discipline
 - Stay in scope. For bugbounty, check the secret/finding is in-program before recording.
 - Credentials are `unconfirmed` until you authenticate with them; only then `active`.

@@ -55,6 +55,7 @@
   },
   "_surface_comment": "Heuristic attack-surface terms. Lower confidence than 'triggers' -> softer 'consider' suggestion, escapable when not about testing. Keep anchored (e.g. 'api endpoint', not bare 'endpoint') to avoid over-firing. Add/trim from trigger-stats.py data.",
   "surface_triggers": {
+    "smart[- ]?id|mobile[- ]?id|national id|manual login|log ?in (manually|by hand)|mfa (login|prompt|challenge)|2fa (login|prompt)|solve (the )?captcha|open (a |the )?browser|drive (the )?browser|capture (the )?(authenticated )?session": "chrome-devtools-browser",
     "^\\s*(\\d{1,3}\\.){3}\\d{1,3}\\b": "ctf-box",
     "recon (a |the |this )?(box|machine|target|host|vm|network|subnet)|scan (a |the |this )?(box|machine|target|host|subnet)|enumerate (the |this )?(box|host|machine|target)|starting recon|begin(ning)? recon": "wiki-recon",
     "login (form|page|endpoint|flow)|sign[- ]?in (form|page|flow)|authentication (form|endpoint|flow)|password (field|reset)\\b|forgot password|registration (form|page)|sign[- ]?up (form|page)": "hunt-auth",

@@ -72,6 +72,8 @@ browser** (`scripts/browser.sh <url>` / `capture.sh web`) to render a JS-heavy w
 its DOM + network requests (the rendered XHR/fetch calls reveal API routes a `curl` crawl misses -
 often the intended path). Rendered screenshots of the flag/exploited state are valid `web` PoCs.
 
+A service needing a **manual login / MFA / CAPTCHA** the agent can't do headlessly -> `Skill(chrome-devtools-browser)`: a VISIBLE chromium on the VM desktop (`scripts/browser-visible.sh`) the operator drives, observed live via the chrome-devtools MCP.
+
 ## Gates
 
 G1 arsenal-first, G2 skill-first, G3 typed evidence (a flag on screen is a valid `web` PoC), G8

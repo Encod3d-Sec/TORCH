@@ -78,3 +78,29 @@ def test_fuzz_refs_resolve():
 def test_fuzz_calls_selector():
     txt = open(_skill("fuzz"), encoding="utf-8").read()
     assert "wl-pick.sh" in txt, "fuzz skill must call the deterministic selector"
+
+
+# --------------------------------------------------------------------------- chrome-devtools-browser (2026-08-19)
+
+def test_cdp_browser_frontmatter():
+    assert _frontmatter_ok(_skill("chrome-devtools-browser"))
+
+def test_cdp_browser_refs_resolve():
+    assert _refs_resolve(_skill("chrome-devtools-browser")) == []
+
+def test_cdp_browser_wired_in_triggers():
+    d = json.load(open(os.path.join(VAULT, "skills", "hunt", "triggers.json")))
+    vals = set()
+    for src in ("triggers", "surface_triggers"):
+        for k, v in d.get(src, {}).items():
+            re.compile(k)  # every pattern must compile
+            vals.update(v if isinstance(v, list) else [v])
+    assert "chrome-devtools-browser" in vals
+
+def test_cdp_browser_helper_script_present():
+    assert os.path.isfile(os.path.join(VAULT, "scripts", "browser-visible.sh"))
+
+def test_cdp_browser_wired_in_workflows():
+    for w in ("bb-workflow", "pt-workflow", "ctf-workflow"):
+        txt = open(_skill(w), encoding="utf-8").read()
+        assert "chrome-devtools-browser" in txt, w

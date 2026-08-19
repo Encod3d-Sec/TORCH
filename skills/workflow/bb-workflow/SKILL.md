@@ -48,6 +48,8 @@ Caveat: chrome-devtools drives a **local** browser, so it only reaches internet 
 VPN-boxed host it cannot connect - use the VM-side browser (`scripts/browser.sh` / `capture.sh web`)
 as the equivalent. `pt-workflow` / `ctf-workflow` default to the VM browser for that reason.
 
+**Manual login / MFA the agent cannot do headlessly** (Smart-ID, Mobile-ID, a CAPTCHA) -> `Skill(chrome-devtools-browser)`: a VISIBLE chromium on the VM desktop (`scripts/browser-visible.sh`) the operator logs into, driven + observed live via the chrome-devtools MCP - capture the authenticated session and the real `/…` API calls, then feed the hunt skills.
+
 ## Gates (the driver enforces; do not fight them)
 
 - **G1** no exploit action until the row's arsenal card exists (`Skill(wiki-arsenal)` fills it).
@@ -62,12 +64,25 @@ No approvals. Out-of-envelope work **parks** to `decisions.md` and the loop move
 and never asks a question. A confirmed TIER1 is written up and chained but does not stop the run; the
 campaign ends when the board is exhausted (two dry reframe rounds) or the request budget is spent.
 
+## Model routing
+
+Explicit per-role model assignment (the driver enforces the verifier gate; the rest is operating policy):
+
+- **Main brain - Opus 5 1M:** the `campaign.py` loop, board/state, strategy, Burp/chrome-devtools, finding write-ups. This session.
+- **Verifier - Opus (fresh context), MANDATORY:** before any CONFIRMED, `campaign.py verify <F>` prints an Opus refuter prompt; dispatch ONE fresh Opus agent that reads the raw PoC, tries to REFUTE, and writes `verdicts/<F>.json`. `done --find` refuses unless that verdict exists, is `refuted:false`, and cites the finding's PoC (anti-rubber-stamp). Fails CLOSED.
+- **RTL - Opus (fresh context):** `Skill(redteamlead)` for direction at a fork or when a vector stalls.
+- **Short tasks - Haiku:** `Skill(wiki-arsenal)` deep, `Skill(delegate)` (mechanical exploit-run), `Skill(ingest)` recon-parse. Bounded, fully-specified, single-shot ONLY.
+
+The line that keeps quota safety: Haiku is allowed for a **bounded single job**, never for open-ended parallel hunting.
+
 ## Discipline (carried, not restated - hunt-core owns the gates)
 
 - **Do NOT** invoke `superpowers:brainstorming` or `superpowers:writing-plans` mid-campaign, and keep
   no parallel `TaskCreate` list. The board is the plan.
-- One agent. The only subagent is the refuter, spawned by `done --find` before a finding is recorded
-  CONFIRMED. No hunter fan-out (it exhausted the weekly quota last time).
+- Model routing (see `## Model routing`): Opus-1M drives the loop; bounded short tasks go to Haiku;
+  the mandatory Opus **verifier** gates every finding (`done --find` refuses without a passing
+  `verdicts/<F>.json`). Still **no open-ended hunter fan-out** (it exhausted the weekly quota last
+  time) - Haiku is only for single, fully-specified jobs.
 - Load-bearing exploit requests go through Burp Repeater when it is reachable; degrade to
   `capture.sh req` when it is not. Never block on Burp.
 - Scope and the enumeration ceiling come from `scope.md`, never from this skill.

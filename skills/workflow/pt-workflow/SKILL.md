@@ -44,10 +44,24 @@ No approvals. Out-of-envelope work parks to `decisions.md`; the loop never block
 the lockout policy in `scope.md` (the envelope), never attempted blind. Destructive AD operations
 (Zerologon and similar) park unless the envelope authorises them.
 
+## Model routing
+
+Explicit per-role model assignment (the driver enforces the verifier gate; the rest is operating policy):
+
+- **Main brain - Opus 5 1M:** the `campaign.py` loop, board/state, strategy, Burp/chrome-devtools, finding write-ups. This session.
+- **Verifier - Opus (fresh context), MANDATORY:** before any CONFIRMED, `campaign.py verify <F>` prints an Opus refuter prompt; dispatch ONE fresh Opus agent that reads the raw PoC, tries to REFUTE, and writes `verdicts/<F>.json`. `done --find` refuses unless that verdict exists, is `refuted:false`, and cites the finding's PoC (anti-rubber-stamp). Fails CLOSED.
+- **RTL - Opus (fresh context):** `Skill(redteamlead)` for direction at a fork or when a vector stalls.
+- **Short tasks - Haiku:** `Skill(wiki-arsenal)` deep, `Skill(delegate)` (mechanical exploit-run), `Skill(ingest)` recon-parse. Bounded, fully-specified, single-shot ONLY.
+
+The line that keeps quota safety: Haiku is allowed for a **bounded single job**, never for open-ended parallel hunting.
+
+**Manual login / MFA the agent cannot do headlessly** (Smart-ID, an SSO/MFA prompt, a CAPTCHA) -> `Skill(chrome-devtools-browser)`: a VISIBLE chromium on the VM desktop (`scripts/browser-visible.sh`) the operator logs into, driven + observed live via the chrome-devtools MCP to capture the authenticated session + real API calls.
+
 ## Discipline
 
 - Do NOT invoke `superpowers:brainstorming`/`writing-plans` mid-run; keep no parallel task list.
-- One agent; the refuter is the only subagent (`done --find`).
+- Model routing (see `## Model routing`): Opus-1M drives; Haiku for bounded short tasks; the mandatory
+  Opus **verifier** gates every finding via `verdicts/<F>.json`. No open-ended hunter fan-out.
 - Load-bearing requests through Burp when reachable; degrade to `capture.sh req` otherwise.
 - Scope, lockout policy and destructive-op limits come from `scope.md`.
 - **RCE-first:** when >1 vector is open, take the one that yields code-exec first - it is the attack
