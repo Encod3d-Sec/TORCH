@@ -52,6 +52,17 @@ worst signal-per-request.
 
 Extend the machine copy at `scripts/wordlist-map.json` (data, no code).
 
+### Cracking / payload lists (not wl-pick.sh surfaces)
+| need | path |
+|---|---|
+| Passwords | `Passwords/{rockyou.txt,Leaked-Databases/}` |
+| Usernames | `Usernames/{top-usernames-shortlist,xato-net-10-million}.txt` |
+| Default creds | `Passwords/Default-Credentials/` -> [[default-credentials]] |
+| Injection payloads (SQLi/XSS/SSTI) | `Fuzzing/{SQLi,XSS,template-engines-*}` |
+
+These are for cracking / payload fuzzing, out of scope for the discovery selector; the hunt-*
+skills own them.
+
 More: assetnote wordlists (`wordlists.assetnote.io`), `fuzzdb`, `payloadbox`, Kettle's `param-miner` lists.
 
 ## Custom: LFI / traversal (copy-paste)
