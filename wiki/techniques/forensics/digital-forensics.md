@@ -120,3 +120,35 @@ Proper parsers: `python-cim` (flare-wmi), `PyWMIPersistenceFinder.py`, Mandiant 
 See offensive/creation side: [[windows-persistence]] (WMI Event Subscription).
 
 <!-- promoted-slug: wmi-cim-repository-forensics -->
+
+### Windows host triage: EVTX + Procmon .PML offline (no GUI)
+
+Pull the artifacts off a live/imaged host and parse them locally - you do NOT need the Windows GUI
+tools. Grab `C:\Windows\System32\winevt\Logs\*.evtx` and any Procmon `.PML` / Autoruns `.arn` via
+SMB/WinRM (`smbclient`, `nxc winrm -X`, impacket). Parse: EVTX -> `python-evtx` / `evtx_dump` /
+chainsaw; Procmon `.PML` -> **`procmon-parser`** (pip; `ProcmonLogsReader`, `.processes()`,
+per-event `.operation/.path/.details/.result/.stacktrace/.date()`).
+
+- **Timezone gotcha (bites every time):** `procmon-parser`'s `event.date()` returns **UTC**, but the
+  Procmon GUI and Event Viewer's "Date and Time" field display the **host's LOCAL** time. Convert with
+  the box TZ (`HKLM\SYSTEM\CurrentControlSet\Control\TimeZoneInformation\TimeZoneKeyName`, or note the
+  `...\Time Zones\<name>\TZI` the process reads). A UTC-vs-local answer mismatch is the classic error.
+- **`<unknown>` stack frame = process injection (T1055).** In a Procmon call stack, a frame whose
+  **Module = `<unknown>`** is executing from unbacked / private (RWX) memory = injected code (the frame
+  above the last named DLL). Corroborate with Sysmon **EID 8 CreateRemoteThread** and
+  **mscoree.dll/clr.dll loaded into a non-.NET host** (e.g. `explorer.exe`) = .NET/PowerShell (Empire)
+  injection. `procmon-parser` won't resolve that address to any module - that IS the finding.
+- **Key Sysmon EIDs for host IR:** 1 proc-create (+cmdline), 3 net-connect, 7 image-load, 8
+  CreateRemoteThread (injection), 13 RegistryValueSet (persistence). RuleName carries the mapped ATT&CK
+  id (e.g. `technique_id=T1547.001`).
+- **Follow layered persistence indirection.** A Run-key value may only launch a loader that reads the
+  REAL encoded payload from a SEPARATE reg value (seen: `HKCU\...\CurrentVersion\Debug` holding
+  base64/UTF-16LE PowerShell). Decode the value the loader points at, not the Run key string.
+- **PrintDemon (CVE-2020-1048) artifact:** PrintService/Admin **EID 823 (ChangingDefaultPrinter)** with
+  a rogue printer name = a printer port abused to write an arbitrary file (e.g. `ualapi.dll` ->
+  Fax-service DLL hijack -> SYSTEM). See offensive side [[windows-persistence]].
+- **PowerShell Empire (S0363) network IOCs:** default GET profile URIs `/admin/get.php,/news.php,
+  /login/process.php`, UA `Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko`,
+  RC4-staged beacon. More: [[modern-c2-frameworks]].
+
+<!-- promoted-slug: windows-host-dfir-evtx-procmon -->
