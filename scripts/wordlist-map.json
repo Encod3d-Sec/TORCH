@@ -57,8 +57,7 @@
   },
   "harness_first": {
     "content": "wordlists/harness-paths.txt",
-    "params": "wordlists/harness-params.txt",
-    "artifacts": "wordlists/sensitive-artifacts.txt"
+    "params": "wordlists/harness-params.txt"
   },
   "profiles": {
     "ctf": {"threads": 60, "rate": 0,  "recursion": 2, "jitter": "off"},

@@ -46,6 +46,15 @@ def test_profiles_have_flag_keys():
             assert k in p, "profile %s missing %s" % (prof, k)
 
 
+def test_harness_first_paths_exist():
+    # every harness_first pointer must resolve to a real file under scripts/
+    m = _map()
+    scripts_dir = os.path.join(REPO, "scripts")
+    for surface, rel in m["harness_first"].items():
+        p = os.path.join(scripts_dir, rel)
+        assert os.path.isfile(p), "harness_first[%s] -> missing file: %s" % (surface, rel)
+
+
 def test_every_seclists_path_exists():
     base = _base()
     if base is None:
