@@ -68,3 +68,13 @@ def test_playbook_wires_metasploit_and_parses():
     assert hits, "no fingerprint routes to metasploit"
     # not blanket-applied
     assert len(hits) < len(fps), "metasploit added to every fingerprint (should be msf-strong only)"
+
+def test_fuzz_frontmatter():
+    assert _frontmatter_ok(_skill("fuzz"))
+
+def test_fuzz_refs_resolve():
+    assert _refs_resolve(_skill("fuzz")) == []
+
+def test_fuzz_calls_selector():
+    txt = open(_skill("fuzz"), encoding="utf-8").read()
+    assert "wl-pick.sh" in txt, "fuzz skill must call the deterministic selector"
