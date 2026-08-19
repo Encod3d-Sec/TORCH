@@ -20,7 +20,7 @@ Given a challenge file or description, identify the category, then read the matc
 | URL / web app | **web** | existing hunt skills | auto-triggers (sqli/xss/ssrf/idor/injection...) via triggers.json |
 | Cloud creds/console (Azure TAP+SP, `*.core.windows.net`, AWS keys, GCP) - no ports, only a REST/console surface | **cloud** | [[cloud-moc]], [[cloud-iam-attacks]] | `Skill(hunt-cloud)`: whoami; enumerate storage/SAS/blob + Key Vault (incl. prior secret versions) / IMDS - NOT the network-box driver |
 | `$hash` / NTLM / shadow / zip2john | **hash/crack** | [[hash-capture-and-cracking]] | identify (`hashid`); [[wiki/tools/hashcat]] mode; [[password-cracking]] |
-| "find the account/person/leak" / no file | **osint** | [[secret-hunting]], [[web-attack-surface]] | search pivots; [[git-exposure]] for repos |
+| "find the account/person/leak" / no file | **osint** | [[persona-tracing]], [[secret-hunting]], [[web-attack-surface]] | person pivots + photo geolocation; [[git-exposure]] for repos |
 | python `>>>` jail / restricted shell / filtered interpreter | **misc/jail** | [[ctf-jail-escapes]] | builtins/mro recovery, format-string pyjail, GTFOBins rbash escape |
 
 ## Procedure
