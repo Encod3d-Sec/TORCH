@@ -29,3 +29,7 @@ def test_swagger_routes_to_fuzz():
 
 def test_benign_page_does_not_route_to_fuzz():
     assert "fuzz" not in _skills("<html><body><h1>Welcome to our homepage</h1></body></html>")
+
+
+def test_bare_robots_mention_does_not_route_to_fuzz():
+    assert "fuzz" not in _skills("For SEO best practices, add a robots.txt file to your site.")
