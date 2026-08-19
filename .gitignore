@@ -28,6 +28,8 @@ raw/*
 # Harness design plans/specs/handovers. They contain real machine paths and a
 # client engagement name; scrub before shipping if you ever want to publish them.
 docs/superpowers/
+docs/plans/
+docs/specs/
 # subagent-driven-development progress ledger (session scratch, per-run)
 .superpowers/
 
