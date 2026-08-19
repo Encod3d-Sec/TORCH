@@ -23,6 +23,8 @@ Probe in this order; a higher entry is more often unguarded than a cleverer payl
 1. **Legacy protocol endpoints** (matrix below) - a second door to the same credential store, frequently with no rate limit, MFA, or CAPTCHA. Probe first on any custom/branded login.
 2. **Password reset flows** - host-header poisoning, token in Referer, token reuse/expiry, reset that does not invalidate live sessions.
 3. **Session and MFA** - fixation, missing rotation on privilege change, MFA-optional endpoints, JWT manipulation.
+4. **Read the login form's fields, not just the endpoint.** A login that takes **username only, no password field** is instant ATO - just submit the privileged/target username (custom auth on a CTF/lab app does this constantly). Same for a "just email"/"just token" form with no secret.
+5. **Predictable/leaked signing key -> forge as any user.** When auth or a "signed message" rests on a per-user key, hunt for a `/debug`, docs, or `/about` endpoint (or source) that discloses the **key-derivation** (deterministic seed like `f(username, CONST)`, `nextprime(int(SHA256(seed)))`). If the derivation is known, reconstruct the private key offline and forge signatures/sessions/JWTs for admin - no factoring, modulus size irrelevant. Build + oracle-brute steps in [[cryptography-attacks]] ("RSA private key from a known/deterministic seed").
 
 ## Legacy Protocol Matrix (Probe First on Any Custom-Branded Login)
 

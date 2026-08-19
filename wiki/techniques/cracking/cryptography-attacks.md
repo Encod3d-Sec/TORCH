@@ -63,7 +63,7 @@ python3 -c "import factordb"   # factordb.com lookup for known n
 Use vetted libraries (libsodium); authenticated encryption (AES-GCM with unique nonces); constant-time comparison; CSPRNG (`secrets`, `/dev/urandom`); RSA-OAEP not textbook RSA; reject reused nonces.
 
 ## Tools
-`RsaCtfTool`, `sage`, `factordb`, `hashpump`, `xortool`, `padbuster`, CyberChef, `z3`, `randcrack`. Hash cracking: [[hashcat]], [[password-cracking]].
+`RsaCtfTool`, `sage`, `factordb`, `hashpump`, `xortool`, `padbuster`, CyberChef, `z3`, `randcrack`. Hash cracking: [[wiki/tools/hashcat]], [[password-cracking]].
 
 ## Structured-limb ("short-sleeve") RSA key factoring
 
@@ -120,3 +120,26 @@ the two ECB attacks:
   against that block using the salt from the same response. The cookie-issuing endpoint IS the oracle.
 
 <!-- promoted-slug: crypt-per-block-ecb-cookie -->
+
+### RSA private key from a known/deterministic seed (no factoring)
+
+When keygen is **deterministic from an attacker-known seed**, rebuild the private key directly - no
+factoring, regardless of modulus size. The tell: a docs / `/debug` endpoint (or source) spelling out
+the derivation, e.g. seed = `f(username, CONST)`, `p = nextprime(int(SHA256(seed)))`, `q =
+nextprime(int(SHA256(seed + b"pki")))`, `n = p*q`, `e = 65537`. Reproduce it exactly and compute `d
+= pow(e, -1, (p-1)*(q-1))`; the advertised size ("RSA-2048") is often a decoy - the real `n` can be
+~512-bit.
+- **Match "nextprime" precisely:** "check consecutive integers until prime" INCLUDES the start value,
+  so `p = x if isprime(x) else nextprime(x)` (sympy's `nextprime` returns strictly `>x` and is
+  off-by-one when the hash int is itself prime).
+- **A public verify endpoint is a signature oracle.** Reconstruct the signer's key, sign a message,
+  submit -> valid/invalid confirms both the key AND the padding. Padding is usually unknown, so brute
+  the handful against the oracle: `PSS(MAX salt)`, `PSS(32)`, `PSS(0)`, `PKCS1v15`, with `e` in
+  `{65537, 3, 17}` (build the key with the `cryptography` lib's `RSAPrivateNumbers`; ensure `p>q`).
+- Same primitive breaks any per-user signed-message / JWT / token scheme keyed on the seed: forge as
+  any user (admin), decrypt private messages, impersonate. Distinct from the PRNG-token forge above
+  (which recovers a hidden CONST from one output pair; here the whole derivation is disclosed).
+- Web pairing seen repeatedly: passwordless/username-only login for the session + this forge for the
+  "cryptographic" gate. See [[insecure-randomness]].
+
+<!-- promoted-slug: rsa-deterministic-seed-keygen -->
