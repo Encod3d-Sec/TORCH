@@ -71,6 +71,13 @@ def test_harness_first_then_size_order(pick):
            paths.index([x for x in paths if x.endswith("raft-large-directories.txt")][0])
 
 
+def test_unknown_surface_shows_usage(pick):
+    run, _ = pick
+    p = run("bogus")
+    assert p.returncode != 0
+    assert "usage" in p.stderr.lower()
+
+
 def test_fingerprint_jumps_to_t3(pick):
     run, _ = pick
     p = run("content", "wordpress", "ctf")

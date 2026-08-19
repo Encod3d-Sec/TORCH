@@ -8,7 +8,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAP="$HERE/wordlist-map.json"
 surface="${1:-}"; fp="${2:-}"; etype="${3:-ctf}"
 
-if [ -z "$surface" ]; then
+if [ -z "$surface" ] || ! python3 -c "import json,sys
+sys.exit(0 if '$surface' in json.load(open('$MAP'))['surfaces'] else 1)" 2>/dev/null; then
   echo "usage: wl-pick.sh <content|files|vhost|api|params|artifacts> [fingerprint] [ctf|pt|bb]" >&2
   exit 2
 fi
@@ -31,13 +32,11 @@ for b in m['seclists_bases']:
   [ -n "$base" ] || { echo "seclists unavailable and install failed" >&2; exit 3; }
 fi
 
-# --- validate surface + emit header lines (base, flags) ---
+# --- emit header lines (base, flags); surface already validated above ---
 python3 - "$MAP" "$base" "$surface" "$fp" "$etype" "$HERE" <<'PY'
 import json, os, sys
 mapf, base, surface, fp, etype, here = sys.argv[1:7]
 m = json.load(open(mapf))
-if surface not in m["surfaces"]:
-    sys.stderr.write("unknown surface: %s\n" % surface); sys.exit(2)
 prof = m["profiles"].get(etype) or m["profiles"]["ctf"]
 print("# seclists: %s" % base)
 print("# flags: threads=%s rate=%s recursion=%s jitter=%s (profile=%s)"
