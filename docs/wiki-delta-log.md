@@ -44,3 +44,7 @@ sustained zero means either wiki saturation (good) or a skipped harvest (investi
 2026-08-15  ctf  2
 2026-08-15  ctf  2
 2026-08-16  ctf  1
+2026-08-17  ctf  1
+2026-08-17  bugbounty  0
+2026-08-17  ctf  2
+2026-08-19  ctf  1
