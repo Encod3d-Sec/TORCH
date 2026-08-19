@@ -105,6 +105,8 @@ coldfusion  php-cgi  vcenter  screenconnect  papercut  ofbiz
 
 Tools whose output is fingerprinted (matched at command position, including inside `vm.sh`/`ssh`/`wsl` bridge wrappers): `nmap masscan nxc netexec crackmapexec ffuf httpx subfinder rustscan naabu dnsx katana gau amass gowitness arjun nuclei gobuster feroxbuster curl wget whatweb wpscan nikto nslookup dig sqlmap dalfox swaks`. (Capturing results into `state.md`/`loot.md` is now state-first discipline, not a hook nudge.)
 
+**`fuzz` skill routing** - three independent paths, no single point of failure: typed discovery vocabulary (`fuzz`, `vhost`, `hidden param`, ...) hits `triggers.json` `surface_triggers` (§2); a live recon gap fires one of `recon-capture.py`'s two content-discovery nudges (RECON COMPLETENESS when a web probe ran but discovery didn't, and the new-surface-class nudge after a foothold); and a precise discoverable-surface signal (dir listing, robots `Disallow`, swagger/openapi) in `playbook.json` routes straight to `Skill(fuzz)` rather than a generic "http service" fingerprint.
+
 ---
 
 ## By task - concrete examples

@@ -11,22 +11,46 @@ sources: []
 
 Where the fuzz lists live, ready custom lists, and how to build target-specific ones. Feed [[wiki/tools/ffuf]] / [[wiki/tools/nuclei]] ([[nuclei-arsenal]]) / gobuster.
 
-## SecLists (the standard set)
-```bash
-apt install seclists        # or: git clone github.com/danielmiessler/SecLists /opt/SecLists
-```
+## SecLists: selection (use wl-pick.sh - do not hand-pick)
 
-| Need | Path (under SecLists/) |
+`scripts/wl-pick.sh <surface> [fingerprint] [ctf|pt|bb]` deterministically prints the right
+lists in size order + profile flags. The `fuzz` skill calls it. Reach for this before any
+manual `ffuf -w`.
+
+### The names lie about size - order by real line count
+| list | lines |
 |---|---|
-| Dirs/files | `Discovery/Web-Content/{raft-large,directory-list-2.3-medium,common}.txt` |
-| API/params | `Discovery/Web-Content/{api/,burp-parameter-names}.txt` |
-| LFI | `Fuzzing/LFI/LFI-Jhaddix.txt`, `Fuzzing/LFI/LFI-gracefulsecurity-linux.txt` |
-| Path traversal | `Fuzzing/LFI/LFI-LFISuite-pathtotest.txt` |
-| SQLi/XSS/SSTI | `Fuzzing/SQLi/`, `Fuzzing/XSS/`, `Fuzzing/template-engines-*` |
-| Subdomains | `Discovery/DNS/{subdomains-top1million-110000,bitquark}.txt` |
-| Passwords | `Passwords/{rockyou.txt,Leaked-Databases/}` |
-| Usernames | `Usernames/{top-usernames-shortlist,xato-net-10-million}.txt` |
-| Default creds | `Passwords/Default-Credentials/` -> see [[default-credentials]] |
+| `common.txt` | 4.7k |
+| `quickhits.txt` | ~2.5k |
+| `raft-small-directories.txt` | 20k |
+| `raft-medium-directories.txt` | 30k |
+| `raft-large-directories.txt` | 62k |
+| `DirBuster..2.3-small.txt` | 87k (bigger than raft-large!) |
+| `DirBuster..2.3-medium.txt` | 220k (last resort / ctf only) |
+
+Starting `directory-list-2.3-medium` first is the anti-pattern: 220k requests, WAF-tripping,
+worst signal-per-request.
+
+### Surface -> list
+| surface | lists (run order) |
+|---|---|
+| content | `common` -> `quickhits` -> `raft-{small,medium,large}-directories` |
+| files | `raft-{small,medium}-files` |
+| vhost | `subdomains-top1million-{5000,20000,110000}`; `namelist` last |
+| api | `api/api-endpoints` -> `api-seen-in-wild` -> `common-api-endpoints-mazen160` -> `api/objects` |
+| params | `harness-params` -> `burp-parameter-names` |
+| artifacts | `sensitive-artifacts` + `versioning_metafiles`, `Common-DB-Backups`, `UnixDotfiles.fuzz` |
+
+### Fingerprint -> shipped list (T3 jump, no grinding)
+| fingerprint | shipped list |
+|---|---|
+| Web server | `Web-Servers/{Apache-Tomcat,IIS,nginx,JBoss}.txt` |
+| WordPress / Drupal / Joomla | `CMS/{wordpress.fuzz,Drupal}.txt`, `URLs/urls-*` |
+| Sharepoint / AEM / Umbraco | `CMS/{Sharepoint,Adobe-AEM_2021,Umbraco}.txt` |
+| Jenkins / WebLogic / Confluence / Keycloak | `Service-Specific/*.txt` |
+| PHP / Spring / ColdFusion | `Programming-Language-Specific/*`, `coldfusion.txt` |
+
+Extend the machine copy at `scripts/wordlist-map.json` (data, no code).
 
 More: assetnote wordlists (`wordlists.assetnote.io`), `fuzzdb`, `payloadbox`, Kettle's `param-miner` lists.
 

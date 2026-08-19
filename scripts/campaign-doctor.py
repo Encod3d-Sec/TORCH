@@ -38,7 +38,7 @@ def check(name, ok, detail="", warn=False):
 def _a_files():
     need = ["campaign.py", "campaign.json", "behaviours.json", "surface-seeds.json", "handroll.py",
             "check-engagement.py", "playbook.json", "chains.json", "coverage-classes.json",
-            "tool-phase-backfill.py"]
+            "tool-phase-backfill.py", "wl-pick.sh", "wordlist-map.json"]
     for f in need:
         check("script present: " + f, os.path.isfile(os.path.join(HERE, f)))
     check("triggers.json present",
