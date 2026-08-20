@@ -152,3 +152,32 @@ per-event `.operation/.path/.details/.result/.stacktrace/.date()`).
   RC4-staged beacon. More: [[modern-c2-frameworks]].
 
 <!-- promoted-slug: windows-host-dfir-evtx-procmon -->
+
+### Reconstruct a custom-crypto C2 implant from EVTX + pcap
+
+When the PowerShell Operational log + the C2 capture are both in hand and the implant is
+hand-rolled (not a known framework - for the known-framework case see the Empire IOCs above):
+
+1. **Stage-1 from ScriptBlock logs.** EID 4104 `ScriptBlockText` holds the deobfuscated
+   dropper (parse EVTX per the offline-triage section above; if the packaged `evtx_dump`
+   entry point is broken, import `python-evtx` `Evtx.Evtx` directly and pull the 4104
+   records). It reveals the stage-2 URL, the cipher (often hand-rolled RC4 KSA/PRGA), and the
+   key - the key is frequently split across string-concatenation (`'Ab1'+'2Cd'+'3Ef'...`) to
+   defeat naive `strings`; reassemble the literal.
+2. **Carve + decrypt stage-2.** `tshark --export-objects http,<dir>` pulls the payload (often
+   hex-text, not raw bytes); apply the step-1 cipher+key, then verify `MZ` + expected SHA-256
+   = the real PE.
+3. **Decompile statically, never run it.** `ilspycmd <asm>.exe` (dotnet global tool) gives
+   full C#; `strings -el` recovers the UTF-16 literals (crypto passphrase, C2 URL).
+4. **Custom-AES C2 pattern to expect, then decrypt every frame:**
+   - AES key = `SHA256(<passphrase-literal>)` used directly as the AES-256 key (no KDF/salt);
+   - IV is **prepended** to the ciphertext: wire blob = `base64(IV[16] || ciphertext)`, so
+     split the first 16 bytes as IV and CBC/PKCS7-decrypt the rest;
+   - directional encoding asymmetry - one channel single-base64, the other **double**
+     (`base64(base64(IV||ct))`); decode accordingly per direction;
+   - the command is hidden in a benign-looking response body, e.g. an HTML comment
+     `<!-- <marker>=<blob> --></body>` - grep the response body for the marker, not a header.
+   Decrypt command (server->implant) and output (implant->server) in frame order to rebuild
+   the attacker's session and pull the flag.
+
+<!-- promoted-slug: malware-c2-reconstruction-evtx-pcap -->
