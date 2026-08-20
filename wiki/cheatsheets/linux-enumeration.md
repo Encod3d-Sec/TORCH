@@ -238,3 +238,25 @@ local_infile enabled where it is not needed.
 - [[linux-privesc]] — exploitation of all above vectors
 - [[linux-privesc]] cheatsheet — attack commands
 - [[docker-attacks]] — container escape techniques
+
+## Map internal services via world-readable systemd units
+
+When app directories are locked down (`drwxr-x---`, owned by root or other service accounts) you
+often cannot read the source, but `/etc/systemd/system/*.service` units are world-readable (644).
+`cat` them to recover each internal service's identity for free:
+
+```
+cat /etc/systemd/system/*.service
+systemctl list-timers --all --no-pager
+```
+
+Each unit reveals `User=`/`Group=` (which service runs as ROOT vs a low-priv svc account),
+`ExecStart=` (the bind address/port, e.g. `--bind 127.0.0.1:9000`), `WorkingDirectory=`, and
+`EnvironmentFile=` (where the secrets live). This maps a multi-tier app, which loopback port is the
+root-running one and therefore the privesc target, without reading a single app source file.
+
+Also read the timers: a job/export service driven by NO `.timer` (and no cron) is triggered
+on-demand, so do not waste time running pspy to catch a periodic caller that does not exist, find
+who holds its token instead (a peer service / admin panel).
+
+<!-- promoted-slug: systemd-unit-service-mapping -->

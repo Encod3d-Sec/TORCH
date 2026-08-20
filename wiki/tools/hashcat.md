@@ -10,7 +10,7 @@ phase: crack
 
 ## Purpose
 
-**Hashcat** is the GPU-accelerated password recovery tool: it cracks captured hashes (NTLM, Kerberos, web app, archive, disk) using wordlists, rules, masks, and hybrid attacks. The offline counterpart to online tools like [[hydra]].
+**Hashcat** is the GPU-accelerated password recovery tool: it cracks captured hashes (NTLM, Kerberos, web app, archive, disk) using wordlists, rules, masks, and hybrid attacks. The offline counterpart to online tools like [[wiki/tools/hydra]].
 
 ## Install / setup
 
@@ -55,7 +55,7 @@ office2john / pdf2john / ssh2john -> matching -m
 - `-O` (optimized kernel) is much faster but caps password length (~31); drop it for long candidates.
 - Rules multiply a wordlist cheaply: `best64`, `OneRuleToRuleThemAll`. Mask attack for known composition; `--increment` to grow length.
 - Potfile (`~/.local/share/hashcat/hashcat.potfile`) caches cracks - `--show` reads it; `--potfile-disable` for clean runs.
-- Online auth instead of hashes -> [[hydra]]. Methodology: [[password-cracking]], [[hash-capture-and-cracking]].
+- Online auth instead of hashes -> [[wiki/tools/hydra]]. Methodology: [[password-cracking]], [[hash-capture-and-cracking]].
 
 ## Related techniques
 [[password-cracking]], [[hash-capture-and-cracking]], [[kerberos-attacks]], [[cryptography-attacks]]. AD capture via [[netexec]]/[[impacket]].

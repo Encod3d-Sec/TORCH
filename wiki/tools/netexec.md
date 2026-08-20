@@ -692,7 +692,7 @@ nxc ssh <target> -u user -p pass --put-file file.txt /tmp/file.txt
 nxc ssh <target> -u users.txt -p pass.txt --no-bruteforce --continue-on-success
 ```
 
-`(Pwn3d!)` on SSH means root. For real SSH brute forcing use [[hydra]]; nxc is for validating a captured credential across a subnet.
+`(Pwn3d!)` on SSH means root. For real SSH brute forcing use [[wiki/tools/hydra]]; nxc is for validating a captured credential across a subnet.
 
 ## FTP protocol
 

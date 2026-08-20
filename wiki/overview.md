@@ -104,7 +104,7 @@ sources: []
 
 ## Tools
 
-[[wiki/tools/nmap]] · [[wiki/tools/rustscan]] · [[wiki/tools/ffuf]] · [[gobuster]] · [[nikto]] · [[wiki/tools/httpx]] · [[wiki/tools/nuclei]] · [[hydra]] · [[medusa]] · [[hashcat]] · [[wpscan]] · [[metasploit]] · [[burp-suite]] · [[sqlmap]] · [[netexec]] · [[impacket]] · [[certipy]] · [[evil-winrm]] · [[tshark]] · [[gdb-gef]] · [[radare2]] · [[ghidra]] · [[pwntools]] · [[angr]] · [[volatility]] · [[binwalk]] · [[aflplusplus]] · [[libfuzzer]] · [[semgrep]] · [[codeql]] · [[trivy]] · [[bloodhound]] · [[responder]] · [[subfinder]] · [[gowitness]] · [[ligolo-ng]] · [[frida]] · [[john]] · [[scoutsuite]] · [[pacu]] · [[roadtools]] · [[apktool]] · [[jadx]]
+[[wiki/tools/nmap]] · [[wiki/tools/rustscan]] · [[wiki/tools/ffuf]] · [[gobuster]] · [[nikto]] · [[wiki/tools/httpx]] · [[wiki/tools/nuclei]] · [[wiki/tools/hydra]] · [[medusa]] · [[hashcat]] · [[wiki/tools/wpscan]] · [[metasploit]] · [[burp-suite]] · [[sqlmap]] · [[netexec]] · [[impacket]] · [[certipy]] · [[evil-winrm]] · [[wiki/tools/tshark]] · [[gdb-gef]] · [[radare2]] · [[ghidra]] · [[pwntools]] · [[angr]] · [[volatility]] · [[binwalk]] · [[aflplusplus]] · [[libfuzzer]] · [[semgrep]] · [[codeql]] · [[trivy]] · [[bloodhound]] · [[responder]] · [[subfinder]] · [[gowitness]] · [[ligolo-ng]] · [[frida]] · [[john]] · [[scoutsuite]] · [[pacu]] · [[roadtools]] · [[apktool]] · [[jadx]]
 
 ---
 

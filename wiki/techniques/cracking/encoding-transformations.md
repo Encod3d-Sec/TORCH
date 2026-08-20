@@ -77,6 +77,6 @@ So if Ascii85 / Z85 / RFC1924 all fail AND the data contains `\` and `'`, it is 
 ### Worked pattern
 GPS coordinates hidden in the HTTP `X-Coordinates` header of each request in a pcap decoded (Base92) straight to plain `lat,lng` text; reverse-geocoding each pair (nominatim) named the towns. General lesson: binary-looking base output is not always binary, decode first, then interpret.
 
-Cross-reference: [[digital-forensics]] (pcap header/stream extraction), [[cryptography-attacks]] (CTF crypto route), [[tshark]].
+Cross-reference: [[digital-forensics]] (pcap header/stream extraction), [[cryptography-attacks]] (CTF crypto route), [[wiki/tools/tshark]].
 
 <!-- promoted-slug: base-encoding-identification -->

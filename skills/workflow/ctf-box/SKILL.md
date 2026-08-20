@@ -230,7 +230,7 @@ After each phase, write to `targets/<eng>/`: hosts/access -> `state.md`, creds -
 - [[wiki/tools/rustscan]]
 - [[naabu]]
 - [[wiki/tools/ffuf]]
-- [[feroxbuster]]
+- [[wiki/tools/feroxbuster]]
 - [[gobuster]]
 - [[wiki/tools/nuclei]]
 - [[nikto]]

@@ -28,11 +28,11 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 - [ ] wiki-query EACH fingerprinted tech/version   <-- GATE 1 source
   (web, per http port:)
 - [ ] whatweb + httpx + screenshot       -> [[wiki/tools/whatweb]] [[wiki/tools/httpx]] + Skill(screenshot)
-- [ ] ffuf/feroxbuster dirs + vhosts     -> [[wiki/tools/ffuf]] [[feroxbuster]] [[gobuster]] [[wordlists]]
+- [ ] ffuf/feroxbuster dirs + vhosts     -> [[wiki/tools/ffuf]] [[wiki/tools/feroxbuster]] [[gobuster]] [[wordlists]]
 - [ ] dump TLS cert SANs for hidden vhosts: `echo | openssl s_client -connect <ip>:443 -servername <host> 2>/dev/null | openssl x509 -noout -text | grep -A1 "Subject Alternative Name"`  -> [[cdn-waf-bypass]]
 - [ ] arjun param mining                 -> [[arjun]]
 - [ ] nuclei                             -> [[wiki/tools/nuclei]] [[nuclei-arsenal]]
-- [ ] nikto ; wpscan (if WordPress)      -> [[nikto]] [[wpscan]]
+- [ ] nikto ; wpscan (if WordPress)      -> [[nikto]] [[wiki/tools/wpscan]]
 - [ ] katana/gau crawl, then READ each .js / inline `<script>` / button `onclick` / `href` END-TO-END (open the file, do not grep - the initial vector hides in a handler grep skips)  -> [[katana]] [[gau]] [[javascript-source-map-exploitation]]
 - [ ] trufflehog / .git exposure         -> [[trufflehog]] [[git-exposure]]
   (recon, multi-host / subdomains:)
@@ -58,7 +58,7 @@ GATE 3 (loop): a vector exhausted -> mark `[!]`, one Deadends line, move to the 
 |----|-------|-----------|---------|-------|------|--------|-----|----------|
 
 cred attacks:  sqlmap / hydra / medusa / john / hashcat
-  -> [[sqlmap]] [[hydra]] [[medusa]] [[wiki/tools/john]] [[hashcat]] [[password-attacks]] [[wordlists]] [[default-credentials]]
+  -> [[sqlmap]] [[wiki/tools/hydra]] [[medusa]] [[wiki/tools/john]] [[hashcat]] [[password-attacks]] [[wordlists]] [[default-credentials]]
 route by class: Skill(arsenal) -> Skill(`hunt-<class>`)
 
 ### 4b. Post-Ex / Privesc  ([[linux-privesc]] · [[privesc-exploit-arsenal]])

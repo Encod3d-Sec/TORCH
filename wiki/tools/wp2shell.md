@@ -24,7 +24,7 @@ Reference / source: https://github.com/Icex0/wp2shell-poc
 - A WordPress target where the version fingerprint is old/spoofed and the REST API is reachable.
 - You already hold WordPress admin creds and want a one-command webshell (it also supports an
   authenticated `shell` mode, not just the pre-auth bridge).
-- Fingerprint via [[wpscan]] first; if the build is in range, `wp2shell` is the quick-win RCE.
+- Fingerprint via [[wiki/tools/wpscan]] first; if the build is in range, `wp2shell` is the quick-win RCE.
 
 ## Install / setup
 
@@ -60,7 +60,7 @@ python3 wp2shell.py shell -i http://target            # interactive shell after 
 
 ## Related
 
-- [[wpscan]] - fingerprint users/plugins/version first.
+- [[wiki/tools/wpscan]] - fingerprint users/plugins/version first.
 - [[sql-injection]] - the underlying injection class.
 - [[file-upload]] / webshell delivery - the RCE stage.
 - WordPress post-ex: DB creds in `wp-config.php`; **check for non-standard `wp_*` tables** (custom tables often hold infra/SSH creds).

@@ -156,3 +156,30 @@ When only a handful of characters pass a regex, the Orange Tsai BabyFirst 5-char
 escalating a tiny character set into full command execution. Also test newline injection against
 regexes that only match `[a-zA-Z0-9]` on a single line. Bashfuscator can generate obfuscated
 equivalents when hand-crafting stalls.
+
+## Internal root job/export microservice: report/filename param -> tar command injection
+
+A recurring privesc chain on multi-tier web boxes: a loopback-only microservice (an "automation",
+"export", "backup", or "report" runner, often Flask/gunicorn) runs as **root** and exposes a
+Bearer-gated job endpoint such as `POST /jobs/export` with body `{"report":"<name>"}`. That
+name/report/filename value is frequently concatenated into a shell archive command via `shell=True`:
+
+```
+tar czf /var/<svc>/exports/<report>.tgz /var/<svc>/data 2>&1
+```
+
+so a `report` value of `x;<cmd>;#` injects `<cmd>` as root. Confirm root, then read the flag:
+
+```
+{"report":"x;id;cat /root/root.txt;#"}   # output field -> uid=0(root) + flag
+```
+
+Notes:
+- The service's `GET /health` usually self-documents the route, the auth header, and `runs_as: root`.
+- The Bearer key lives in a root-only env file; do not grind to read it directly, it is typically
+  leaked by a peer service or admin panel that also holds it (e.g. a UCP dashboard widget, see
+  [[cms-exploitation]]).
+- Drive the request from the foothold user against `127.0.0.1:<port>` directly through the foothold
+  RCE, a meterpreter port-forward to the loopback service is often flakier than hitting it in-place.
+
+<!-- promoted-slug: internal-root-jobservice-tar-injection -->

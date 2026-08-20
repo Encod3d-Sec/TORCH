@@ -298,7 +298,7 @@ SSH certificates issued for certain GitHub contexts were accepted by `gist.githu
 
 - [[burp-suite]] — Intruder (Sniper / Pitchfork / Cluster Bomb), Repeater
 - [[wiki/tools/ffuf]] — fast HTTP fuzzing for login endpoints
-- [[hydra]] — network login brute force
+- [[wiki/tools/hydra]] — network login brute force
 - hashcat — offline cracking of password hashes found in cookies
 - CyberChef — Base64/hash manipulation for cookie analysis
 

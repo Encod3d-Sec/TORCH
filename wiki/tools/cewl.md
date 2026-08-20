@@ -57,7 +57,7 @@ hashcat --force words.txt -r /usr/share/hashcat/rules/best64.rule --stdout | sor
 john --wordlist=words.txt --rules --stdout > mangled.txt
 ```
 
-Or pipe CeWL's words into [[cupp]]'s "keywords" field when the password may blend company vocabulary with the target's personal info. Then feed the resulting list to [[hydra]] against the login.
+Or pipe CeWL's words into [[cupp]]'s "keywords" field when the password may blend company vocabulary with the target's personal info. Then feed the resulting list to [[wiki/tools/hydra]] against the login.
 
 ## Tips and gotchas
 
@@ -68,7 +68,7 @@ Or pipe CeWL's words into [[cupp]]'s "keywords" field when the password may blen
 ## Related techniques
 
 - [[cupp]]: combine site keywords with personal-info mutation rules
-- [[hydra]]: feed the generated (and mangled) wordlist to `-P`
+- [[wiki/tools/hydra]]: feed the generated (and mangled) wordlist to `-P`
 - [[password-cracking]], [[password-attacks]]
 
 ## Sources

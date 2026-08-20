@@ -51,4 +51,4 @@ Respond, in order:
 A `403` on a discovered dir is a signal, not an end. Try bypass BEFORE abandoning: path mutations (`/admin/`, `/admin/.`, `/admin/..;/`, `/%2e/admin`, case, trailing `?`), method swap (`GET`->`POST`/`HEAD`/`TRACE`), and header spoofs (`X-Forwarded-For: 127.0.0.1`, `X-Original-URL`, `X-Rewrite-URL`). Use a dedicated tool (`byp4xx`/`nomore403`) rather than a wordlist - 403 bypass is mutation, not brute. See [[cdn-waf-bypass]].
 
 ## Wiki
-Tools: [[ffuf]] [[feroxbuster]] [[cewl]] [[arjun]]. Reference: [[wordlists]] (the selection matrix, human-readable twin of wordlist-map.json), [[cdn-waf-bypass]] (WAF/origin bypass). Stuck -> Skill(redteamlead).
+Tools: [[ffuf]] [[wiki/tools/feroxbuster]] [[cewl]] [[arjun]]. Reference: [[wordlists]] (the selection matrix, human-readable twin of wordlist-map.json), [[cdn-waf-bypass]] (WAF/origin bypass). Stuck -> Skill(redteamlead).
