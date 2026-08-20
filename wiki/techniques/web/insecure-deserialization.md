@@ -695,3 +695,29 @@ Chain: `CustomTemplate->__destruct()` → `file_exists(lockFilePath())` on `phar
 <!-- auto-wired: context-reachable sub-technique pages -->
 - [[gwt-attacks]]
 - [[ml-model-deserialization]]
+
+## Restricted unpickler: blocklist-gap single-call code-exec gadgets
+
+A "restricted" `find_class` that rejects by **module name against a blocklist** (blocks
+`os`, `posix`, `builtins`, `subprocess`, `sys`, `importlib`, `socket` ...) still allows the rest of
+stdlib. Any un-blocked module exposing a **one-call arbitrary-code sink** is RCE in a single
+`REDUCE` - no gadget chain, no allowed-class hunt:
+
+- `cProfile.run("<py>")`, `profile.run("<py>")`, `pdb.run("<py>")` - each `exec()`s a code string.
+- `timeit.timeit("<py>")` / `timeit.Timer("<py>").timeit()` - runs the stmt (loops, so make it idempotent).
+
+```python
+cProfile.run("__import__('os').system('id')")   # module cProfile is rarely on a blocklist
+```
+
+**Map the filter black-box** by crafting a raw `GLOBAL`+`REDUCE` pickle per `(module, name)` and
+reading the (usually verbose) error: `blocked module 'X'` = blocklisted; `Can't get attribute 'Y' on
+<module ...>` = module allowed, wrong attr; a repr back = allowed + executed. Minimal craft (proto 2,
+`c`=GLOBAL, `V`=unicode arg): `b"\x80\x02c"+mod+b"\n"+name+b"\n(V"+arg+b"\ntR."` base64'd.
+
+Gotcha: an allowed app module that did `import os` exposes `app.os` (the module), but the restricted
+`find_class` does a **plain `getattr` (no dotted resolution)**, so `app` + name `os.system` fails -
+you cannot walk `.system` off it. Use the single-call stdlib gadget above instead. This is a real
+allowlist/blocklist bypass distinct from "chain to os via an allowed module's imports".
+
+<!-- promoted-slug: pickle-blocklist-unpickler-gadgets -->

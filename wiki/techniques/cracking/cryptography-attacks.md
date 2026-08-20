@@ -143,3 +143,32 @@ nextprime(int(SHA256(seed + b"pki")))`, `n = p*q`, `e = 65537`. Reproduce it exa
   "cryptographic" gate. See [[insecure-randomness]].
 
 <!-- promoted-slug: rsa-deterministic-seed-keygen -->
+
+## Forge a custom binary's signed (HMAC) protocol by reproducing its key derivation offline
+
+When a stripped binary (an implant/agent/updater) authenticates its own protocol with
+HMAC-SHA256 and the key is derived from material you can READ, the key is fully recoverable - so
+you can forge valid signed messages/tasks without ever having the "real" secret:
+
+- **hardcoded blob** in `.rodata` (dump with `objdump -s -j .rodata` / radare2),
+- a **PRNG pad with a hardcoded seed** (deterministic, not random), and
+- a **world/other-readable file** (`/etc/machine-id`, a hostid, a serial).
+
+Recover it: RE the key schedule (`radare2 -A`, follow the arg to `HMAC` - `rsi`=key, `rdx`=keylen,
+`rcx`=data), reproduce the exact derivation in Python, then **verify against one captured live
+signature before forging** (a single mismatch means a byte/order is wrong).
+
+**Recognize the classic glibc `rand()` LCG** when it appears as a key/pad generator (a hardcoded
+seed makes the output a fixed pad, trivially reproduced):
+
+```
+state = state * 0x41c64e6d + 0x3039        # mult 1103515245, add 12345 (glibc TYPE_0 rand)
+byte  = (state >> 16) & 0xff
+```
+
+Typical schedule seen in the wild: `key_seed = blob XOR lcg_pad`, then
+`msg_key = HMAC(key_seed, machine_id)`, then each message `= fields | HMAC(msg_key, fields)`.
+Same idea breaks any home-rolled signed IPC/C2/token scheme whose key lives in a readable binary.
+See [[insecure-randomness]] for predicting a *live* (non-seeded) PRNG stream instead.
+
+<!-- promoted-slug: binary-signed-protocol-forge -->

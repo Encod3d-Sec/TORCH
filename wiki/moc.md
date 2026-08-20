@@ -22,7 +22,7 @@ Top-level hub. Each domain has its own MOC linking every page.
 - [[methodology-moc|Methodology]] (12)
 - [[mobile-iot-moc|Mobile Iot]] (5)
 - [[network-moc|Network]] (19)
-- [[osint-moc|Osint]] (7)
+- [[osint-moc|Osint]] (8)
 - [[red-team-moc|Red Team]] (15)
 - [[web-moc|Web]] (83)
 
