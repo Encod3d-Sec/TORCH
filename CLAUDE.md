@@ -53,7 +53,7 @@ Search rule: never read `wiki/index.md` to find pages - always search first. MCP
 
 ## Hunt Skill Auto-Triggers
 
-The `hunt-trigger.py` UserPromptSubmit hook matches your prompt against `skills/hunt/triggers.json` (single source of truth): an explicit vuln-type term injects a **MANDATORY** `Skill(<hunt>)` directive, a surface term (e.g. "login form", "upload field") a softer "consider `Skill(...)`". Treat a hard directive as a real instruction unless genuinely irrelevant (say why in one line). Edit `triggers.json` to change mappings, not this table; full mechanics (incl. leak-safe telemetry) in `docs/auto-triggers.md`.
+The `hunt-trigger.py` UserPromptSubmit hook matches your prompt against `skills/hunt/triggers.json` (single source of truth): an explicit vuln-type term injects a **MANDATORY** `Skill(<hunt>)` directive, a surface term (e.g. "login form", "upload field") a softer "consider `Skill(...)`". Treat a hard directive as a real instruction unless genuinely irrelevant (say why in one line). When you SKIP a fingerprint-routed hunt (correctly, or because another hunt already covers it), write the one-line reason to `targets/<eng>/log.md` (or `Deadends.md`) so the close-out drift-count separates a real miss from a correct skip. Edit `triggers.json` to change mappings, not this table; full mechanics (incl. leak-safe telemetry) in `docs/auto-triggers.md`.
 
 Vuln-type rows (SSRF/XSS/SQLi/IDOR/RCE/auth/federation/injection/m365/vpn -> matching hunt skill) live in `triggers.json`, fired by the hook. Only the model-judged rows remain here:
 

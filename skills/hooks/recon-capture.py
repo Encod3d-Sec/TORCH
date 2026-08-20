@@ -507,6 +507,22 @@ def _is_exploit_cmd(cmd):
     return False
 
 
+# Reverse-shell connect-back patterns for the egress-first nudge (F1). Broader than _REVSHELL_RE
+# (adds mkfifo shells + msfvenom reverse payloads): the point is to catch the FIRST connect-back
+# attempt and remind to diagnose egress before grinding ports/reverse-shells.
+_EGRESS_REVSHELL_RE = re.compile(
+    r"/dev/tcp/|\bnc\b[^\n]*\s-e\b|\bbash\s+-i\b|\brlwrap\s+nc\b|\bmkfifo\b[^\n]*\bnc\b|"
+    r"\bmsfvenom\b[^\n]*reverse", re.I)
+
+
+def _is_revshell_cmd(cmd):
+    """True if cmd (or an inner vm.sh/ssh-wrapped cmd) is a reverse-shell connect-back attempt."""
+    for c in [cmd] + inner_cmds(cmd):
+        if _EGRESS_REVSHELL_RE.search(c):
+            return True
+    return False
+
+
 GATE1_MAX = 3
 
 
@@ -878,6 +894,26 @@ def main():
                 "SERIAL ENUMERATION: a for/while/seq + curl loop fetches one URL at a time (slow). "
                 "Fan out instead -- ffuf -t 80 over the range (e.g. `seq -f %04g 0 9999` as -w) or "
                 "xargs -P50. Parallel discovery is the 10-min-vs-40-min difference.")
+            try:
+                open(marker, "w").close()
+            except OSError:
+                pass
+
+    # egress-first nudge (fire-once per engagement, advisory, fail-open): the FIRST reverse-shell
+    # connect-back is the moment to remind that a silent connect-back failure is usually a FILTERED
+    # egress port, not a broken payload -- diagnosing egress before grinding ports/reverse-shells
+    # saved ~30 min on a real box (target-egress-shaped network, "beacons OUT on a schedule").
+    if d and _engagement and not _is_framework_meta(cmd):
+        marker = os.path.join(d, ".egress-nudged")
+        if not os.path.exists(marker) and _is_revshell_cmd(cmd):
+            blocks.append(
+                "EGRESS-FIRST: a reverse-shell connect-back just fired. A silent connect-back "
+                "failure is usually a FILTERED egress port (4444/1337 often blocked; 443/80/53/8000 "
+                "usually pass), NOT a broken payload -- probe egress first with one clean command "
+                "(curl/wget to your listener, or `echo x >/dev/tcp/<you>/<port>`) across a couple of "
+                "ports. If filtered, pivot to an HTTP-pull + webshell/SSH channel instead of grinding "
+                "reverse shells. Deliver the payload base64-wrapped, not a nested-quote one-liner "
+                "through the vm.sh->ssh bridge.")
             try:
                 open(marker, "w").close()
             except OSError:
