@@ -1,5 +1,11 @@
 """Shared pytest fixtures. Adds the hook + script dirs to sys.path and builds an
-isolated fixture vault so tests never touch real engagement data."""
+isolated fixture vault so tests never touch real engagement data.
+
+Fast suite: `pytest -n auto` runs the ~820 tests across cores in ~2 min vs ~6 min serial
+(needs `pip install --break-system-packages pytest-xdist`). The suite is parallel-safe -- every
+test uses a per-test tmp vault; the one shared-path marker (scope-guard's .enforce-off) is
+redirected to a tmp file via ENFORCE_OFF_MARKER. Not forced in config: xdist is an optional dev
+dep and isn't installed on every machine."""
 import os
 import shutil
 import sys

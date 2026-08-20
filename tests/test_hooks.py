@@ -21,9 +21,10 @@ HOOKS = os.path.join(REPO, "skills", "hooks")
 def run_hook(name, payload, env=None):
     # In-process (hookrunner) instead of a subprocess python3 start per call: the `vault` fixture
     # monkeypatches _engagement so the hook resolves to the tmp vault, and all 9 hooks read the
-    # vault at call-time (not import), so caching the module is safe. env kept for call compat.
+    # vault at call-time (not import), so caching the module is safe. env is applied during the
+    # call (and restored) so per-test overrides like ENFORCE_OFF_MARKER stay parallel-safe.
     from hookrunner import run_payload
-    return run_payload(name, payload)
+    return run_payload(name, payload, env)
 
 
 def _env(vault):
@@ -972,8 +973,8 @@ def test_scope_guard_escape_hatch_downgrades_to_advisory(vault):
     """The skills/hooks/.enforce-off marker turns every deny into an advisory warning, so a
     false block can never trap the operator."""
     _write_scope(vault, in_scope=["10.0.0.5"], out_of_scope=["10.9.9.0/24"])
-    marker = os.path.join(HOOKS, ".enforce-off")
-    env = _env(vault)
+    marker = str(vault / ".enforce-off")             # per-test tmp marker (parallel-safe, not the
+    env = dict(_env(vault), ENFORCE_OFF_MARKER=marker)   # shared skills/hooks/.enforce-off)
     try:
         open(marker, "w").close()
         out = run_hook("scope-guard.py", {"tool_name": "Bash",

@@ -68,17 +68,26 @@ class _Result:
         self.returncode = 0
 
 
-def run_payload(name, payload):
+def run_payload(name, payload, env=None):
     """Feed a FULL payload dict to <name>'s main() in-process; return a CompletedProcess-like object
     whose .stdout is the raw printed text. Drop-in for `subprocess.run([...], input=json.dumps(
     payload)).stdout` call sites (e.g. test_hooks.py's central run_hook helper). `name` may include
-    a trailing '.py'."""
+    a trailing '.py'. `env`, when given, is applied to os.environ for the duration of the call and
+    restored after (so a test that sets e.g. ENFORCE_OFF_MARKER to a tmp path stays parallel-safe)."""
     mod = load_hook(name[:-3] if name.endswith(".py") else name)
     old_in, old_out = sys.stdin, sys.stdout
+    saved_env = None
+    if env is not None:
+        saved_env = dict(os.environ)
+        os.environ.clear()
+        os.environ.update(env)
     sys.stdin, sys.stdout = io.StringIO(json.dumps(payload)), io.StringIO()
     try:
         mod.main()
         txt = sys.stdout.getvalue()
     finally:
         sys.stdin, sys.stdout = old_in, old_out
+        if saved_env is not None:
+            os.environ.clear()
+            os.environ.update(saved_env)
     return _Result(txt)

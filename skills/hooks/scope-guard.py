@@ -96,8 +96,11 @@ def ip_out_of_scope(cmd, sc):
 
 def _enforcing():
     """Enforcement is ON unless an escape-hatch marker sits in the hooks dir. Creating
-    `skills/hooks/.enforce-off` (== HERE) downgrades every deny to an advisory warning."""
-    return not os.path.exists(os.path.join(HERE, ".enforce-off"))
+    `skills/hooks/.enforce-off` (== HERE) downgrades every deny to an advisory warning.
+    ENFORCE_OFF_MARKER overrides the marker path so parallel test workers point it at a tmp file
+    instead of colliding on the shared hooks-dir marker (operator default path is unchanged)."""
+    marker = os.environ.get("ENFORCE_OFF_MARKER") or os.path.join(HERE, ".enforce-off")
+    return not os.path.exists(marker)
 
 
 def main():
