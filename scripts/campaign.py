@@ -46,9 +46,12 @@ OOB_CLASSES = {"ssrf", "ssti", "xxe", "rce", "deserialization", "blind-sqli", "c
 TWO_ACCOUNT_CLASSES = {"idor", "bola", "business-logic"}
 # Network-touching binaries: the pre-filter for drift (Task 12a) and G6. 46% of Bash calls
 # touch no network, so counting all of them as drift would be noise.
-NET_BINS = {"curl", "wget", "nmap", "rustscan", "dnsx", "httpx", "nc", "ncat", "ffuf",
-            "feroxbuster", "gobuster", "sqlmap", "nuclei", "nxc", "netexec", "katana",
-            "gau", "subfinder", "amass", "nikto", "wpscan", "dig", "openssl", "hydra"}
+try:                                       # single source shared with the drift-guard hook
+    from _netbins import NET_BINS
+except Exception:                          # fail-safe literal mirror (import path edge cases)
+    NET_BINS = {"curl", "wget", "nmap", "rustscan", "dnsx", "httpx", "nc", "ncat", "ffuf",
+                "feroxbuster", "gobuster", "sqlmap", "nuclei", "nxc", "netexec", "katana",
+                "gau", "subfinder", "amass", "nikto", "wpscan", "dig", "openssl", "hydra"}
 TYPE_ALIASES = {"bb": "bb", "bugbounty": "bb", "pt": "pt", "pentest": "pt", "ctf": "ctf"}
 TYPE_TO_APPROACH = {"bb": "bugbounty", "pt": "pentest", "ctf": "ctf"}
 SEV_RANK = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4, "exceptional": 5}

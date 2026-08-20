@@ -3,20 +3,17 @@ declawed, advisory-only); driver calls reset; on-board / empty-board / pass<5 / 
 all fail open (allow)."""
 import json
 import os
-import subprocess
 
 import _engagement  # noqa: F401  (self-locate VAULT before any vault fixture, see test_hooks.py)
+from hookrunner import run_hook
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOOK = os.path.join(REPO, "skills", "hooks", "drift-guard.py")
 
 
-def _run(cmd, env):
-    p = subprocess.run(["python3", HOOK], input=json.dumps({
-        "tool_name": "Bash", "tool_input": {"command": cmd}}),
-        capture_output=True, text=True, env=env, timeout=20)
-    out = json.loads(p.stdout) if p.stdout.strip() else {}
-    return (out.get("hookSpecificOutput") or {})
+def _run(cmd, env=None):
+    # env kept for call-site compatibility; the `vault` fixture monkeypatches _engagement so the
+    # in-process hook resolves to the tmp vault (no subprocess / env injection needed).
+    return run_hook("drift-guard", command=cmd)
 
 
 def _campaign(eng, pass_=5, emitted=None, board=True):
@@ -78,10 +75,10 @@ def test_driver_call_resets_streak(vault):
     assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 0
 
 
-def test_post_foothold_never_denies(vault):
-    """Post-foothold, privesc enum is legit and varied -> the guard ADVISES but never hard-denies
-    (blocking privesc enum is the over-fire the review warned about). Now true unconditionally
-    (the hook is advisory-only everywhere), but kept as a regression guard on this specific case."""
+def test_post_foothold_advises_once_then_silent(vault):
+    """A3: post-foothold, manual exploitation via curl/scripts is EXPECTED (the board is a pre-foothold
+    aid), so advise ONCE (streak 1) then go silent instead of nagging every call. Never denies. The
+    streak is still COUNTED (eval accuracy)."""
     eng = vault / "targets" / "acme"
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": []}, open(eng / ".campaign.json", "w"))
     (eng / "Approach.md").write_text(
@@ -90,10 +87,39 @@ def test_post_foothold_never_denies(vault):
     (eng / "state.md").write_text("| asset | access |\n|--|--|\n| 10.0.0.5 | foothold |\n")
     env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
     o1 = _run("bash /root/vm.sh 'python3 /tmp/x.py'", env)
+    assert "additionalContext" in o1 and "streak 1" in o1["additionalContext"]
+    assert o1.get("permissionDecision") != "deny"
     o2 = _run("nmap 10.0.0.5", env)
-    o3 = _run("curl http://10.0.0.5/", env)         # 3rd - advisory only, never deny
-    assert o3.get("permissionDecision") != "deny"
-    assert "additionalContext" in o3
+    o3 = _run("curl http://10.0.0.5/", env)         # post-foothold -> silent after the one reminder
+    assert o2 == {} and o3 == {}
+    assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 3   # still counted
+
+
+def test_backoff_throttles_repeated_advisory(vault):
+    """A1: pre-foothold off-board streak advises at 1,2,3 then goes SILENT (4..24), firing again at
+    the 25th. Count still increments every call; only the context injection is throttled."""
+    eng = vault / "targets" / "acme"
+    _campaign(eng, emitted=[])                          # board wants sqlmap; free-hand nmap off-board
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    ctx = [_run("nmap 10.0.0.5", env) for _ in range(4)]
+    assert all("additionalContext" in ctx[i] for i in (0, 1, 2))   # streaks 1,2,3 advise
+    assert ctx[3] == {}                                            # streak 4 -> silent
+    assert json.load(open(eng / ".campaign.json"))["off_board_streak"] == 4   # but still counted
+    st = json.load(open(eng / ".campaign.json")); st["off_board_streak"] = 24
+    json.dump(st, open(eng / ".campaign.json", "w"))
+    o25 = _run("nmap 10.0.0.5", env)                              # -> streak 25 -> advises again
+    assert "additionalContext" in o25 and "streak 25" in o25["additionalContext"]
+
+
+def test_solved_suppresses_drift(vault):
+    """A2: once state.md marks the box SOLVED, the board is moot -> no drift advisory at all
+    (was firing through the entire close-out phase)."""
+    eng = vault / "targets" / "acme"
+    _campaign(eng, emitted=[])
+    (eng / "state.md").write_text("## STATUS: SOLVED\n\n| asset | access |\n|--|--|\n| 10.0.0.5 | root |\n")
+    env = dict(os.environ, CLAUDEBRAIN_VAULT=str(vault))
+    assert _run("nmap 10.0.0.5", env) == {}
+    assert _run("bash /root/vm.sh 'curl http://127.0.0.1:9000/'", env) == {}
 
 
 def test_framework_meta_not_drift(vault):

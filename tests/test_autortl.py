@@ -1,16 +1,14 @@
 """The time-based 5-min auto-rtl is REMOVED from drift-guard.py (declawed to advisory-only, no
 time-based nagging). RTL reflex now lives in campaign.py `_tells_stop` (tests/test_tells.py) +
 recon-capture vector-doubt nudges."""
-import json, os, time, subprocess
+import json, os, time
 import _engagement  # noqa: F401
+from hookrunner import run_hook
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(REPO, "skills", "hooks", "drift-guard.py")
 
-def _run(cmd, env):
-    p = subprocess.run(["python3", HOOK], input=json.dumps(
-        {"tool_name": "Bash", "tool_input": {"command": cmd}}),
-        capture_output=True, text=True, env=env, timeout=20)
-    return (json.loads(p.stdout) if p.stdout.strip() else {}).get("hookSpecificOutput") or {}
+def _run(cmd, env=None):
+    return run_hook("drift-guard", command=cmd)
 
 def _ctf(eng):
     json.dump({"type": "ctf", "pass": 5, "emitted_bins": ["sqlmap"]}, open(eng / ".campaign.json", "w"))

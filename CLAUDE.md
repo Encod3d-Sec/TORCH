@@ -85,6 +85,10 @@ each step in order yourself, do not skip under momentum:
    its gates: no exploit before the row's arsenal card (G1), no `[x]` without a `poc/` image (G3), and
    an exhausted vector goes `[!]` + one `Deadends.md` line then you move to the next open item, never
    re-running `[!]` (G4); off-campaign, honor the board's own GATE 1/2/3 lines by hand.
+   Deliberately-off-board work is legitimate (following a writeup, or post-foothold manual
+   exploitation the driver can't plan): acknowledge a `drift-guard` nudge ONCE and continue, do
+   not re-run `campaign.py next` on every fire. The hook now backs off on its own (fires at streak
+   1-3 then rarely, silent post-foothold and post-`SOLVED`), so a repeated nudge is not expected.
 1. **Wiki-first, reference-map before qmd (qmd is ~15-30s, so it is hint-driven).** Before exploiting
    a fingerprinted service/class: (a) FIRST read the mapped pages directly - the hunt skill's `## Wiki`
    section (domain MOC + primary page + anchors) and one-hop from the MOC. That is an instant `Read`

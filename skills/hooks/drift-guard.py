@@ -43,10 +43,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "scripts"))
 
-# Network/scan/exploit binary set = the driver's own NET_BINS (drift pre-filter). Import it so the
-# two never diverge; fall back to a literal mirror if campaign.py can't be imported.
+# Network/scan/exploit binary set = the driver's own NET_BINS (drift pre-filter). Import the shared
+# _netbins module (NOT campaign.py) so this PreToolUse hook never parses the ~90KB driver per call;
+# fall back to a literal mirror if the module can't be imported.
 try:
-    from campaign import NET_BINS
+    from _netbins import NET_BINS
 except Exception:
     NET_BINS = {"curl", "wget", "nmap", "rustscan", "dnsx", "httpx", "nc", "ncat", "ffuf",
                 "feroxbuster", "gobuster", "sqlmap", "nuclei", "nxc", "netexec", "katana",
@@ -147,6 +148,42 @@ def _selfkill_advisory(cmd):
             "the next command hangs or drops to the attacker prompt, the shell died - re-pop it.")
 
 
+# --- advisory throttle (A1/A2/A3): a legitimately off-board run (writeup-driven, or post-foothold
+#     manual exploitation the driver can't plan) was getting the SAME nudge injected on every call
+#     (observed: 184 identical fires in one box = pure token noise). The streak is still COUNTED
+#     every time (telemetry/eval-metrics accuracy); only the context INJECTION is gated.
+_STATUS_RE = re.compile(r"^##\s*status:\s*(solved|owned|rooted|complete)\b", re.I | re.M)
+_FOOTHOLD = {"foothold", "user", "root", "owned", "system", "domain-admin", "da"}
+
+
+def _state_text(d):
+    try:
+        return open(os.path.join(d, "state.md"), encoding="utf-8", errors="ignore").read()
+    except Exception:
+        return ""
+
+
+def _post_foothold(d):
+    """True once state.md's host table shows an access cell at foothold-or-better. The board is a
+    PRE-foothold planning aid; post-foothold manual exploitation should not be nagged repeatedly."""
+    try:
+        import _engagement                       # imported here: main()'s import is local-scoped
+        for r in _engagement._parse_table(os.path.join(d, "state.md")):
+            if (r.get("access") or "").strip().lower() in _FOOTHOLD:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _should_advise(streak, post_foothold):
+    """Gate the context injection (never the count). Post-foothold: one reminder then silent. Else:
+    streak 1,2,3 then every 25th - keeps the early signal, kills the ~180x repeat that was noise."""
+    if post_foothold:
+        return streak == 1
+    return streak in (1, 2, 3) or streak % 25 == 0
+
+
 def main():
     try:
         data = json.loads(sys.stdin.read())
@@ -193,6 +230,9 @@ def main():
         return                                    # framework/dev command, not engagement drift
     if st.get("pass", 0) < 5:
         return                                    # pre-board recon: free exploration expected
+
+    if _STATUS_RE.search(_state_text(d)):
+        return                                    # A2: engagement SOLVED -> board is moot, stay silent
 
     cmd_bins = _bins_in(cmd)
     exploit_shaped = bool(cmd_bins) or _handroll_classify(cmd)[0] or bool(_INTERP_RE.search(cmd))
@@ -244,6 +284,15 @@ def main():
     try:
         import _telemetry
         _telemetry.drift("drift-guard", "off-board streak %d (%s)" % (streak, off))
+    except Exception:
+        pass
+
+    # THROTTLE the context injection (the count above still fired for eval accuracy).
+    if not _should_advise(streak, _post_foothold(d)):
+        return
+
+    try:
+        import _telemetry
         _telemetry.hook("drift-guard", action="advise")
     except Exception:
         pass

@@ -310,10 +310,11 @@ def _response_text(data):
         return str(r)[:MAX_BLOB]
 
 
-def fingerprint_records(blob):
+def fingerprint_records(blob, skip=None):
     """Return up to MAX_HITS (label, spec) tuples matched from playbook.json. The label is
     the cleaned first fingerprint token; spec is the raw playbook record (skills/tools/refs/
-    tests). Backs the routing display (fingerprint_hits)."""
+    tests). Backs the routing display (fingerprint_hits). `skip` (a set of labels already
+    routed this engagement) drops techs that have already fired -- the per-tech cap."""
     try:
         import _engagement
         pb = os.path.join(_engagement.VAULT, "scripts", "playbook.json")
@@ -328,6 +329,10 @@ def fingerprint_records(blob):
         except re.error:
             continue
         label = key.split("|")[0].replace("\\b", "")   # clean regex tokens for display
+        _m = re.match(r"[\w/.:+-]+", label)            # keep only the leading token (drop regex
+        label = _m.group(0) if _m else label           # metachars) -> clean display + stable dedup key
+        if skip and label in skip:                     # A4: per-engagement per-tech cap
+            continue
         out.append((label, spec))
         if len(out) >= MAX_HITS:
             break
@@ -437,7 +442,7 @@ def _wiki_excerpt(slugs):
     return "", ""
 
 
-def fingerprint_hits(blob):
+def fingerprint_hits(blob, skip=None):
     """Return up to MAX_HITS ROUTING lines ('<tech> detected -> load Skill(x) | run: <tools>')
     from playbook.json. Routing only: the named hunt skill owns the tests, payload arsenal,
     and cheatsheet reuse -- this hook surfaces the skill and the mapped tool, it does not
@@ -447,7 +452,7 @@ def fingerprint_hits(blob):
     start and went unread here, so a fingerprint that routed to hunt-sqli six times never
     once printed "sqlmap" while the bug was being hand-rolled with curl."""
     out = []
-    for label, spec in fingerprint_records(blob):
+    for label, spec in fingerprint_records(blob, skip=skip):
         skills = spec.get("skills") or []
         sk = (" -> load " + ", ".join("Skill(%s)" % s for s in skills)) if skills else ""
         tools = spec.get("tools") or []
@@ -1196,7 +1201,17 @@ def main():
             (m for ic in _inners if (m := invokes(ic, PROBE_TOOLS))), None)
         if is_probe and not _is_framework_meta(cmd):
             blob = (cmd + "\n" + _response_text(data))[:MAX_BLOB]
-            lines = fingerprint_hits(blob)
+            # A4: per-tech-per-engagement cap -- each fingerprint routes ONCE, not on every command
+            # that re-mentions it (observed: hunt-rce re-fired on every `id`, nday on every CHANGELOG
+            # string). Techs already routed this engagement are in <d>/.fp-fired and get skipped.
+            fp_seen = set()
+            fp_path = os.path.join(d, ".fp-fired") if d else None
+            if fp_path and os.path.exists(fp_path):
+                try:
+                    fp_seen = {ln.strip() for ln in open(fp_path, encoding="utf-8") if ln.strip()}
+                except Exception:
+                    pass
+            lines = fingerprint_hits(blob, skip=fp_seen)
             if lines:
                 routed_block = (
                     "Tech fingerprinted (playbook.json) -> load the hunt Skill named below; it "
@@ -1208,7 +1223,7 @@ def main():
                 # bypasses/payloads are in context before the first exploit attempt.
                 try:
                     _slugs = []
-                    for _lbl, _spec in fingerprint_records(blob):
+                    for _lbl, _spec in fingerprint_records(blob, skip=fp_seen):
                         _slugs.extend(_spec.get("refs") or [])
                     _ex, _rel = _wiki_excerpt(_slugs)
                     if _ex:
@@ -1218,11 +1233,19 @@ def main():
                 except Exception:
                     pass
                 blocks.append(routed_block)
+                # mark these techs fired so they don't re-route on every subsequent command
+                if fp_path:
+                    try:
+                        with open(fp_path, "a", encoding="utf-8") as _fh:
+                            for _lbl, _spec in fingerprint_records(blob, skip=fp_seen):
+                                _fh.write(_lbl + "\n")
+                    except Exception:
+                        pass
                 # log routed hunt skills so eval_metrics can flag any never invoked (drift signal)
                 if d:
                     try:
                         import _telemetry
-                        for _lbl, _spec in fingerprint_records(blob):
+                        for _lbl, _spec in fingerprint_records(blob, skip=fp_seen):
                             for _s in (_spec.get("skills") or []):
                                 if str(_s).startswith("hunt-"):
                                     _telemetry.log_event("route", d=d, routed=_s)

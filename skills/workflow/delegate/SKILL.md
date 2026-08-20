@@ -18,8 +18,19 @@ is a guess wearing a checklist.
 
 ## Model choice
 
-`haiku` for mechanical, fully-specified steps: compile-and-run a known exploit, decrypt a credential
-store. `sonnet` for judgement-heavy multi-step work: a JS-heavy per-route-CSRF authed backend RCE.
+`haiku` is the DEFAULT for a fully-specified mechanical or wait-heavy run: compile-and-run a known
+exploit, deliver an ELF, decrypt a credential store, a pspy/tcpdump watch window, a fixed-payload
+flag-read. On CTF and RoE-approved pentests the safety bar for a cheap model executing an exploit is
+already cleared, so lean into haiku there and keep the main model on strategy. Step UP to `sonnet`
+only for a genuinely judgement-heavy multi-step run (a JS-heavy per-route-CSRF authed backend RCE).
+
+NEVER delegate DISCOVERY or judgement to a cheap model: route/endpoint/token discovery, "is this
+surface empty or am I querying it wrong", vector selection. A cheap model hardens a wrong negative
+into a fact -- it reports "empty/dead" from a query mistake and you inherit it as a hard exclusion (a
+real miss: a delegated agent called a UCP voicemail "empty" because it hit the AJAX endpoint, not the
+dashboard widget that rendered the secret; that fossilized into a wrong "rabbit hole" and cost an
+hour+). If the run is not fully specified, it is not a delegation, it is a guess wearing a checklist,
+keep it on the main model. Re-verify any NEGATIVE a sub-agent returns before it becomes a Deadend.
 
 ## The checklist (a delegation is only as good as its checklist)
 
@@ -34,6 +45,10 @@ usual failure mode, not a weak sub-agent.
 - **(e) fragile-box discipline** if applicable: serial requests, long timeouts, no fuzzers.
 - **(f) report-back contract**: return the primitive/creds/flag plus evidence path; do not pivot
   further without the main agent.
+- **(g) anti-give-up + no-guess**: run the FULL specified window (a 5-minute pspy watch is 5 minutes,
+  not 2); if blocked, report the RAW output/errors and STOP, never guess or substitute a value and
+  never invent a result. A cheap model's instinct is to quit early and guess a token/flag, forbid
+  both explicitly in the prompt.
 
 ## False-root/hostname guardrail (MANDATORY every delegation)
 

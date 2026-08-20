@@ -18,11 +18,12 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(REPO, "skills", "hooks")
 
 
-def run_hook(name, payload, env):
-    p = subprocess.run(
-        ["python3", os.path.join(HOOKS, name)],
-        input=json.dumps(payload), capture_output=True, text=True, env=env, timeout=20)
-    return p
+def run_hook(name, payload, env=None):
+    # In-process (hookrunner) instead of a subprocess python3 start per call: the `vault` fixture
+    # monkeypatches _engagement so the hook resolves to the tmp vault, and all 9 hooks read the
+    # vault at call-time (not import), so caching the module is safe. env kept for call compat.
+    from hookrunner import run_payload
+    return run_payload(name, payload)
 
 
 def _env(vault):
@@ -842,7 +843,7 @@ def test_fingerprint_hits_is_routing_only():
     import os, re
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     src = open(os.path.join(root, "skills", "hooks", "recon-capture.py"), encoding="utf-8").read()
-    body = re.search(r"def fingerprint_hits\(blob\):.*?\n    return out\n", src, re.S).group(0)
+    body = re.search(r"def fingerprint_hits\(blob,[^)]*\):.*?\n    return out\n", src, re.S).group(0)
     for banned in ("try {tests}", "don't hand-roll", "arsenal: consult", "reuse: ", "tools: lean on"):
         assert banned not in body, banned
     assert "Skill(%s)" in body and "detected" in body
@@ -1189,10 +1190,18 @@ def _reindex_env(vault):
     return env
 
 
+def _run_reindex(name, payload, env):
+    """wiki-reindex spawns a DETACHED background `qmd update` and relies on _reindex_env's PATH/QMD
+    manipulation, so it stays a subprocess in tests (in-process would leak a background proc and
+    skip that env guard). The rest of test_hooks runs the hooks in-process via the central helper."""
+    return subprocess.run(["python3", os.path.join(HOOKS, name)], input=json.dumps(payload),
+                          capture_output=True, text=True, env=env, timeout=20)
+
+
 def test_wiki_reindex_acts_on_wiki_edit(vault):
     stamp = vault / ".wiki-reindex-stamp"
     assert not stamp.exists()
-    run_hook("wiki-reindex.py",
+    _run_reindex("wiki-reindex.py",
              {"tool_name": "Edit",
               "tool_input": {"file_path": str(vault / "wiki" / "techniques" / "foo.md")}},
              _reindex_env(vault))
@@ -1201,12 +1210,12 @@ def test_wiki_reindex_acts_on_wiki_edit(vault):
 
 def test_wiki_reindex_skips_non_wiki_edit(vault):
     env = _reindex_env(vault)
-    run_hook("wiki-reindex.py",
+    _run_reindex("wiki-reindex.py",
              {"tool_name": "Edit",
               "tool_input": {"file_path": str(vault / "targets" / "acme" / "state.md")}}, env)
     assert not (vault / ".wiki-reindex-stamp").exists()   # non-wiki path -> no-op
     # a wiki-dir path that is NOT markdown is also skipped
-    run_hook("wiki-reindex.py",
+    _run_reindex("wiki-reindex.py",
              {"tool_name": "Write",
               "tool_input": {"file_path": str(vault / "wiki" / "index.json")}}, env)
     assert not (vault / ".wiki-reindex-stamp").exists()
@@ -1216,9 +1225,9 @@ def test_wiki_reindex_debounces_burst(vault):
     env = _reindex_env(vault)
     ev = {"tool_name": "Edit",
           "tool_input": {"file_path": str(vault / "wiki" / "payloads" / "xss.md")}}
-    run_hook("wiki-reindex.py", ev, env)
+    _run_reindex("wiki-reindex.py", ev, env)
     first = (vault / ".wiki-reindex-stamp").stat().st_mtime
-    run_hook("wiki-reindex.py", ev, env)         # immediate second edit within the window
+    _run_reindex("wiki-reindex.py", ev, env)         # immediate second edit within the window
     assert (vault / ".wiki-reindex-stamp").stat().st_mtime == first   # not re-fired
 
 

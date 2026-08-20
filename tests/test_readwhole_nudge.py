@@ -1,13 +1,11 @@
-import json, os, subprocess
+import json, os
 import _engagement  # noqa: F401
+from hookrunner import run_hook
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOK = os.path.join(REPO, "skills", "hooks", "recon-capture.py")
 
-def _run(cmd, env, tool_out=""):
-    p = subprocess.run(["python3", HOOK], input=json.dumps(
-        {"tool_name": "Bash", "tool_input": {"command": cmd}, "tool_response": {"stdout": tool_out}}),
-        capture_output=True, text=True, env=env, timeout=20)
-    return (json.loads(p.stdout) if p.stdout.strip() else {}).get("hookSpecificOutput") or {}
+def _run(cmd, env=None, tool_out=""):
+    return run_hook("recon-capture", command=cmd, tool_response={"stdout": tool_out})
 
 def _foothold(eng):
     (eng / "state.md").write_text("| asset | access |\n|--|--|\n| 10.0.0.5 | foothold |\n")
